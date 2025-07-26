@@ -20,15 +20,9 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-
-// Parse the ORIGIN environment variable to handle multiple origins
-const allowedOrigins = process.env.ORIGIN 
-	? process.env.ORIGIN.split(',').map(origin => origin.trim())
-	: ["http://localhost:3000", "http://localhost:5173"];
-
 app.use(
 	cors({
-		origin: allowedOrigins,
+		origin: process.env.ORIGIN || ["http://localhost:3000", "http://localhost:5173"],
 		credentials: true,
 	})
 );
@@ -75,8 +69,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payment-transactions", paymentTransactionRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-app.listen(process.env.PORT, "0.0.0.0", () => {
+app.listen(process.env.PORT, () => {
 	console.log(`Server is running on port ${process.env.PORT}`);
-	console.log(`Local: http://localhost:${process.env.PORT}`);
-	console.log(`Network: http://0.0.0.0:${process.env.PORT}`);
 });

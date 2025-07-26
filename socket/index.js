@@ -11,15 +11,9 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(express.json());
-
-// Parse the ORIGIN environment variable to handle multiple origins
-const allowedOrigins = process.env.ORIGIN 
-	? process.env.ORIGIN.split(',').map(origin => origin.trim())
-	: ["http://localhost:3000", "http://localhost:5173"];
-
 app.use(
 	cors({
-		origin: allowedOrigins,
+		origin: process.env.ORIGIN || ["http://localhost:3000", "http://localhost:5173"],
 		credentials: true,
 	})
 );
@@ -32,17 +26,15 @@ app.get("/test", (req, res) => {
 // Socket.IO setup
 const io = new Server(server, {
 	cors: {
-		origin: allowedOrigins,
+		origin: process.env.ORIGIN || ["http://localhost:3000", "http://localhost:5173"],
 		credentials: true,
 	},
 });
 
 // Server listener
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, "0.0.0.0", () => {
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
 	console.log(`Socket server is running on port ${PORT}`);
-	console.log(`Local: http://localhost:${PORT}`);
-	console.log(`Network: http://0.0.0.0:${PORT}`);
 });
 
 // Socket.IO connection handler
