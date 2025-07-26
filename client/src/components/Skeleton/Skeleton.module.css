@@ -1,0 +1,137 @@
+/* Skeleton Loading Styles */
+.skeleton {
+	background: linear-gradient(
+		90deg,
+		rgba(var(--mainColor-rgb), 0.1) 25%,
+		rgba(var(--mainColor-rgb), 0.2) 50%,
+		rgba(var(--mainColor-rgb), 0.1) 75%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 1.5s infinite;
+	border-radius: 0.5rem;
+}
+
+.skeleton.rectangular {
+	border-radius: 0.5rem;
+}
+
+.skeleton.circular {
+	border-radius: 50%;
+}
+
+.skeleton.rounded {
+	border-radius: 1rem;
+}
+
+/* Skeleton Card */
+.skeletonCard {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1.5rem;
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: var(--glassBlur);
+	border-radius: 1rem;
+	margin-bottom: 1rem;
+}
+
+.skeletonContent {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+/* Skeleton Table */
+.skeletonTable {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.skeletonRow {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 1rem;
+	padding: 1rem;
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: var(--glassBlur);
+	border-radius: 0.75rem;
+}
+
+/* Skeleton Stats */
+.skeletonStats {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.skeletonStatCard {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1.5rem;
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: var(--glassBlur);
+	border-radius: 1rem;
+}
+
+.skeletonStatContent {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+/* Shimmer Animation */
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+/* Pulse Animation Alternative */
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 0.6;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+.skeleton.pulse {
+	animation: pulse 1.5s infinite;
+	background: rgba(var(--mainColor-rgb), 0.1);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+	.skeletonCard {
+		flex-direction: column;
+		text-align: center;
+		gap: 1rem;
+		padding: 1rem;
+	}
+
+	.skeletonRow {
+		grid-template-columns: 1fr;
+		gap: 0.75rem;
+		padding: 0.75rem;
+	}
+
+	.skeletonStats {
+		gap: 0.75rem;
+	}
+
+	.skeletonStatCard {
+		padding: 1rem;
+	}
+}

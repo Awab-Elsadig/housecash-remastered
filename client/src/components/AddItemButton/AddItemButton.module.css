@@ -1,0 +1,43 @@
+.addItemButton {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+	padding: 1rem;
+	background: var(--glassBackground);
+	border: 0.1rem solid var(--glassStroke);
+	border-radius: 0.5rem;
+	color: white;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	backdrop-filter: var(--glassBlur);
+}
+
+.addIcon {
+	font-size: 1.5rem;
+	font-weight: 300;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	background: var(--mainColor);
+	border-radius: 50%;
+	transition: transform 0.2s ease;
+	transform-origin: center;
+}
+
+.addItemButton:hover {
+	opacity: 0.8;
+}
+
+.addItemButton:hover .addIcon {
+	line-height: 1;
+	transform-origin: center;
+	transform: rotate(90deg);
+}
+
+.addItemButton:active {
+	transform: translateY(0px);
+}

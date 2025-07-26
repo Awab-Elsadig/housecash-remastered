@@ -1,0 +1,119 @@
+/* Responsive skeleton layouts */
+.dashboard-skeleton {
+	display: flex;
+	padding: 2rem;
+	gap: 1rem;
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+.dashboard-skeleton > div {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.dashboard-skeleton .left-column {
+	flex: 1;
+	min-width: 15rem;
+}
+
+.dashboard-skeleton .middle-column {
+	flex: 1.5;
+	min-width: 30rem;
+}
+
+.dashboard-skeleton .right-column {
+	flex: 1;
+	min-width: 15rem;
+}
+
+.expenses-skeleton {
+	display: grid;
+	grid-template-columns: 1fr 20rem;
+	gap: 2rem;
+	align-items: start;
+	flex: 1;
+	padding: 2rem;
+	overflow-y: auto;
+}
+
+.payment-history-skeleton {
+	display: grid;
+	grid-template-columns: 1fr 300px;
+	gap: 2rem;
+	align-items: start;
+	flex: 1;
+	padding: 2rem;
+	overflow-y: auto;
+}
+
+.settings-skeleton {
+	padding: 2rem;
+}
+
+.settings-skeleton .settings-grid {
+	display: grid;
+	grid-template-columns: 250px 1fr;
+	gap: 2rem;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+	.dashboard-skeleton {
+		flex-direction: column !important;
+		padding: 1rem !important;
+	}
+
+	.dashboard-skeleton .left-column,
+	.dashboard-skeleton .middle-column,
+	.dashboard-skeleton .right-column {
+		min-width: unset !important;
+	}
+
+	.expenses-skeleton {
+		grid-template-columns: 1fr !important;
+		padding: 1rem !important;
+		gap: 1rem !important;
+	}
+
+	.payment-history-skeleton {
+		grid-template-columns: 1fr !important;
+		padding: 1rem !important;
+		gap: 1rem !important;
+	}
+
+	.settings-skeleton {
+		padding: 1rem !important;
+	}
+
+	.settings-skeleton .settings-grid {
+		grid-template-columns: 1fr !important;
+		gap: 1rem !important;
+	}
+}
+
+/* Tablet responsive styles */
+@media (max-width: 1024px) {
+	.dashboard-skeleton .middle-column {
+		min-width: 25rem;
+	}
+
+	.expenses-skeleton {
+		grid-template-columns: 1fr 15rem;
+	}
+
+	.payment-history-skeleton {
+		grid-template-columns: 1fr 250px;
+	}
+}
+
+/* Small mobile screens */
+@media (max-width: 480px) {
+	.dashboard-skeleton,
+	.expenses-skeleton,
+	.payment-history-skeleton,
+	.settings-skeleton {
+		padding: 0.5rem !important;
+	}
+}

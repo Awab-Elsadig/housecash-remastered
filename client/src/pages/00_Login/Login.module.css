@@ -1,0 +1,182 @@
+/* Login Page Styles - Subtle design matching expenses page */
+.login {
+	height: 100dvh;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background: var(--mainBackground, #1a1a2e);
+	padding: 20px;
+	box-sizing: border-box;
+}
+
+.login h1 {
+	color: var(--textColor, #fff);
+	font-size: 2.5rem;
+	font-weight: 600;
+	margin-bottom: 2rem;
+	text-align: center;
+	letter-spacing: 1px;
+}
+
+.formLayout {
+	background: var(--glassBackground, rgba(255, 255, 255, 0.05));
+	border: 1px solid var(--glassStroke, rgba(255, 255, 255, 0.1));
+	backdrop-filter: blur(10px);
+	border-radius: 1rem;
+	padding: 2rem;
+	width: 100%;
+	max-width: 400px;
+	margin: 0 auto;
+}
+
+.formLayout h2 {
+	color: var(--textColor, #fff);
+	font-size: 1.5rem;
+	margin-bottom: 1.5rem;
+	text-align: center;
+	font-weight: 600;
+}
+
+.inputGroup {
+	margin-bottom: 1.5rem;
+}
+
+.inputGroup label {
+	display: block;
+	margin-bottom: 0.5rem;
+	color: var(--textColor, #fff);
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.inputGroup input {
+	width: 100%;
+	padding: 0.75rem 1rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--borderColor, rgba(255, 255, 255, 0.2));
+	border-radius: 0.5rem;
+	color: var(--textColor, #fff);
+	font-size: 0.875rem;
+	transition: all 0.2s ease;
+	box-sizing: border-box;
+}
+
+.inputGroup input::placeholder {
+	color: var(--textSecondary, rgba(255, 255, 255, 0.6));
+}
+
+.inputGroup input:focus {
+	outline: none;
+	border-color: var(--mainColor, #4f46e5);
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.passwordWrapper {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.passwordWrapper input {
+	padding-right: 45px;
+}
+
+.eyeIcon {
+	position: absolute;
+	right: 12px;
+	cursor: pointer;
+	color: var(--textSecondary, rgba(255, 255, 255, 0.6));
+	font-size: 1.1rem;
+	transition: color 0.2s ease;
+}
+
+.eyeIcon:hover {
+	color: var(--textColor, #fff);
+}
+
+.errorMessage {
+	display: block;
+	color: var(--errorColor, #ef4444);
+	font-size: 0.8rem;
+	margin-top: 0.5rem;
+	font-weight: 500;
+}
+
+.links {
+	display: flex;
+	justify-content: space-between;
+	margin: 1.5rem 0;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.links a {
+	color: var(--mainColor, #4f46e5);
+	text-decoration: none;
+	font-size: 0.85rem;
+	font-weight: 500;
+	transition: color 0.2s ease;
+}
+
+.links a:hover {
+	color: var(--textColor, #fff);
+	text-decoration: underline;
+}
+
+.connectionError {
+	color: var(--errorColor, #ef4444);
+	text-align: center;
+	margin: 1rem 0;
+	font-size: 0.85rem;
+	font-weight: 500;
+	background: rgba(239, 68, 68, 0.1);
+	padding: 10px;
+	border-radius: 0.5rem;
+	border-left: 3px solid var(--errorColor, #ef4444);
+}
+
+.navigation button {
+	width: 100%;
+	background: var(--mainColor, #4f46e5);
+	color: white;
+	border: none;
+	padding: 0.75rem 1rem;
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	margin-top: 1rem;
+}
+
+.navigation button:hover:not(:disabled) {
+	background: var(--mainColorHover, #4338ca);
+	transform: translateY(-1px);
+}
+
+.navigation button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.navigation button:active {
+	transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.login {
+		padding: 2rem;
+	}
+
+	.login h1 {
+		font-size: 2rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.formLayout {
+		padding: 1.5rem;
+	}
+}

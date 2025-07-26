@@ -1,0 +1,125 @@
+/* Mobile Close Button */
+.mobileCloseButton {
+	display: none;
+	position: absolute;
+	top: 1rem;
+	right: 1rem;
+	background: transparent;
+	border: none;
+	font-size: 2rem;
+	cursor: pointer;
+	z-index: 1002;
+}
+
+.sidebar {
+	flex-shrink: 0;
+	background: rgba(var(--darkColor-rgb), 0.7);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: var(--glassBlur);
+	width: 20rem;
+	display: flex;
+	flex-direction: column;
+	padding: 1rem 2rem;
+	position: relative;
+	height: 100vh;
+	transition: transform 0.3s ease;
+	z-index: 20;
+}
+
+/* Logo Section */
+.logoSection {
+	padding: 2rem 0;
+	border-bottom: 1px solid var(--glassStroke);
+	margin-bottom: 2rem;
+}
+
+.nameLogo {
+	width: 8rem;
+	margin-inline: auto;
+	display: block;
+}
+
+.logo {
+	width: 2rem;
+	height: 2rem;
+	margin-right: 0.75rem;
+}
+
+.title {
+	font-size: 1.25rem;
+	font-weight: bold;
+	margin: 0;
+	color: var(--text-primary);
+}
+
+/* Navigation */
+.navLinks {
+	display: flex;
+	flex-direction: column;
+	gap: 1.4rem;
+}
+
+.navLink {
+	padding: 0.5rem 1rem;
+	border: 1px solid var(--glassStroke);
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	border-radius: 0.5rem;
+	transition: all 0.3s ease;
+	position: relative;
+}
+
+.navLink:hover {
+	background: var(--glassStroke);
+	transform: translateX(0.25rem);
+}
+
+.navLink.active {
+	background: var(--glassBackground);
+	color: white;
+}
+
+.icon {
+	font-size: 1.25rem;
+	flex-shrink: 0;
+}
+
+/* Add Item Button Container */
+.addItemButtonContainer {
+	margin-top: auto;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+	.mobileCloseButton {
+		display: grid;
+	}
+
+	.sidebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		z-index: 1000;
+		transform: translateX(-100%);
+		width: 280px;
+		box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+	}
+
+	.sidebar .navLink {
+		background: var(--glassStroke);
+	}
+
+	.sidebar .navLink.active {
+		background: var(--mainColor);
+	}
+
+	.sidebar.mobileOpen {
+		transform: translateX(0);
+	}
+
+	/* Hide AddItem button in sidebar on mobile */
+	.addItemButtonContainer {
+		display: none;
+	}
+}

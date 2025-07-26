@@ -1,0 +1,342 @@
+/* AddItem.module.css */
+.modalBG {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	backdrop-filter: blur(4px);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1500;
+	animation: fadeIn 0.2s ease-out;
+}
+
+.addItem {
+	background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 1rem;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+	max-width: 500px;
+	width: 90%;
+	max-height: 90vh;
+	overflow-y: auto;
+	animation: slideIn 0.3s ease-out;
+}
+
+.top {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem 1.5rem 1rem 1.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.top h1 {
+	margin: 0;
+	color: #ffffff;
+	font-size: 1.5rem;
+	font-weight: 600;
+}
+
+.closeBtn {
+	font-size: 1.5rem;
+	color: #94a3b8;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	padding: 0.25rem;
+	border-radius: 0.25rem;
+}
+
+.closeBtn:hover {
+	color: #ffffff;
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.addForm {
+	padding: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.inputGroup {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.inputGroup label {
+	color: #e2e8f0;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.inputGroup input,
+.inputGroup select {
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 0.5rem;
+	color: #ffffff;
+	font-size: 1rem;
+	transition: all 0.2s ease;
+}
+
+.inputGroup input:focus,
+.inputGroup select:focus {
+	outline: none;
+	border-color: var(--mainColor);
+	box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.inputGroup input::placeholder {
+	color: #64748b;
+}
+
+.participantsHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.5rem;
+}
+
+.selectAll {
+	background: rgba(124, 58, 237, 0.1);
+	border: 1px solid rgba(124, 58, 237, 0.3);
+	border-radius: 0.375rem;
+	color: var(--mainColor);
+	padding: 0.375rem 0.75rem;
+	font-size: 0.8rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.selectAll:hover {
+	background: rgba(124, 58, 237, 0.2);
+	border-color: rgba(124, 58, 237, 0.5);
+}
+
+.members {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.selectedMember,
+.unselectedMember {
+	padding: 0.5rem 1rem;
+	border-radius: 0.5rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	border: none;
+	font-size: 0.9rem;
+}
+
+.selectedMember {
+	background: linear-gradient(135deg, var(--mainColor), #8b5cf6);
+	color: white;
+	box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.selectedMember:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.unselectedMember {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #e2e8f0;
+}
+
+.unselectedMember:hover {
+	background: rgba(255, 255, 255, 0.1);
+	border-color: rgba(255, 255, 255, 0.2);
+	transform: translateY(-1px);
+}
+
+.payerList {
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+	background-position: right 0.5rem center;
+	background-repeat: no-repeat;
+	background-size: 1.5em 1.5em;
+	padding-right: 2.5rem;
+}
+
+.submitButton {
+	padding: 0.875rem 1.5rem;
+	background: linear-gradient(135deg, var(--mainColor), #8b5cf6);
+	border: none;
+	border-radius: 0.5rem;
+	color: white;
+	font-weight: 600;
+	font-size: 1rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	margin-top: 1rem;
+}
+
+.submitButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(124, 58, 237, 0.3);
+}
+
+.submitButton:active {
+	transform: translateY(0);
+}
+
+.submitButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.submitButton:disabled:hover {
+	transform: none;
+	box-shadow: none;
+}
+
+.popup {
+	position: fixed;
+	top: 2rem;
+	right: 2rem;
+	background: linear-gradient(135deg, #10b981, #059669);
+	color: white;
+	padding: 1rem 1.5rem;
+	border-radius: 0.5rem;
+	box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+	z-index: 1600;
+	animation: slideInRight 0.3s ease-out;
+	font-weight: 500;
+}
+
+/* Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes slideIn {
+	from {
+		opacity: 0;
+		transform: translateY(-20px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes slideInRight {
+	from {
+		opacity: 0;
+		transform: translateX(100%);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+/* Single Mobile Responsive Breakpoint - 768px */
+@media (max-width: 768px) {
+	.addItem {
+		margin: 1rem;
+		max-width: none;
+		width: auto;
+	}
+
+	.top {
+		padding: 1rem;
+	}
+
+	.top h1 {
+		font-size: 1.25rem;
+	}
+
+	.addForm {
+		padding: 1rem;
+		gap: 1.25rem;
+	}
+
+	.members {
+		gap: 0.5rem;
+	}
+
+	.selectedMember,
+	.unselectedMember {
+		padding: 0.375rem 0.75rem;
+		font-size: 0.85rem;
+	}
+
+	.popup {
+		top: 1rem;
+		right: 1rem;
+		left: 1rem;
+		text-align: center;
+	}
+
+	.participantsHeader {
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: stretch;
+	}
+
+	.selectAll {
+		align-self: center;
+	}
+
+	.members {
+		justify-content: center;
+	}
+}
+
+/* Loading state */
+.submitButton:disabled {
+	background: linear-gradient(135deg, #6b7280, #9ca3af);
+}
+
+/* Error states */
+.inputGroup input:invalid {
+	border-color: #ef4444;
+	box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Focus within for better accessibility */
+.inputGroup:focus-within label {
+	color: var(--mainColor);
+}
+
+/* Smooth scrolling for the modal */
+.addItem {
+	scrollbar-width: thin;
+	scrollbar-color: var(--mainColor) transparent;
+}
+
+.addItem::-webkit-scrollbar {
+	width: 6px;
+}
+
+.addItem::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.addItem::-webkit-scrollbar-thumb {
+	background: var(--mainColor);
+	border-radius: 3px;
+}
+
+.addItem::-webkit-scrollbar-thumb:hover {
+	background: #8b5cf6;
+}

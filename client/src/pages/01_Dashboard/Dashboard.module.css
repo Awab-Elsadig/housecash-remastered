@@ -1,0 +1,459 @@
+.dashboard {
+	display: flex;
+	padding: 2rem;
+	overflow-y: auto;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+
+.top {
+	display: flex;
+	justify-content: space-between;
+	width: 100%;
+	padding: 2rem;
+}
+
+.profile {
+	display: flex;
+	gap: 1rem;
+}
+
+.greeting {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+}
+
+.greeting span {
+	line-height: 1.2;
+}
+
+.profile img {
+	height: 3rem;
+	border-radius: 50%;
+}
+
+.left,
+.right {
+	flex: 1;
+	min-width: min(15rem, 100%);
+}
+
+.left {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* Payment Actions */
+.readyToCollect,
+.shouldCollect,
+.shouldPay {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	padding: 1rem;
+	border: 0.1rem solid var(--glassStroke);
+	border-radius: 0.75rem;
+}
+
+.readyToCollect {
+	background: var(--glassBackground), rgba(var(--goodColor-rgb), 0.2);
+}
+
+.shouldCollect {
+	background: var(--glassBackground), rgba(var(--mainColor-rgb), 0.2);
+}
+
+.shouldPay {
+	background: var(--glassBackground), rgba(var(--badColor-rgb), 0.2);
+}
+
+.readyToCollect button {
+	background: var(--goodColor);
+}
+
+.shouldCollect button {
+	background: var(--mainColor);
+}
+
+.shouldPay button {
+	background: var(--badColor);
+}
+
+/* Payment Action Buttons */
+.paymentButton {
+	color: #fff;
+	border: none;
+	padding: 0.5rem 1rem;
+	border-radius: 0.75rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-weight: 600;
+	transition: all 0.3s ease;
+}
+
+.paymentButton:hover {
+	opacity: 0.8;
+	transform: translateY(-2px);
+}
+
+.paymentButton:active {
+	transform: translateY(0px);
+}
+
+.paymentButton.activeButton {
+	box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+}
+
+.paymentButton .icon {
+	font-size: 1.2rem;
+	transition: transform 0.2s ease;
+}
+
+.paymentButton.activeButton .icon {
+	transform: scale(1.1);
+}
+
+.paymentSpan {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.price {
+	font-size: 2.5rem;
+	font-weight: 700;
+	line-height: 1;
+}
+
+/* Middle Section */
+.middle {
+	flex: 1.5;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	background: var(--glassBackground);
+	border: 0.1rem solid var(--glassStroke);
+	backdrop-filter: var(--glassBlur);
+	border-radius: 0.75rem;
+	padding: 1rem;
+	overflow-y: auto;
+	position: relative;
+	min-width: min(30rem, 100%);
+}
+
+.middleContent {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	animation: slideInFade 0.5s ease-out;
+}
+
+.middleContent.collectSection span.share {
+	color: var(--goodColor);
+}
+
+.middleContent.notifySection span.share {
+	color: var(--mainColor);
+}
+
+.middleContent.paySection span.share {
+	color: var(--badColor);
+}
+
+@keyframes slideInFade {
+	0% {
+		opacity: 0;
+		transform: translateX(20px) scale(0.98);
+	}
+	50% {
+		opacity: 0.5;
+		transform: translateX(10px) scale(0.99);
+	}
+	100% {
+		opacity: 1;
+		transform: translateX(0) scale(1);
+	}
+}
+
+.title {
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: white;
+	margin-bottom: 1rem;
+}
+
+.member {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.memberTop {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.actionButton {
+	border: 0.1rem solid var(--glassStroke);
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	font-weight: 600;
+	color: #fff;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.actionButton:hover {
+	opacity: 0.8;
+}
+
+.actionButton .icon {
+	font-size: 1rem;
+}
+
+.collectButton {
+	background: var(--glassBackground), rgba(var(--goodColor-rgb), 0.6);
+}
+
+.notifyButton {
+	background: var(--glassBackground), rgba(var(--mainColor-rgb), 0.6);
+}
+
+.payButton {
+	background: var(--glassBackground), rgba(var(--badColor-rgb), 0.6);
+}
+
+.items {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.itemName {
+	font-size: 1rem;
+	text-wrap: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 50%;
+}
+
+.itemRight {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.itemPrice {
+	font-size: 0.75rem;
+}
+
+.itemPrice .share {
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.payItemButton {
+	display: grid;
+	place-items: center;
+	border: 0.1rem solid var(--glassStroke);
+	border-radius: 0.25rem;
+	cursor: pointer;
+	font-weight: 600;
+	color: #fff;
+	padding: 0.35rem;
+	background: var(--glassBackground), rgba(var(--badColor-rgb), 0.6);
+}
+
+.payItemButton:hover {
+	opacity: 0.8;
+}
+
+.total {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.5rem;
+	font-weight: 600;
+	font-size: 1.25rem;
+}
+
+.totalPrice {
+	font-size: 1.5rem;
+	font-weight: 700;
+}
+
+.totalPrice.collectPrice {
+	color: var(--goodColor);
+}
+
+.totalPrice.notifyPrice {
+	color: var(--mainColor);
+}
+
+.totalPrice.payPrice {
+	color: var(--badColor);
+}
+
+.divider {
+	border: none;
+	border-top: 0.1rem solid var(--glassStroke);
+}
+
+/* Right Section */
+.right {
+	flex: 1;
+	background: var(--glassBackground);
+	border: 0.1rem solid var(--glassStroke);
+	border-radius: 0.75rem;
+	padding: 1rem;
+	color: white;
+	overflow-y: auto;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+	.dashboard {
+		padding: 1rem;
+		padding-bottom: 6rem;
+	}
+
+	.top {
+		padding: 1rem;
+		flex-direction: column;
+		gap: 1rem;
+		text-align: center;
+	}
+
+	.profile {
+		justify-content: center;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.greeting {
+		align-items: center;
+	}
+
+	.greeting span {
+		font-size: 0.9rem;
+	}
+
+	.profile img {
+		height: 2.5rem;
+	}
+
+	.dashboard > main {
+		flex-direction: column;
+		gap: 1rem;
+		overflow-y: auto;
+	}
+
+	/* Mobile Payment Actions */
+	.readyToCollect,
+	.shouldCollect,
+	.shouldPay {
+		gap: 1rem;
+		padding: 0.75rem;
+	}
+
+	.paymentButton {
+		padding: 0.5rem;
+		font-size: 0.9rem;
+		gap: 0.5rem;
+	}
+
+	.paymentButton .icon {
+		font-size: 1rem;
+	}
+
+	.paymentSpan p {
+		margin: 0;
+		font-size: 0.9rem;
+	}
+
+	.price {
+		font-size: 2rem;
+	}
+
+	/* Mobile Middle Section */
+	.middle {
+		padding: 0.75rem;
+	}
+
+	.title {
+		font-size: 1.1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.member {
+		gap: 0.75rem;
+	}
+
+	.memberTop {
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: stretch;
+	}
+
+	.memberTop h3 {
+		font-size: 1rem;
+		margin: 0;
+		text-align: center;
+	}
+
+	.actionButton {
+		padding: 0.5rem;
+		font-size: 0.85rem;
+		justify-content: center;
+	}
+
+	.item {
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: stretch;
+		padding: 0.5rem;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 0.25rem;
+	}
+
+	.itemName {
+		max-width: 100%;
+		text-align: center;
+		font-weight: 600;
+	}
+
+	.itemRight {
+		justify-content: space-between;
+		width: 100%;
+	}
+
+	.itemPrice {
+		font-size: 0.8rem;
+	}
+
+	.total {
+		flex-direction: column;
+		gap: 0.25rem;
+		text-align: center;
+		font-size: 1rem;
+	}
+
+	.totalPrice {
+		font-size: 1.3rem;
+	}
+}

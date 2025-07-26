@@ -1,0 +1,745 @@
+/* Main Container */
+.expenses {
+	display: flex;
+	gap: 2rem;
+	flex: 1;
+	flex-wrap: wrap;
+	padding: 2rem;
+	overflow-y: auto;
+}
+
+/* Main Expenses Section */
+.mainExpenses {
+	flex: 2;
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: blur(10px);
+	border-radius: 1rem;
+	padding: 1rem;
+	overflow-x: auto;
+	min-width: min(50rem, 100%);
+}
+
+.mainExpensesTop {
+	border-bottom: 1px solid var(--glassStroke);
+	margin-bottom: 1rem;
+}
+
+.mainExpensesTop h2 {
+	margin-bottom: 1.5rem;
+	font-size: 1.5rem;
+	font-weight: 600;
+}
+
+/* Filters Container */
+.filtersContainer {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.searchContainer {
+	width: 100%;
+	position: relative;
+}
+
+.searchIcon {
+	position: absolute;
+	left: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #fff;
+	font-size: 18px;
+	pointer-events: none;
+}
+
+.searchInput {
+	width: 100%;
+	padding: 0.75rem 1rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--borderColor);
+	border-radius: 0.5rem;
+	color: var(--textColor);
+	font-size: 0.875rem;
+	transition: all 0.2s ease;
+	padding-left: 3rem;
+}
+
+.searchInput::placeholder {
+	color: var(--textSecondary);
+}
+
+.searchInput:focus {
+	outline: none;
+	border-color: var(--mainColor);
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.filters {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.primaryFilters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.filterButton {
+	padding: 0.5rem 1rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--borderColor);
+	border-radius: 0.5rem;
+	color: var(--textColor);
+	font-size: 0.875rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.filterButton:hover {
+	background: var(--hoverColor);
+	border-color: var(--mainColor);
+}
+
+.filterButton.active {
+	background: var(--mainColor);
+	border-color: var(--mainColor);
+	color: white;
+}
+
+.secondaryFilters {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--borderColor);
+	border-radius: 0.5rem;
+	padding: 0;
+}
+
+.secondaryFilters summary {
+	padding: 0.75rem 1rem;
+	cursor: pointer;
+	font-weight: 500;
+	list-style: none;
+	transition: background 0.2s ease;
+}
+
+.secondaryFilters summary:hover {
+	background: var(--hoverColor);
+}
+
+.secondaryFilters summary::-webkit-details-marker {
+	display: none;
+}
+
+.secondaryFilters summary::after {
+	content: "+";
+	float: right;
+	font-weight: bold;
+}
+
+.secondaryFilters[open] summary::after {
+	content: "-";
+}
+
+.memberFilters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	padding: 1rem;
+	border-top: 1px solid var(--borderColor);
+}
+
+.memberFilter {
+	padding: 0.375rem 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--borderColor);
+	border-radius: 0.375rem;
+	color: var(--textColor);
+	font-size: 0.75rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.memberFilter:hover {
+	background: var(--hoverColor);
+}
+
+.memberFilter.active {
+	background: var(--mainColor);
+	border-color: var(--mainColor);
+}
+
+/* Expenses List */
+
+.mainExpensesList {
+	overflow-x: auto;
+}
+
+.expenseHeader {
+	width: 100%;
+	display: grid;
+	grid-template-columns: 60px 1fr 120px 100px 80px 40px;
+	gap: 1rem;
+	padding: 1rem 1.5rem;
+	background: rgba(255, 255, 255, 0.05);
+	border-bottom: 1px solid var(--borderColor);
+	font-weight: 600;
+	font-size: 0.875rem;
+	color: var(--textSecondary);
+}
+
+.list {
+	max-height: 500px;
+}
+
+.expenseItem {
+	border-bottom: 1px solid var(--borderColor);
+}
+
+.expenseRow {
+	display: grid;
+	grid-template-columns: 60px 1fr 120px 100px 80px 40px;
+	gap: 1rem;
+	padding: 1rem 1.5rem;
+	cursor: pointer;
+	transition: background 0.2s ease;
+	align-items: center;
+}
+
+.expenseRow:hover {
+	background: var(--hoverColor);
+}
+
+.expensePayer {
+	display: flex;
+	align-items: center;
+}
+
+.payerAvatar {
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 50%;
+	background: var(--mainColor);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	font-size: 0.875rem;
+	color: white;
+}
+
+.expenseName {
+	font-weight: 500;
+	color: var(--textColor);
+}
+
+.expenseAmount {
+	font-weight: 600;
+	text-align: right;
+}
+
+.expenseAmount sub {
+	font-size: 0.75rem;
+	color: var(--textSecondary);
+	font-weight: 400;
+}
+
+.owedAmount {
+	color: var(--goodColor);
+}
+
+.oweAmount {
+	color: var(--warningColor);
+}
+
+.expenseDate {
+	font-size: 0.875rem;
+	color: var(--textSecondary);
+}
+
+.expenseActions {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.edit,
+.delete {
+	padding: 0.375rem;
+	background: transparent;
+	border: 1px solid var(--borderColor);
+	border-radius: 0.375rem;
+	color: var(--textColor);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.edit:hover {
+	background: var(--mainColor);
+	border-color: var(--mainColor);
+}
+
+.delete:hover {
+	background: var(--badColor);
+	border-color: var(--badColor);
+}
+
+.icon {
+	width: 1rem;
+	height: 1rem;
+}
+
+.expenseExpand {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expandIndicator {
+	font-weight: bold;
+	font-size: 1.25rem;
+	color: var(--textSecondary);
+}
+
+/* Expanded Content */
+.expandedContent {
+	padding: 1.5rem;
+	background: rgba(0, 0, 0, 0.2);
+	border-top: 1px solid var(--borderColor);
+}
+
+.memberAvatars {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+	flex-wrap: wrap;
+}
+
+.memberAvatar {
+	width: 2rem;
+	height: 2rem;
+	border-radius: 50%;
+	background: var(--textSecondary);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	font-size: 0.75rem;
+	color: white;
+	transition: all 0.2s ease;
+}
+
+.memberAvatar.small {
+	width: 1.5rem;
+	height: 1.5rem;
+	font-size: 0.625rem;
+}
+
+.memberAvatar.paidMember {
+	background: var(--goodColor);
+}
+
+.memberAvatar.unpaidMember {
+	background: var(--warningColor);
+}
+
+.memberAvatar.currentUser {
+	border: 2px solid var(--mainColor);
+}
+
+.paymentProgressSection {
+	margin-bottom: 1rem;
+}
+
+.progressInfo {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.progressInfo span {
+	font-size: 0.875rem;
+	color: var(--textSecondary);
+}
+
+.paymentProgress {
+	width: 100%;
+	height: 0.5rem;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 0.25rem;
+}
+
+.progressBar {
+	height: 100%;
+	transition: width 0.3s ease;
+	border-radius: 0.25rem;
+}
+
+.detailedMemberList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.memberDetail {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 0.5rem;
+}
+
+.memberInfo {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.memberName {
+	font-weight: 500;
+	color: var(--textColor);
+}
+
+.memberStatus {
+	display: flex;
+	align-items: center;
+}
+
+.payerBadge,
+.paidBadge,
+.unpaidBadge {
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.375rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.payerBadge {
+	background: var(--mainColor);
+	color: white;
+}
+
+.paidBadge {
+	background: var(--goodColor);
+	color: white;
+}
+
+.unpaidBadge {
+	background: var(--warningColor);
+	color: white;
+}
+
+.memberPaySection {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 0.5rem;
+	margin-top: 1rem;
+}
+
+.paymentInfo {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.paymentDetail {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.paymentLabel {
+	font-size: 0.875rem;
+	color: var(--textSecondary);
+}
+
+.paymentAmount {
+	font-weight: 600;
+	color: var(--textColor);
+}
+
+.paymentStatus {
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+
+.paymentStatus.paid {
+	color: var(--goodColor);
+}
+
+.paymentStatus.unpaid {
+	color: var(--warningColor);
+}
+
+.payButton {
+	padding: 0.75rem 1.5rem;
+	background: var(--goodColor);
+	border: none;
+	border-radius: 0.5rem;
+	color: white;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.payButton:hover:not(:disabled) {
+	background: #059669;
+	transform: translateY(-1px);
+}
+
+.payButton:disabled {
+	background: var(--textSecondary);
+	cursor: not-allowed;
+}
+
+/* Statistics Section */
+.mainStatistics {
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: var(--glassBlur);
+	border-radius: 1rem;
+	flex: 1 0 auto;
+}
+
+.statisticsHeader {
+	padding: 1.5rem;
+	border-bottom: 1px solid var(--borderColor);
+}
+
+.statisticsHeader h2 {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 600;
+}
+
+.statisticsContent {
+	padding: 0;
+}
+
+.paymentStats {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.statItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.statItem:last-child {
+	border-bottom: none;
+}
+
+.statLabel {
+	font-size: 0.875rem;
+	color: var(--textSecondary);
+}
+
+.statPrice {
+	font-weight: 600;
+	color: var(--textColor);
+}
+
+.addItemSection {
+	border-top: 1px solid var(--borderColor);
+	padding: 1rem;
+}
+
+.addItemButton {
+	width: 100%;
+	padding: 1rem;
+	background: var(--mainColor);
+	border: none;
+	border-radius: 0.5rem;
+	color: white;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.addItemButton:hover {
+	background: #5b21b6;
+	transform: translateY(-1px);
+}
+
+.addIcon {
+	font-size: 1.25rem;
+	font-weight: bold;
+}
+
+/* Single Mobile Responsive Breakpoint - 768px */
+@media (max-width: 768px) {
+	.expenses {
+		grid-template-columns: 1fr;
+		padding: 1rem;
+		gap: 1.5rem;
+		padding-bottom: 6rem;
+	}
+
+	.mainStatistics {
+		order: -1;
+	}
+
+	.top {
+		flex-direction: column;
+		gap: 1rem;
+		text-align: center;
+	}
+
+	.top p {
+		font-size: 1.25rem;
+	}
+
+	.expenseHeader {
+		display: none;
+	}
+
+	.expenseRow {
+		grid-template-columns: 1fr;
+		gap: 0.75rem;
+		padding: 1rem;
+	}
+
+	.expenseRow > span {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.expenseRow > span::before {
+		content: attr(data-label);
+		font-weight: 600;
+		color: var(--textSecondary);
+		font-size: 0.875rem;
+	}
+
+	.expensePayer::before {
+		content: "Payer: ";
+	}
+
+	.expenseName::before {
+		content: "Expense: ";
+	}
+
+	.expenseAmount::before {
+		content: "Amount: ";
+	}
+
+	.expenseDate::before {
+		content: "Date: ";
+	}
+
+	.expenseActions::before {
+		content: "Actions: ";
+	}
+
+	.primaryFilters {
+		flex-direction: column;
+	}
+
+	.filterButton {
+		justify-content: center;
+	}
+
+	.memberFilters {
+		flex-direction: column;
+	}
+
+	.memberDetail {
+		flex-direction: column;
+		gap: 0.5rem;
+		text-align: center;
+	}
+
+	.memberPaySection {
+		flex-direction: column;
+		gap: 1rem;
+		text-align: center;
+	}
+
+	.expandedContent {
+		padding: 1rem;
+	}
+
+	.memberAvatars {
+		justify-content: center;
+	}
+
+	.paymentStats {
+		gap: 0.75rem;
+	}
+
+	.statItem {
+		flex-direction: column;
+		gap: 0.25rem;
+		text-align: center;
+	}
+}
+
+/* Scrollbar Styling */
+.list::-webkit-scrollbar {
+	width: 6px;
+}
+
+.list::-webkit-scrollbar-track {
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 3px;
+}
+
+.list::-webkit-scrollbar-thumb {
+	background: var(--mainColor);
+	border-radius: 3px;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+	background: #5b21b6;
+}
+
+/* Animation for expanding items */
+.expandedContent {
+	animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Loading state (for future use) */
+.loading {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 2rem;
+}
+
+/* Error state (for future use) */
+.error {
+	padding: 2rem;
+	text-align: center;
+	color: var(--badColor);
+	border-radius: 0.5rem;
+	margin: 1rem;
+}

@@ -1,0 +1,162 @@
+@import url("https://fonts.googleapis.com/css2?family=Alexandria:wght@100..900&display=swap");
+
+*,
+*::after,
+*::before {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	color: inherit;
+	list-style: none;
+	text-decoration: none;
+	font-family: inherit;
+}
+
+:root {
+	--mainColor-rgb: 94, 114, 228;
+	--mainColor: #5e72e4;
+	--darkColor-rgb: 35, 62, 99;
+	--darkColor: #233e63;
+	--goodColor-rgb: 65, 231, 65;
+	--goodColor: #41e741;
+	--badColor-rgb: 232, 48, 48;
+	--badColor: #e83030;
+
+	--glassBackground: linear-gradient(160deg, rgba(255, 255, 255, 0.15) 11.2%, rgba(255, 255, 255, 0.05) 83.25%);
+	--glassStroke: rgba(255, 255, 255, 0.2);
+	--glassBlur: blur(0.5rem);
+
+	/* Header variables */
+	--headerBackground: var(--glassBackground);
+	--headerShadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+	/* Text colors */
+	--text-primary: #ffffff;
+	--textColor: #ffffff;
+	--textSecondary: rgba(255, 255, 255, 0.7);
+	--borderColor: rgba(255, 255, 255, 0.1);
+}
+
+body {
+	background: linear-gradient(#073650, #192432);
+	background-repeat: no-repeat;
+	color: #fff;
+	overflow-x: hidden;
+	overflow-y: hidden;
+	font-family: Alexandria;
+}
+
+.app {
+	display: flex;
+	height: 100vh;
+}
+
+.app > .right {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	height: 100dvh;
+	overflow-x: auto;
+}
+
+/* Input Styles */
+input {
+	border: none;
+	outline: none;
+	color: #111;
+	transition: box-shadow 0.5s;
+}
+
+input::placeholder {
+	font-weight: 600;
+	opacity: 0.6;
+}
+
+input:focus {
+	box-shadow: 0 0 0 0.25rem inset #5e72e493;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+	box-shadow: 0 0 0 30px #5e72e47c inset;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+	width: 0.5rem;
+}
+
+::-webkit-scrollbar-thumb {
+	background: rgba(var(--mainColor-rgb), 0.5);
+	border-radius: 0.25rem;
+}
+
+::-webkit-scrollbar-track {
+	background: rgba(var(--mainColor-rgb), 0.1);
+	border-radius: 0.25rem;
+}
+
+/* Selection Styles */
+::selection {
+	color: var(--mainColor);
+	background: #e7e7e7;
+}
+
+/* Global Skeleton Animation */
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 0.6;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+/* Loading States */
+.loading {
+	pointer-events: none;
+	user-select: none;
+}
+
+.skeleton-shimmer {
+	background: linear-gradient(
+		90deg,
+		rgba(var(--mainColor-rgb), 0.1) 25%,
+		rgba(var(--mainColor-rgb), 0.2) 50%,
+		rgba(var(--mainColor-rgb), 0.1) 75%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 1.5s infinite;
+}
+
+/* Mobile Add Button */
+.mobile-add-button {
+	display: none; /* Hidden on desktop */
+}
+
+@media (max-width: 768px) {
+	.mobile-add-button {
+		display: grid; /* Visible on mobile */
+	}
+
+	.mobile-add-button {
+		position: absolute;
+		bottom: 1rem;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 15;
+		width: 60%;
+	}
+}
