@@ -15,14 +15,29 @@ export const useUser = () => {
 		const savedHouseMembers = sessionStorage.getItem("houseMembers");
 		const savedItems = sessionStorage.getItem("items");
 
-		if (savedUser) {
-			setUser(JSON.parse(savedUser));
+		if (savedUser && savedUser !== "undefined") {
+			try {
+				setUser(JSON.parse(savedUser));
+			} catch (error) {
+				console.error("Error parsing saved user data:", error);
+				sessionStorage.removeItem("user");
+			}
 		}
-		if (savedHouseMembers) {
-			setHouseMembers(JSON.parse(savedHouseMembers));
+		if (savedHouseMembers && savedHouseMembers !== "undefined") {
+			try {
+				setHouseMembers(JSON.parse(savedHouseMembers));
+			} catch (error) {
+				console.error("Error parsing saved house members data:", error);
+				sessionStorage.removeItem("houseMembers");
+			}
 		}
-		if (savedItems) {
-			setItems(JSON.parse(savedItems));
+		if (savedItems && savedItems !== "undefined") {
+			try {
+				setItems(JSON.parse(savedItems));
+			} catch (error) {
+				console.error("Error parsing saved items data:", error);
+				sessionStorage.removeItem("items");
+			}
 		}
 	}, []);
 
@@ -69,9 +84,8 @@ export const useUser = () => {
 		try {
 			const response = await axios.get("/api/items/get-items");
 			if (response.data?.items) {
-				// Filter items by house code on the frontend
-				const houseItems = response.data.items.filter((item) => item.houseCode === user.houseCode);
-				updateItems(houseItems);
+				// Items are already filtered by house code on the backend
+				updateItems(response.data.items);
 			}
 		} catch (error) {
 			console.error("Error fetching items:", error);
@@ -79,7 +93,14 @@ export const useUser = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [user?.houseCode, updateItems]); // Fetch user profile
+	}, [user?.houseCode, updateItems]);
+
+	// Auto-fetch items when user data becomes available
+	useEffect(() => {
+		if (user?.houseCode && user?._id) {
+			fetchItems();
+		}
+	}, [user?.houseCode, user?._id, fetchItems]); // Fetch user profile
 	const fetchUser = useCallback(
 		async (userId) => {
 			setLoading(true);

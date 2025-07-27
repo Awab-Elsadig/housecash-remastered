@@ -148,7 +148,7 @@
 .middleContent {
 	display: flex;
 	flex-direction: column;
-	gap: 1rem;
+	gap: 1.5rem;
 	animation: slideInFade 0.5s ease-out;
 }
 
@@ -180,16 +180,28 @@
 }
 
 .title {
-	font-size: 1.25rem;
-	font-weight: 600;
+	font-size: 1.5rem;
+	font-weight: 700;
 	color: white;
-	margin-bottom: 1rem;
+	margin-bottom: 1.5rem;
+	letter-spacing: -0.02em;
+	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .member {
 	display: flex;
 	flex-direction: column;
-	gap: 1rem;
+	gap: 1.25rem;
+	padding: 1rem;
+	background: rgba(255, 255, 255, 0.03);
+	border: 0.1rem solid rgba(255, 255, 255, 0.08);
+	border-radius: 0.5rem;
+	transition: all 0.2s ease;
+}
+
+.member:hover {
+	background: rgba(255, 255, 255, 0.05);
+	border-color: rgba(255, 255, 255, 0.12);
 }
 
 .memberTop {
@@ -198,20 +210,33 @@
 	align-items: center;
 }
 
+.memberTop h3 {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.95);
+	letter-spacing: -0.01em;
+}
+
 .actionButton {
 	border: 0.1rem solid var(--glassStroke);
-	padding: 0.25rem 0.5rem;
-	border-radius: 0.25rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.375rem;
 	cursor: pointer;
 	font-weight: 600;
+	font-size: 0.875rem;
 	color: #fff;
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
+	transition: all 0.2s ease;
+	backdrop-filter: blur(8px);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .actionButton:hover {
-	opacity: 0.8;
+	opacity: 0.9;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .actionButton .icon {
@@ -233,17 +258,28 @@
 .items {
 	display: flex;
 	flex-direction: column;
-	gap: 0.25rem;
+	gap: 0.5rem;
+	margin-top: 0.25rem;
 }
 
 .item {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	padding: 0.5rem 0.75rem;
+	background: rgba(255, 255, 255, 0.02);
+	border-radius: 0.25rem;
+	transition: all 0.2s ease;
+}
+
+.item:hover {
+	background: rgba(255, 255, 255, 0.04);
 }
 
 .itemName {
-	font-size: 1rem;
+	font-size: 0.95rem;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.9);
 	text-wrap: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -258,12 +294,14 @@
 }
 
 .itemPrice {
-	font-size: 0.75rem;
+	font-size: 0.8rem;
+	color: rgba(255, 255, 255, 0.7);
 }
 
 .itemPrice .share {
-	font-size: 1rem;
-	font-weight: 600;
+	font-size: 1.05rem;
+	font-weight: 700;
+	color: white;
 }
 
 .payItemButton {
@@ -288,12 +326,18 @@
 	align-items: center;
 	gap: 0.5rem;
 	font-weight: 600;
-	font-size: 1.25rem;
+	font-size: 1.125rem;
+	padding: 0.75rem 0;
+	margin-top: 0.5rem;
+	border-top: 0.1rem solid rgba(255, 255, 255, 0.1);
+	color: rgba(255, 255, 255, 0.95);
 }
 
 .totalPrice {
-	font-size: 1.5rem;
-	font-weight: 700;
+	font-size: 1.75rem;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3); /* 0: no offset, 2px: vertical offset, 8px: blur radius */
 }
 
 .totalPrice.collectPrice {
@@ -310,7 +354,8 @@
 
 .divider {
 	border: none;
-	border-top: 0.1rem solid var(--glassStroke);
+	border-top: 0.1rem solid rgba(255, 255, 255, 0.1);
+	margin: 1rem 0;
 }
 
 /* Right Section */

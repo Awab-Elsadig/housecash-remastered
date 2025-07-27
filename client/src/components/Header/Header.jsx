@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { HiMenuAlt3 } from "react-icons/hi";
 import classes from "./Header.module.css";
 import { useUser } from "../../hooks/useUser";
@@ -8,6 +8,7 @@ import NotificationDropdown from "../NotificationDropdown/NotificationDropdown";
 const Header = ({ toggleMobileMenu }) => {
 	const { user } = useUser();
 	const location = useLocation();
+	const navigate = useNavigate();
 
 	// Page information based on current route
 	const getPageInfo = () => {
@@ -65,6 +66,8 @@ const Header = ({ toggleMobileMenu }) => {
 					src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png"
 					alt="Profile"
 					className={classes.profilePic}
+					onClick={() => navigate("/settings")}
+					style={{ cursor: "pointer" }}
 				/>
 			</div>
 		</div>

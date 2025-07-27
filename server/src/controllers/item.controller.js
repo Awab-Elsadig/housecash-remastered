@@ -6,7 +6,21 @@ export const createItem = async (req, res) => {
 	const { name, price, description, members, createdBy, author } = req.body;
 
 	try {
-		const item = await Item.create({ name, price, description, members, createdBy, author });
+		// Get house code from the authenticated user
+		const houseCode = req.user?.houseCode;
+		if (!houseCode) {
+			return res.status(400).json({ error: "User must belong to a house to create items" });
+		}
+
+		const item = await Item.create({
+			name,
+			price,
+			description,
+			members,
+			createdBy,
+			author,
+			houseCode,
+		});
 		return res.status(201).json({ item });
 	} catch (error) {
 		console.error("Error creating item:", error);
@@ -16,7 +30,14 @@ export const createItem = async (req, res) => {
 
 export const getItems = async (req, res) => {
 	try {
-		const items = await Item.find().exec();
+		// Get house code from the authenticated user
+		const houseCode = req.user?.houseCode;
+		if (!houseCode) {
+			return res.status(400).json({ error: "User must belong to a house to view items" });
+		}
+
+		// Filter items by house code
+		const items = await Item.find({ houseCode }).exec();
 		return res.status(200).json({ items });
 	} catch (error) {
 		console.error("Error fetching items:", error);

@@ -57,6 +57,7 @@ body {
 	flex-direction: column;
 	height: 100dvh;
 	overflow-x: auto;
+	overflow-y: hidden;
 }
 
 /* Input Styles */

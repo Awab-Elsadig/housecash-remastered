@@ -23,10 +23,14 @@ const Expenses = () => {
 	const [deleteConfirmation, setDeleteConfirmation] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState(null);
 	const [expandedItem, setExpandedItem] = useState(null);
+	// Pagination state
+	const [itemsPerPage] = useState(50);
+	const [currentPage, setCurrentPage] = useState(1);
+	const [displayedItems, setDisplayedItems] = useState([]);
 
 	useEffect(() => {
-		fetchItems();
-	}, [fetchItems]);
+		// Items will be automatically fetched by useUser hook when user data is available
+	}, []);
 
 	// Fuzzy search function
 	const fuzzySearch = (query, text) => {
@@ -51,6 +55,8 @@ const Expenses = () => {
 	const applyFilters = () => {
 		if (!user?._id) {
 			setFilteredItems([]);
+			setDisplayedItems([]);
+			setCurrentPage(1);
 			return;
 		}
 
@@ -77,10 +83,8 @@ const Expenses = () => {
 				});
 				break;
 			default:
-				// Individual member filter (backward compatibility)
-				filtered = items.filter(
-					(item) => item.author === selectedFilter || item.members.some((member) => member.userID === selectedFilter)
-				);
+				// Individual member filter - filter by payer only
+				filtered = items.filter((item) => item.author === selectedFilter);
 		}
 
 		// Apply search filter
@@ -97,8 +101,38 @@ const Expenses = () => {
 			});
 		}
 
+		// Sort by date (most recent first) - this is the key change
+		filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
 		setFilteredItems(filtered);
+		// Reset pagination when filters change
+		setCurrentPage(1);
+		// Show first page of items (most recent 50)
+		setDisplayedItems(filtered.slice(0, itemsPerPage));
 	};
+
+	// Function to load more items
+	const loadMoreItems = () => {
+		const nextPage = currentPage + 1;
+		const startIndex = currentPage * itemsPerPage;
+		const endIndex = nextPage * itemsPerPage;
+
+		// Append new items to existing displayed items
+		const newItems = filteredItems.slice(startIndex, endIndex);
+		setDisplayedItems((prev) => [...prev, ...newItems]);
+		setCurrentPage(nextPage);
+
+		// Scroll to the newly added content after a brief delay
+		setTimeout(() => {
+			const showMoreButton = document.querySelector(`.${classes.showMoreContainer}`);
+			if (showMoreButton) {
+				showMoreButton.scrollIntoView({ behavior: "smooth", block: "end" });
+			}
+		}, 100);
+	};
+
+	// Check if there are more items to load
+	const hasMoreItems = displayedItems.length < filteredItems.length;
 
 	useEffect(() => {
 		applyFilters();
@@ -311,15 +345,17 @@ const Expenses = () => {
 									<details className={classes.secondaryFilters}>
 										<summary>Members</summary>
 										<div className={classes.memberFilters}>
-											{houseMembers.map((member) => (
-												<button
-													key={member._id}
-													onClick={() => setSelectedFilter(member._id)}
-													className={`${classes.memberFilter} ${selectedFilter === member._id ? classes.active : ""}`}
-												>
-													{member.name.split(" ")[0]}
-												</button>
-											))}
+											{houseMembers
+												.filter((member) => member._id !== user._id) // Exclude current user
+												.map((member) => (
+													<button
+														key={member._id}
+														onClick={() => setSelectedFilter(member._id)}
+														className={`${classes.memberFilter} ${selectedFilter === member._id ? classes.active : ""}`}
+													>
+														{member.name.split(" ")[0]}
+													</button>
+												))}
 										</div>
 									</details>
 								</div>
@@ -335,176 +371,279 @@ const Expenses = () => {
 								<span className={classes.expenseExpand}></span>
 							</div>
 							<div className={classes.list}>
-								{filteredItems.length > 0 ? (
-									[...filteredItems].reverse().map((item) => (
-										<div key={item._id} className={classes.expenseItem}>
-											<div
-												className={classes.expenseRow}
-												onClick={() => setExpandedItem(expandedItem === item._id ? null : item._id)}
-											>
-												<span className={classes.expensePayer}>
-													<div className={classes.payerAvatar} title={getPayerName(item.author)}>
-														{getPayerNickname(item.author)}
-													</div>
-												</span>
-												<span className={classes.expenseName}>{item.name}</span>
-												<span
-													className={`${classes.expenseAmount} ${
-														isUserOwedMoney(item) ? classes.owedAmount : classes.oweAmount
-													}`}
+								{displayedItems.length > 0 ? (
+									<>
+										{displayedItems.map((item) => (
+											<div key={item._id} className={classes.expenseItem}>
+												{/* Desktop Version */}
+												<div
+													className={`${classes.expenseRow} ${classes.desktopOnly}`}
+													onClick={() => setExpandedItem(expandedItem === item._id ? null : item._id)}
 												>
-													${calculateUserShare(item).toFixed(2)}
-													<sub>/${item.price.toFixed(2)}</sub>
-												</span>
-												<span className={classes.expenseDate}>{formatDateTime(item.createdAt)}</span>
-												<span className={classes.expenseActions}>
-													<button
-														className={classes.edit}
-														onClick={(e) => {
-															e.stopPropagation();
-															handleEdit(item);
-														}}
-														disabled={item.author !== user._id}
-														style={{
-															opacity: item.author !== user._id ? 0.5 : 1,
-															cursor: item.author !== user._id ? "not-allowed" : "pointer",
-														}}
+													<span className={classes.expensePayer}>
+														<div className={classes.payerAvatar} title={getPayerName(item.author)}>
+															{getPayerNickname(item.author)}
+														</div>
+													</span>
+													<span className={classes.expenseName}>{item.name}</span>
+													<span
+														className={`${classes.expenseAmount} ${
+															isUserOwedMoney(item) ? classes.owedAmount : classes.oweAmount
+														}`}
 													>
-														<RiPencilFill className={classes.icon} />
-													</button>
-													<button
-														className={classes.delete}
-														onClick={(e) => {
-															e.stopPropagation();
-															handleDelete(item);
-														}}
-														disabled={item.author !== user._id}
-														style={{
-															opacity: item.author !== user._id ? 0.5 : 1,
-															cursor: item.author !== user._id ? "not-allowed" : "pointer",
-														}}
-													>
-														<RiDeleteBin6Line className={classes.icon} />
-													</button>
-												</span>
-												<span className={classes.expenseExpand}>
-													<span className={classes.expandIndicator}>{expandedItem === item._id ? "-" : "+"}</span>
-												</span>
-											</div>
-											{expandedItem === item._id && (
-												<div className={classes.expandedContent}>
-													<div className={classes.memberAvatars}>
-														{item.members.map((member, index) => (
-															<div
-																key={index}
-																className={`${classes.memberAvatar} ${
-																	// Only show payment status colors if user is the author
-																	item.author === user._id
-																		? member.paid
-																			? classes.paidMember
-																			: classes.unpaidMember
-																		: ""
-																} ${member.userID === user._id ? classes.currentUser : ""}`}
-																title={
-																	item.author === user._id
-																		? `${getMemberName(member.userID)} - ${member.paid ? "Paid" : "Unpaid"}`
-																		: getMemberName(member.userID)
-																}
-															>
-																{getMemberUsername(member.userID)}
-															</div>
-														))}
-													</div>
+														${calculateUserShare(item).toFixed(2)}
+														<sub>/${item.price.toFixed(2)}</sub>
+													</span>
+													<span className={classes.expenseDate}>{formatDateTime(item.createdAt)}</span>
+													<span className={classes.expenseActions}>
+														<button
+															className={classes.edit}
+															onClick={(e) => {
+																e.stopPropagation();
+																handleEdit(item);
+															}}
+															disabled={item.author !== user._id}
+															style={{
+																opacity: item.author !== user._id ? 0.5 : 1,
+																cursor: item.author !== user._id ? "not-allowed" : "pointer",
+															}}
+														>
+															<RiPencilFill className={classes.icon} />
+														</button>
+														<button
+															className={classes.delete}
+															onClick={(e) => {
+																e.stopPropagation();
+																handleDelete(item);
+															}}
+															disabled={item.author !== user._id}
+															style={{
+																opacity: item.author !== user._id ? 0.5 : 1,
+																cursor: item.author !== user._id ? "not-allowed" : "pointer",
+															}}
+														>
+															<RiDeleteBin6Line className={classes.icon} />
+														</button>
+													</span>
+													<span className={classes.expenseExpand}>
+														<span className={classes.expandIndicator}>{expandedItem === item._id ? "-" : "+"}</span>
+													</span>
+												</div>
 
-													{/* Show detailed member info and progress only if user is the author */}
-													{item.author === user._id && (
-														<>
-															<div className={classes.paymentProgressSection}>
-																<div className={classes.progressInfo}>
-																	<span>
-																		Payment Progress: {getPaymentProgress(item).paid}/{getPaymentProgress(item).total}
-																	</span>
-																	<div className={classes.paymentProgress}>
-																		<div
-																			className={classes.progressBar}
-																			style={{
-																				width: `${getPaymentProgress(item).percentage}%`,
-																				backgroundColor:
-																					getPaymentProgress(item).percentage === 100
-																						? "var(--goodColor)"
-																						: "var(--mainColor)",
-																			}}
-																		></div>
-																	</div>
-																</div>
+												{/* Mobile Card Version */}
+												<div
+													className={`${classes.mobileCard} ${classes.mobileOnly}`}
+													onClick={() => setExpandedItem(expandedItem === item._id ? null : item._id)}
+												>
+													<div className={classes.cardHeader}>
+														<div className={classes.cardPayer}>
+															<div className={classes.mobilePayerAvatar} title={getPayerName(item.author)}>
+																{getPayerNickname(item.author)}
 															</div>
-															<div className={classes.detailedMemberList}>
-																{item.members.map((member, index) => (
-																	<div key={index} className={classes.memberDetail}>
-																		<div className={classes.memberInfo}>
-																			<div
-																				className={`${classes.memberAvatar} ${classes.small} ${
-																					member.paid ? classes.paidMember : classes.unpaidMember
-																				} ${member.userID === user._id ? classes.currentUser : ""}`}
-																			>
-																				{getMemberUsername(member.userID)}
-																			</div>
-																			<span className={classes.memberName}>
-																				{getMemberName(member.userID)}
-																				{member.userID === user._id && " (You)"}
-																				{member.userID === item.author && " (Payer)"}
-																			</span>
-																		</div>
-																		<div className={classes.memberStatus}>
-																			{member.userID === item.author ? (
-																				<span className={classes.payerBadge}>Payer</span>
-																			) : member.paid ? (
-																				<span className={classes.paidBadge}>✓ Paid</span>
-																			) : (
-																				<span className={classes.unpaidBadge}>Pending</span>
-																			)}
-																		</div>
-																	</div>
-																))}
+															<div className={classes.payerInfo}>
+																<span className={classes.payerName}>{getPayerName(item.author)}</span>
+																<span className={classes.cardDate}>{formatDateTime(item.createdAt)}</span>
 															</div>
-														</>
-													)}
-
-													{/* Show pay section only if user is a member (not author) */}
-													{item.author !== user._id && (
-														<div className={classes.memberPaySection}>
-															<div className={classes.paymentInfo}>
-																<div
-																	className={`${classes.paymentDetail} ${
-																		item.members.find((m) => m.userID === user._id)?.paid ? "paid" : ""
-																	}`}
-																>
-																	<span className={classes.paymentLabel}>Your share:</span>
-																	<span className={classes.paymentAmount}>
-																		${(item.price / item.members.length).toFixed(2)}
-																	</span>
-																</div>
-																<div
-																	className={`${classes.paymentStatus} ${
-																		item.members.find((m) => m.userID === user._id)?.paid ? "paid" : "unpaid"
-																	}`}
-																>
-																	{item.members.find((m) => m.userID === user._id)?.paid ? "Paid" : "Unpaid"}
-																</div>
-															</div>
+														</div>
+														<div className={classes.cardActions}>
 															<button
-																className={classes.payButton}
-																onClick={() => handlePayment(item._id)}
-																disabled={item.members.find((m) => m.userID === user._id)?.paid}
+																className={classes.mobileEdit}
+																onClick={(e) => {
+																	e.stopPropagation();
+																	handleEdit(item);
+																}}
+																disabled={item.author !== user._id}
+																style={{
+																	opacity: item.author !== user._id ? 0.5 : 1,
+																	cursor: item.author !== user._id ? "not-allowed" : "pointer",
+																}}
 															>
-																{item.members.find((m) => m.userID === user._id)?.paid ? "✓ Paid" : "Mark as Paid"}
+																<RiPencilFill />
+															</button>
+															<button
+																className={classes.mobileDelete}
+																onClick={(e) => {
+																	e.stopPropagation();
+																	handleDelete(item);
+																}}
+																disabled={item.author !== user._id}
+																style={{
+																	opacity: item.author !== user._id ? 0.5 : 1,
+																	cursor: item.author !== user._id ? "not-allowed" : "pointer",
+																}}
+															>
+																<RiDeleteBin6Line />
 															</button>
 														</div>
-													)}
+													</div>
+
+													<div className={classes.cardBody}>
+														<h3 className={classes.cardTitle}>{item.name}</h3>
+														<div className={classes.cardAmountSection}>
+															<div className={classes.cardAmountInfo}>
+																<span className={classes.cardAmountLabel}>Your share</span>
+																<span
+																	className={`${classes.cardAmount} ${
+																		isUserOwedMoney(item) ? classes.owedAmount : classes.oweAmount
+																	}`}
+																>
+																	${calculateUserShare(item).toFixed(2)}
+																</span>
+															</div>
+															<div className={classes.cardTotalInfo}>
+																<span className={classes.cardTotalLabel}>Total</span>
+																<span className={classes.cardTotal}>${item.price.toFixed(2)}</span>
+															</div>
+														</div>
+													</div>
+
+													<div className={classes.cardFooter}>
+														<div className={classes.cardMembers}>
+															{item.members.slice(0, 3).map((member, index) => (
+																<div
+																	key={index}
+																	className={`${classes.cardMemberAvatar} ${
+																		member.userID === user._id ? classes.currentUser : ""
+																	}`}
+																	title={getMemberName(member.userID)}
+																>
+																	{getMemberUsername(member.userID)}
+																</div>
+															))}
+															{item.members.length > 3 && (
+																<div className={classes.cardMemberCount}>+{item.members.length - 3}</div>
+															)}
+														</div>
+														<div className={classes.cardExpandButton}>
+															<span className={classes.mobileExpandIndicator}>
+																{expandedItem === item._id ? "−" : "+"}
+															</span>
+														</div>
+													</div>
 												</div>
-											)}
-										</div>
-									))
+												{expandedItem === item._id && (
+													<div className={classes.expandedContent}>
+														<div className={classes.memberAvatars}>
+															{item.members.map((member, index) => (
+																<div
+																	key={index}
+																	className={`${classes.memberAvatar} ${
+																		// Only show payment status colors if user is the author
+																		item.author === user._id
+																			? member.paid
+																				? classes.paidMember
+																				: classes.unpaidMember
+																			: ""
+																	} ${member.userID === user._id ? classes.currentUser : ""}`}
+																	title={
+																		item.author === user._id
+																			? `${getMemberName(member.userID)} - ${member.paid ? "Paid" : "Unpaid"}`
+																			: getMemberName(member.userID)
+																	}
+																>
+																	{getMemberUsername(member.userID)}
+																</div>
+															))}
+														</div>
+
+														{/* Show detailed member info and progress only if user is the author */}
+														{item.author === user._id && (
+															<>
+																<div className={classes.paymentProgressSection}>
+																	<div className={classes.progressInfo}>
+																		<span>
+																			Payment Progress: {getPaymentProgress(item).paid}/{getPaymentProgress(item).total}
+																		</span>
+																		<div className={classes.paymentProgress}>
+																			<div
+																				className={classes.progressBar}
+																				style={{
+																					width: `${getPaymentProgress(item).percentage}%`,
+																					backgroundColor:
+																						getPaymentProgress(item).percentage === 100
+																							? "var(--goodColor)"
+																							: "var(--mainColor)",
+																				}}
+																			></div>
+																		</div>
+																	</div>
+																</div>
+																<div className={classes.detailedMemberList}>
+																	{item.members.map((member, index) => (
+																		<div key={index} className={classes.memberDetail}>
+																			<div className={classes.memberInfo}>
+																				<div
+																					className={`${classes.memberAvatar} ${classes.small} ${
+																						member.paid ? classes.paidMember : classes.unpaidMember
+																					} ${member.userID === user._id ? classes.currentUser : ""}`}
+																				>
+																					{getMemberUsername(member.userID)}
+																				</div>
+																				<span className={classes.memberName}>
+																					{getMemberName(member.userID)}
+																					{member.userID === user._id && " (You)"}
+																					{member.userID === item.author && " (Payer)"}
+																				</span>
+																			</div>
+																			<div className={classes.memberStatus}>
+																				{member.userID === item.author ? (
+																					<span className={classes.payerBadge}>Payer</span>
+																				) : member.paid ? (
+																					<span className={classes.paidBadge}>✓ Paid</span>
+																				) : (
+																					<span className={classes.unpaidBadge}>Pending</span>
+																				)}
+																			</div>
+																		</div>
+																	))}
+																</div>
+															</>
+														)}
+
+														{/* Show pay section only if user is a member (not author) */}
+														{item.author !== user._id && (
+															<div className={classes.memberPaySection}>
+																<div className={classes.paymentInfo}>
+																	<div
+																		className={`${classes.paymentDetail} ${
+																			item.members.find((m) => m.userID === user._id)?.paid ? "paid" : ""
+																		}`}
+																	>
+																		<span className={classes.paymentLabel}>Your share:</span>
+																		<span className={classes.paymentAmount}>
+																			${(item.price / item.members.length).toFixed(2)}
+																		</span>
+																	</div>
+																	<div
+																		className={`${classes.paymentStatus} ${
+																			item.members.find((m) => m.userID === user._id)?.paid ? "paid" : "unpaid"
+																		}`}
+																	>
+																		{item.members.find((m) => m.userID === user._id)?.paid ? "Paid" : "Unpaid"}
+																	</div>
+																</div>
+																<button
+																	className={classes.payButton}
+																	onClick={() => handlePayment(item._id)}
+																	disabled={item.members.find((m) => m.userID === user._id)?.paid}
+																>
+																	{item.members.find((m) => m.userID === user._id)?.paid ? "✓ Paid" : "Mark as Paid"}
+																</button>
+															</div>
+														)}
+													</div>
+												)}
+											</div>
+										))}
+										{/* Show More Button */}
+										{hasMoreItems && (
+											<div className={classes.showMoreContainer}>
+												<button onClick={loadMoreItems} className={classes.showMoreButton}>
+													Show More ({filteredItems.length - displayedItems.length} remaining)
+												</button>
+											</div>
+										)}
+									</>
 								) : (
 									<p style={{ textAlign: "center", padding: "2rem", color: "#fff" }}>No expenses found</p>
 								)}

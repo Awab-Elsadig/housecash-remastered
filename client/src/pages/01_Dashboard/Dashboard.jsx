@@ -5,7 +5,6 @@ import { FaHandHoldingUsd } from "react-icons/fa";
 import { IoIosNotifications } from "react-icons/io";
 import { PiHandDepositFill } from "react-icons/pi";
 import { useUser } from "../../hooks/useUser";
-import { useImpersonation } from "../../hooks/useImpersonation";
 import { useInitialLoading } from "../../hooks/useLoading";
 import { DashboardSkeleton } from "../../components/Skeleton";
 import axios from "axios";
@@ -14,7 +13,6 @@ import PaymentHistoryWidget from "./PaymentHistoryWidget";
 
 const Dashboard = () => {
 	const { user, houseMembers, items, fetchItems, updateItems } = useUser();
-	const { impersonating } = useImpersonation();
 	const navigate = useNavigate();
 	const isLoading = useInitialLoading(1000); // 1 second initial loading
 	const [readyToCollect, setReadyToCollect] = useState(0);
@@ -23,9 +21,7 @@ const Dashboard = () => {
 	const [paymentsByMember, setPaymentsByMember] = useState({});
 	const [collectData, setCollectData] = useState({});
 	const [notifyData, setNotifyData] = useState({});
-	const [selectedMember, setSelectedMember] = useState("all");
 	const [activeSection, setActiveSection] = useState("pay"); // Default to "pay" section
-	const [notifications, setNotifications] = useState([]);
 	const [paymentTransactions, setPaymentTransactions] = useState([]);
 	const [paymentStats, setPaymentStats] = useState({});
 
@@ -43,6 +39,7 @@ const Dashboard = () => {
 			}
 		} catch (error) {
 			// Error fetching payment transactions
+			console.error("Error fetching payment transactions:", error);
 		}
 	}, []);
 
@@ -57,14 +54,14 @@ const Dashboard = () => {
 			}
 		} catch (error) {
 			// Error fetching payment stats
+			console.error("Error fetching payment stats:", error);
 		}
 	}, []);
 
 	useEffect(() => {
-		fetchItems();
 		fetchPaymentTransactions();
 		fetchPaymentStats();
-	}, [fetchItems, fetchPaymentTransactions, fetchPaymentStats]);
+	}, [fetchPaymentTransactions, fetchPaymentStats]);
 
 	// Calculate amounts and organize data by member
 	useEffect(() => {
@@ -171,7 +168,6 @@ const Dashboard = () => {
 		setPaymentsByMember(memberPayments);
 		setCollectData(collectData);
 		setNotifyData(notifyData);
-		setNotifications(newNotifications);
 	}, [items, user, houseMembers]);
 
 	// Handle section changes without executing functions
@@ -400,39 +396,6 @@ const Dashboard = () => {
 		}
 	};
 
-	const calculateTotals = () => {
-		if (selectedMember === "all") {
-			const totalToGet = readyToCollect + notPaidAmount;
-			const totalToPay = shouldPay;
-			const finalTotal = totalToGet - totalToPay;
-			return { totalToGet, totalToPay, finalTotal };
-		}
-
-		// Calculate totals for specific member
-		let memberToGet = 0;
-		let memberToPay = 0;
-
-		// Check if we should collect from this member
-		if (collectData[selectedMember]) {
-			memberToGet += collectData[selectedMember].total;
-		}
-
-		// Check if we should notify this member (not paid yet)
-		if (notifyData[selectedMember]) {
-			memberToGet += notifyData[selectedMember].total;
-		}
-
-		// Check if we should pay this member
-		if (paymentsByMember[selectedMember]) {
-			memberToPay += paymentsByMember[selectedMember].total;
-		}
-
-		const finalTotal = memberToGet - memberToPay;
-		return { totalToGet: memberToGet, totalToPay: memberToPay, finalTotal };
-	};
-
-	const { totalToGet, totalToPay, finalTotal } = calculateTotals();
-
 	const renderMiddleSection = () => {
 		switch (activeSection) {
 			case "collect":
@@ -471,7 +434,6 @@ const Dashboard = () => {
 											${memberData.total.toFixed(2)}
 										</span>
 									</div>
-									<hr className={classes.divider} />
 								</div>
 							))
 						) : (
@@ -515,7 +477,6 @@ const Dashboard = () => {
 											${memberData.total.toFixed(2)}
 										</span>
 									</div>
-									<hr className={classes.divider} />
 								</div>
 							))
 						) : (
@@ -561,7 +522,6 @@ const Dashboard = () => {
 										<span className={classes.totalText}>Total</span>
 										<span className={`${classes.totalPrice} ${classes.payPrice}`}>${memberData.total.toFixed(2)}</span>
 									</div>
-									<hr className={classes.divider} />
 								</div>
 							))
 						) : (

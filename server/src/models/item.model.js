@@ -17,6 +17,10 @@ const itemSchema = new mongoose.Schema(
 			trim: true,
 			maxLength: 100,
 		},
+		houseCode: {
+			type: String,
+			required: true,
+		},
 		members: [
 			{
 				userID: {

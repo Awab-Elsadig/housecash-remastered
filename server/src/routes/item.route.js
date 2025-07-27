@@ -11,20 +11,21 @@ import {
 	undoPayAll,
 	updatePaymentStatus,
 } from "../controllers/item.controller.js";
+import { jwtAuthMiddleware } from "../middlewares/jwtAuth.middleware.js";
 
 const router = express.Router();
 
-router.post("/create-item", createItem);
-router.get("/get-items-by-user-id/:userId", getItemsByUserId);
-router.get("/get-items", getItems);
-router.patch("/update-item/:itemId", updateItem);
-router.delete("/delete-item/:houseCode/:userId/:itemId", deleteItem);
+router.post("/create-item", jwtAuthMiddleware, createItem);
+router.get("/get-items-by-user-id/:userId", jwtAuthMiddleware, getItemsByUserId);
+router.get("/get-items", jwtAuthMiddleware, getItems);
+router.patch("/update-item/:itemId", jwtAuthMiddleware, updateItem);
+router.delete("/delete-item/:houseCode/:userId/:itemId", jwtAuthMiddleware, deleteItem);
 
 // Payment Details actions
-router.patch("/get-all", getAllItems);
-router.patch("/undo-get-all", undoGetAll);
-router.patch("/pay-all", payAll);
-router.patch("/undo-pay-all", undoPayAll);
-router.patch("/:itemId/payment", updatePaymentStatus);
+router.patch("/get-all", jwtAuthMiddleware, getAllItems);
+router.patch("/undo-get-all", jwtAuthMiddleware, undoGetAll);
+router.patch("/pay-all", jwtAuthMiddleware, payAll);
+router.patch("/undo-pay-all", jwtAuthMiddleware, undoPayAll);
+router.patch("/:itemId/payment", jwtAuthMiddleware, updatePaymentStatus);
 
 export default router;

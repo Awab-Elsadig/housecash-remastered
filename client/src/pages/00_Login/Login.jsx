@@ -48,24 +48,25 @@ const Login = () => {
 		e.preventDefault();
 		if (validateForm()) {
 			setLoading(true);
-			setTimeout(() => {
-				setLoading(false);
-			}, 10000);
 			try {
 				const response = await axios.post("/api/auth/login", values, { withCredentials: true });
 
 				if (response.status === 200) {
-					navigate("/dashboard");
-
+					// Update user data first
 					updateUser(response.data.user);
 					updateHouseMembers(response.data.houseMembers.members);
+
+					// Then navigate to dashboard
+					navigate("/dashboard");
 				} else {
 					setErrors((prev) => ({ ...prev, connectionError: true }));
 				}
 			} catch (error) {
 				setErrors((prev) => ({ ...prev, connectionError: true }));
-				setTheError(error.response.data.error);
-				console.error("Login Error: ", error.response.data);
+				setTheError(error.response?.data?.error || "Login failed");
+				console.error("Login Error: ", error.response?.data);
+			} finally {
+				setLoading(false);
 			}
 		}
 	};

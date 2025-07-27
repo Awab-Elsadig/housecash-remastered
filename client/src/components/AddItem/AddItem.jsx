@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import classes from "./AddItem.module.css";
 import { useUser } from "../../hooks/useUser";
 import axios from "axios";
@@ -91,6 +92,11 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 	const [itemPrice, setItemPrice] = useState("");
 	const [itemDescription, setItemDescription] = useState("");
 
+	// Custom dropdown state
+	const [selectedPayer, setSelectedPayer] = useState(user?._id || "");
+	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+	const dropdownRef = useRef();
+
 	// Trigger phrases logic remains unchanged
 	const triggerMap = {
 		"waleed waleed waleed": {
@@ -165,9 +171,11 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 
 	// Listen for Ctrl+R globally
 	useEffect(() => {
-		first.current.focus();
+		if (first.current) {
+			first.current.focus();
+		}
 		const handleKeyDown = (e) => {
-			if (e.ctrlKey && e.key === "r") {
+			if (e.ctrlKey && (e.key === "r" || e.key === "ق")) {
 				e.preventDefault();
 				generateRandomData();
 			}
@@ -175,6 +183,26 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [generateRandomData]);
+
+	// Initialize selected payer when user data is available
+	useEffect(() => {
+		if (user?._id && !selectedPayer) {
+			setSelectedPayer(user._id);
+		}
+	}, [user, selectedPayer]);
+
+	// Handle dropdown click outside
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+				setIsDropdownOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, []);
 
 	// Prepopulate fields if editing and when houseMembers are available
 	useEffect(() => {
@@ -209,6 +237,17 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 		}
 	};
 
+	// Custom dropdown handlers
+	const handlePayerSelect = (payerId) => {
+		setSelectedPayer(payerId);
+		setIsDropdownOpen(false);
+	};
+
+	const getSelectedPayerName = () => {
+		const selectedMember = houseMembers?.find((member) => member._id === selectedPayer);
+		return selectedMember ? selectedMember.name.split(" ")[0] : "Select Payer";
+	};
+
 	// Submit handler: Create new item or update existing one
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -224,14 +263,13 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 
 		setLoading(true);
 		// Build the members array and mark the payer as paid
-		const { payer } = e.target;
 		const members = selectedMembers.map((member) => ({
 			userID: member._id,
 			paid: false,
 			got: false, // ensure the got property is set
 		}));
 		const updatedMembers = members.map((member) =>
-			member.userID === payer.value ? { ...member, paid: true, got: true } : member
+			member.userID === selectedPayer ? { ...member, paid: true, got: true } : member
 		);
 
 		if (itemToEdit) {
@@ -241,7 +279,7 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				return existing ? existing : { userID: member._id, paid: false, got: false };
 			});
 			const finalMembers = updatedMembersMerged.map((member) =>
-				member.userID === payer.value ? { ...member, paid: true } : member
+				member.userID === selectedPayer ? { ...member, paid: true } : member
 			);
 
 			const updatedItem = {
@@ -250,7 +288,7 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				price: itemPrice,
 				description: itemDescription,
 				members: finalMembers,
-				author: payer.value,
+				author: selectedPayer,
 			};
 
 			try {
@@ -272,8 +310,8 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				price: itemPrice,
 				description: itemDescription,
 				members: updatedMembers,
-				createdBy: user._id,
-				author: payer.value,
+				createdBy: user?._id,
+				author: selectedPayer,
 			};
 
 			try {
@@ -304,7 +342,21 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 		};
 	}, [setAddItem, fetchItems]);
 
-	return (
+	// Don't render if user data isn't loaded yet
+	if (!user) {
+		return createPortal(
+			<div className={classes.modalBG}>
+				<div className={classes.addItem}>
+					<div className={classes.top}>
+						<h1>Loading...</h1>
+					</div>
+				</div>
+			</div>,
+			document.body
+		);
+	}
+
+	return createPortal(
 		<div className={classes.modalBG}>
 			<div className={classes.addItem}>
 				<div className={classes.top}>
@@ -380,14 +432,28 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 
 					<div className={classes.inputGroup}>
 						<label htmlFor="payer">Payer *</label>
-						<select className={classes.payerList} name="payer" defaultValue={user._id} required>
-							{houseMembers &&
-								houseMembers.map((member) => (
-									<option key={member._id} value={member._id}>
-										{member.name.split(" ")[0]}
-									</option>
-								))}
-						</select>
+						<div className={classes.customDropdown} ref={dropdownRef}>
+							<div className={classes.dropdownToggle} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+								{getSelectedPayerName()}
+								<span className={classes.dropdownArrow}>▼</span>
+							</div>
+							{isDropdownOpen && (
+								<div className={classes.dropdownMenu}>
+									{houseMembers &&
+										houseMembers.map((member) => (
+											<div
+												key={member._id}
+												className={`${classes.dropdownOption} ${
+													selectedPayer === member._id ? classes.selectedOption : ""
+												}`}
+												onClick={() => handlePayerSelect(member._id)}
+											>
+												{member.name.split(" ")[0]}
+											</div>
+										))}
+								</div>
+							)}
+						</div>
 					</div>
 
 					<button className={classes.submitButton} type="submit">
@@ -396,7 +462,8 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				</form>
 			</div>
 			{showPopup && <div className={classes.popup}>{popupMsg}</div>}
-		</div>
+		</div>,
+		document.body
 	);
 };
 

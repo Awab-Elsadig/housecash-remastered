@@ -1,10 +1,13 @@
 /**
- * Format a date string or Date object to a readable format
+ * Format a date string or Date object to a smart readable format
+ * Today: 9:32 PM
+ * Yesterday: Yesterday
+ * This year: 12-Jul
+ * Previous years: 12-Jul-23
  * @param {string|Date} dateInput - The date to format
- * @param {Object} options - Formatting options
  * @returns {string} Formatted date string
  */
-const formatDateTime = (dateInput, options = {}) => {
+const formatDateTime = (dateInput) => {
 	if (!dateInput) return "N/A";
 
 	const date = new Date(dateInput);
@@ -14,45 +17,42 @@ const formatDateTime = (dateInput, options = {}) => {
 		return "Invalid Date";
 	}
 
-	const {
-		includeTime = false,
-		includeSeconds = false,
-		dateStyle = "short", // 'short', 'medium', 'long', 'full'
-		timeStyle = "short", // 'short', 'medium', 'long'
-		locale = "en-US",
-	} = options;
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const yesterday = new Date(today);
+	yesterday.setDate(yesterday.getDate() - 1);
 
-	try {
-		if (includeTime) {
-			return new Intl.DateTimeFormat(locale, {
-				dateStyle: dateStyle,
-				timeStyle: includeSeconds ? "medium" : timeStyle,
-			}).format(date);
-		} else {
-			return new Intl.DateTimeFormat(locale, {
-				dateStyle: dateStyle,
-			}).format(date);
-		}
-	} catch {
-		// Fallback for older browsers
-		const year = date.getFullYear();
-		const month = String(date.getMonth() + 1).padStart(2, "0");
-		const day = String(date.getDate()).padStart(2, "0");
+	const inputDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-		if (includeTime) {
-			const hours = String(date.getHours()).padStart(2, "0");
-			const minutes = String(date.getMinutes()).padStart(2, "0");
-			const seconds = String(date.getSeconds()).padStart(2, "0");
-
-			if (includeSeconds) {
-				return `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`;
-			} else {
-				return `${month}/${day}/${year} ${hours}:${minutes}`;
-			}
-		} else {
-			return `${month}/${day}/${year}`;
-		}
+	// Check if it's today
+	if (inputDate.getTime() === today.getTime()) {
+		// Return time in format like "9:32 PM"
+		return date.toLocaleTimeString("en-US", {
+			hour: "numeric",
+			minute: "2-digit",
+			hour12: true,
+		});
 	}
+
+	// Check if it's yesterday
+	if (inputDate.getTime() === yesterday.getTime()) {
+		return "Yesterday";
+	}
+
+	// For other dates, show in "12-Jul" or "12-Jul-23" format
+	const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+	const day = date.getDate();
+	const month = months[date.getMonth()];
+
+	// If it's current year, show "12-Jul"
+	if (date.getFullYear() === now.getFullYear()) {
+		return `${day}-${month}`;
+	}
+
+	// If it's previous year, show "12-Jul-23"
+	const year = date.getFullYear().toString().slice(-2);
+	return `${day}-${month}-${year}`;
 };
 
 /**
