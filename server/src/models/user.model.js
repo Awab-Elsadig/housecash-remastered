@@ -35,6 +35,14 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			required: true,
 		},
+		profilePictureUrl: {
+			type: String,
+			default: "",
+		},
+		profilePictureFileId: {
+			type: String,
+			default: "",
+		},
 		lastLogin: {
 			type: Date,
 			default: Date.now,

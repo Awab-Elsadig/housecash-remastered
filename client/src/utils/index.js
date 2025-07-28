@@ -6,6 +6,12 @@ export { formatRelativeTime, formatDateForInput, getTimeAgoShort } from "./forma
 export { default as formatCurrency } from "./formatCurrency.js";
 export { formatCurrencyAbbreviated, formatPercentage, parseCurrency, formatNumber } from "./formatCurrency.js";
 
+// Avatar utilities
+export { getUserInitials, getAvatarData, getAvatarColor } from "./avatarUtils.js";
+
+// ImageKit utilities
+export { isValidImageKitUrl, getOptimizedImageUrl, getProfilePictureUrl, preloadImage } from "./imagekitUtils.js";
+
 // String utilities
 export {
 	getFirstName,

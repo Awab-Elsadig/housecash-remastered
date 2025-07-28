@@ -8,6 +8,7 @@ import { FaCopy } from "react-icons/fa6";
 import axios from "axios";
 import { useUser } from "../../hooks/useUser";
 import ably from "../../ablyConfig";
+import ProfilePictureUpload from "../../components/ProfilePictureUpload/ProfilePictureUpload";
 
 const Settings = () => {
 	useEffect(() => {
@@ -151,82 +152,126 @@ const Settings = () => {
 		}
 	};
 
+	// Handle profile picture update
+	const handleImageUpdate = (newImageUrl, updatedUser) => {
+		if (!user) return;
+
+		// The ProfilePictureUpload component now handles the API call
+		// and passes the updated user data, so we just need to update our state
+		if (updatedUser) {
+			updateUser({
+				...user,
+				profilePictureUrl: newImageUrl,
+				profilePictureFileId: updatedUser.profilePictureFileId,
+			});
+		}
+	};
+
+	const handleImageDelete = () => {
+		if (!user) return;
+
+		axios
+			.put(`/api/users/update-user/${user._id}`, { profilePictureUrl: null }, { withCredentials: true })
+			.then(() => {
+				updateUser({
+					...user,
+					profilePictureUrl: null,
+				});
+			})
+			.catch((err) => console.error("Error deleting profile picture", err));
+	};
+
 	// Don't render if user data isn't loaded yet
 	if (!user) {
 		return (
 			<div className={classes.settingsPage}>
-				<div className={classes.top}>
-					<span className={classes.backBtn} onClick={() => navigate(-1)}>
+				<header className={classes.header}>
+					<button className={classes.backBtn} onClick={() => navigate(-1)}>
 						<IoMdArrowRoundBack />
-					</span>
-					<div className={classes.profilePic}>
-						<img src={"https://thumbs.dreamstime.com/b/web-269268516.jpg"} alt="Profile" />
+					</button>
+					<div className={classes.profileSection}>
+						<div className={classes.loadingProfile}>
+							<img src={"https://thumbs.dreamstime.com/b/web-269268516.jpg"} alt="Profile" />
+						</div>
+						<h1 className={classes.userName}>Loading...</h1>
 					</div>
-					<span className={classes.logout}>
+					<button className={classes.logout}>
 						<TbLogout />
-					</span>
-				</div>
-				<div className={classes.info}>
-					<div className={classes.infoGroup}>
-						<p>Loading...</p>
+					</button>
+				</header>
+				<main className={classes.content}>
+					<div className={classes.settingsCard}>
+						<div className={classes.loadingText}>Loading user information...</div>
 					</div>
-				</div>
+				</main>
 			</div>
 		);
 	}
 
 	return (
 		<div className={classes.settingsPage}>
-			{/* TOP PART */}
-			<div className={classes.top}>
-				<span className={classes.backBtn} onClick={() => navigate(-1)}>
+			{/* Header Section */}
+			<header className={classes.header}>
+				<button className={classes.backBtn} onClick={() => navigate(-1)}>
 					<IoMdArrowRoundBack />
-				</span>
+				</button>
 
-				<div className={classes.profilePic}>
-					<img src={"https://thumbs.dreamstime.com/b/web-269268516.jpg"} alt="Profile" />
-					<MdEdit className={classes.icon} />
+				<div className={classes.profileSection}>
+					<ProfilePictureUpload
+						currentImageUrl={user?.profilePictureUrl}
+						onImageUpdate={handleImageUpdate}
+						onImageDelete={handleImageDelete}
+						size="large"
+					/>
+					<h1 className={classes.userName}>{user?.name || "User"}</h1>
 				</div>
 
-				<span className={classes.logout} onClick={logout}>
+				<button className={classes.logout} onClick={logout}>
 					<TbLogout />
-				</span>
-			</div>
+				</button>
+			</header>
 
-			{/* INFO PART */}
-			<div className={classes.info}>
-				<div className={classes.infoGroup}>
-					<p>Name</p>
-					<div className={classes.box}>
-						<span>{user?.name || "Not set"}</span>
-						<MdEdit className={classes.icon} onClick={() => openEditPopup("name")} />
+			{/* Settings Content */}
+			<main className={classes.content}>
+				<div className={classes.settingsCard}>
+					<div className={classes.settingItem}>
+						<label>Name</label>
+						<div className={classes.valueContainer}>
+							<span>{user?.name || "Not set"}</span>
+							<button className={classes.editBtn} onClick={() => openEditPopup("name")}>
+								<MdEdit />
+							</button>
+						</div>
+					</div>
+
+					<div className={classes.settingItem}>
+						<label>Username</label>
+						<div className={classes.valueContainer}>
+							<span>{user?.username || "Not set"}</span>
+							<button className={classes.editBtn} onClick={() => openEditPopup("username")}>
+								<MdEdit />
+							</button>
+						</div>
+					</div>
+
+					<div className={classes.settingItem}>
+						<label>House Code</label>
+						<div className={classes.valueContainer}>
+							<span>{user?.houseCode || "Not set"}</span>
+							<div className={classes.copyContainer}>
+								{copySuccess && <div className={classes.copySuccess}>Copied!</div>}
+								<button className={classes.copyBtn} onClick={handleCopy}>
+									<FaCopy />
+								</button>
+							</div>
+						</div>
 					</div>
 				</div>
-				<div className={classes.infoGroup}>
-					<p>Username</p>
-					<div className={classes.box}>
-						<span>{user?.username || "Not set"}</span>
-						<MdEdit className={classes.icon} onClick={() => openEditPopup("username")} />
-					</div>
-				</div>
-				<div className={classes.infoGroup}>
-					<p>House Code</p>
-					<div className={classes.box}>
-						<span>{user?.houseCode || "Not set"}</span>
-						<span className={classes.copySpan}>
-							{copySuccess && <div className={classes.copySuccess}>Copied!</div>}
-							<FaCopy className={classes.icon} onClick={handleCopy} />
-						</span>
-					</div>
-				</div>
-			</div>
 
-			{/* Change Password Button */}
-			<button onClick={handleChangePasswordClick} className={classes.resetPassword}>
-				Change Password
-			</button>
-
-			<div className={classes.bottom}></div>
+				<button onClick={handleChangePasswordClick} className={classes.changePasswordBtn}>
+					Change Password
+				</button>
+			</main>
 
 			{/* Modal Popup for Editing Name/Username */}
 			{editingField && (

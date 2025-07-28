@@ -157,6 +157,17 @@
 	object-fit: cover;
 }
 
+.profilePicContainer {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+}
+
+.profilePicContainer:hover {
+	transform: scale(1.05);
+}
+
 @media (max-width: 768px) {
 	.mobileMenuButton {
 		display: grid;
@@ -201,6 +212,10 @@
 	.profilePic {
 		width: 2.5rem;
 		height: 2.5rem;
+	}
+
+	.profilePicContainer {
+		margin-left: 0.5rem;
 	}
 }
 

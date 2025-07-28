@@ -12,6 +12,7 @@ import itemRoutes from "./src/routes/item.route.js";
 import adminRoutes from "./src/routes/admin.route.js"; // new admin routes
 import paymentTransactionRoutes from "./src/routes/paymentTransaction.route.js";
 import notificationRoutes from "./src/routes/notification.route.js";
+import uploadRoutes from "./src/routes/upload.route.js";
 import cookieParser from "cookie-parser";
 
 dotenv.config();
@@ -73,6 +74,7 @@ app.use("/api/items", itemRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payment-transactions", paymentTransactionRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/upload", uploadRoutes);
 
 app.listen(process.env.PORT, () => {
 	console.log(`Server is running on port ${process.env.PORT}`);

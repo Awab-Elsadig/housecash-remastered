@@ -6,6 +6,7 @@ import classes from "./Header.module.css";
 import { useUser } from "../../hooks/useUser";
 import { useImpersonationContext } from "../../hooks/useImpersonationContext";
 import NotificationDropdown from "../NotificationDropdown/NotificationDropdown";
+import { getProfilePictureUrl } from "../../utils/imagekitUtils";
 
 const Header = ({ toggleMobileMenu }) => {
 	const { user } = useUser();
@@ -121,7 +122,10 @@ const Header = ({ toggleMobileMenu }) => {
 						<span>{user?.name ? user.name.split(" ")[0] : "User"}</span>
 					</span>
 					<img
-						src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png"
+						src={
+							getProfilePictureUrl(user?.profilePictureUrl, "small") ||
+							"https://thumbs.dreamstime.com/b/web-269268516.jpg"
+						}
 						alt="Profile"
 						className={classes.profilePic}
 						onClick={() => navigate("/settings")}
