@@ -1,0 +1,284 @@
+.netBalance {
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 1.2rem;
+	font-weight: 600;
+	margin-bottom: 20px;
+	color: white;
+}
+
+.titleIcon {
+	font-size: 1.1rem;
+}
+
+.incomingSection {
+	margin-bottom: 20px;
+	padding-bottom: 15px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sectionTitle {
+	font-size: 0.9rem;
+	margin-bottom: 12px;
+	color: rgba(255, 255, 255, 0.9);
+	font-weight: 500;
+}
+
+.resolutionRequest {
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	padding: 12px;
+	margin-bottom: 8px;
+	border-left: 3px solid #ffd700;
+}
+
+.requestHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 6px;
+}
+
+.senderName {
+	font-weight: 600;
+	color: white;
+}
+
+.amount {
+	font-weight: 700;
+	color: #ffd700;
+}
+
+.requestText {
+	font-size: 0.85rem;
+	color: rgba(255, 255, 255, 0.8);
+	margin: 6px 0;
+}
+
+.requestActions {
+	display: flex;
+	gap: 8px;
+	margin: 10px 0;
+}
+
+.actionBtn {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 12px;
+	border: none;
+	border-radius: 6px;
+	font-size: 0.8rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.acceptBtn {
+	background: #10b981;
+	color: white;
+}
+
+.acceptBtn:hover {
+	background: #059669;
+	transform: translateY(-1px);
+}
+
+.rejectBtn {
+	background: #ef4444;
+	color: white;
+}
+
+.rejectBtn:hover {
+	background: #dc2626;
+	transform: translateY(-1px);
+}
+
+.timer {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.memberBalance {
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 10px;
+	padding: 15px;
+	margin-bottom: 12px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	transition: all 0.3s ease;
+}
+
+.memberBalance:hover {
+	background: rgba(255, 255, 255, 0.15);
+	transform: translateY(-2px);
+}
+
+.memberHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.memberName {
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: white;
+	margin: 0;
+}
+
+.netAmount {
+	text-align: right;
+}
+
+.netValue {
+	font-size: 1.2rem;
+	font-weight: 700;
+	padding: 4px 8px;
+	border-radius: 6px;
+}
+
+.positive {
+	color: #10b981;
+	background: rgba(16, 185, 129, 0.2);
+}
+
+.negative {
+	color: #ef4444;
+	background: rgba(239, 68, 68, 0.2);
+}
+
+.balanceDetails {
+	margin-bottom: 12px;
+}
+
+.balanceRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 6px;
+	font-size: 0.9rem;
+}
+
+.balanceLabel {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: rgba(255, 255, 255, 0.9);
+}
+
+.balanceIcon {
+	font-size: 0.8rem;
+}
+
+.owedAmount {
+	color: #10b981;
+	font-weight: 600;
+}
+
+.owingAmount {
+	color: #ef4444;
+	font-weight: 600;
+}
+
+.actionSection {
+	margin-top: 12px;
+}
+
+.resolveBtn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	padding: 10px 16px;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.resolveBtn:hover {
+	background: linear-gradient(135deg, #059669 0%, #047857 100%);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.resolveIcon {
+	font-size: 0.9rem;
+}
+
+.pendingStatus {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 16px;
+	background: rgba(255, 193, 7, 0.2);
+	color: #ffc107;
+	border: 1px solid rgba(255, 193, 7, 0.3);
+	border-radius: 8px;
+	font-size: 0.85rem;
+	font-weight: 500;
+}
+
+.pendingIcon {
+	font-size: 0.8rem;
+	animation: pulse 1.5s infinite;
+}
+
+.pendingTimer {
+	font-weight: 600;
+	color: #ffd700;
+}
+
+.noBalances {
+	text-align: center;
+	padding: 40px 20px;
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.noBalances p {
+	font-size: 1.1rem;
+	margin: 0;
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}
+
+/* Scrollbar styling */
+.balancesSection::-webkit-scrollbar {
+	width: 6px;
+}
+
+.balancesSection::-webkit-scrollbar-track {
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 3px;
+}
+
+.balancesSection::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.3);
+	border-radius: 3px;
+}
+
+.balancesSection::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.5);
+}

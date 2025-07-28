@@ -2,8 +2,7 @@
 	width: 100%;
 	min-height: 6rem;
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
+	flex-direction: column;
 	background-color: var(--headerBackground);
 	box-shadow: var(--headerShadow);
 	position: relative;
@@ -11,6 +10,73 @@
 	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* 0: no of pixels, 2: vertical offset, 10: blur radius */
 	border-bottom: 1px solid var(--glassStroke);
 	z-index: 10;
+}
+
+/* Impersonation Banner */
+.impersonationBanner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 0.75rem 1rem;
+	background: linear-gradient(135deg, rgba(255, 165, 0, 0.9) 0%, rgba(255, 140, 0, 0.8) 100%);
+	border: 1px solid #ff8c00;
+	border-radius: 0.5rem;
+	margin-bottom: 1rem;
+	box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
+	animation: slideDown 0.3s ease-out;
+}
+
+.impersonationInfo {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: white;
+	font-weight: 600;
+}
+
+.impersonationIcon {
+	font-size: 1.25rem;
+}
+
+.adminInfo {
+	font-weight: 400;
+	opacity: 0.9;
+	font-size: 0.875rem;
+}
+
+.stopImpersonationBtn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 1rem;
+	background: rgba(255, 255, 255, 0.2);
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	border-radius: 0.375rem;
+	color: white;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-size: 0.875rem;
+}
+
+.stopImpersonationBtn:hover {
+	background: rgba(255, 255, 255, 0.3);
+	transform: translateY(-1px);
+}
+
+.stopImpersonationBtn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+/* Main Header Content */
+.headerContent {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
 }
 
 /* Mobile Menu Button */
@@ -135,5 +201,19 @@
 	.profilePic {
 		width: 2.5rem;
 		height: 2.5rem;
+	}
+}
+
+/* Animations */
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+		max-height: 0;
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+		max-height: 100px;
 	}
 }

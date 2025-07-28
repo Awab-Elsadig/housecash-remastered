@@ -334,11 +334,10 @@
 /* Single Mobile Responsive Breakpoint - 768px */
 @media (max-width: 768px) {
 	.modalBG {
-		padding: 0.5rem;
+		padding: 2rem;
 	}
 
 	.addItem {
-		max-width: none;
 		width: 100%;
 		max-height: calc(100vh - 1rem);
 	}

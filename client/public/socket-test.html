@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket Test</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Socket Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <button id="testBtn">Send Test Event</button>
+    <div id="log"></div>
+
+    <script>
+        const socket = io('http://localhost:5000', {
+            withCredentials: true,
+            transports: ['websocket', 'polling']
+        });
+
+        const statusDiv = document.getElementById('status');
+        const logDiv = document.getElementById('log');
+        const testBtn = document.getElementById('testBtn');
+
+        function log(message) {
+            const now = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<p>[${now}] ${message}</p>`;
+            console.log(message);
+        }
+
+        socket.on('connect', () => {
+            statusDiv.textContent = 'Connected!';
+            statusDiv.style.color = 'green';
+            log(`Connected to socket server with ID: ${socket.id}`);
+        });
+
+        socket.on('disconnect', () => {
+            statusDiv.textContent = 'Disconnected';
+            statusDiv.style.color = 'red';
+            log('Disconnected from socket server');
+        });
+
+        socket.on('connect_error', (error) => {
+            statusDiv.textContent = 'Connection Error';
+            statusDiv.style.color = 'red';
+            log(`Connection error: ${error.message}`);
+        });
+
+        socket.on('ReceiveFetch', () => {
+            log('Received ReceiveFetch event from server');
+        });
+
+        testBtn.addEventListener('click', () => {
+            log('Sending SendFetch event to server');
+            socket.emit('SendFetch');
+        });
+    </script>
+</body>
+</html>

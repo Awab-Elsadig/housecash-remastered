@@ -15,6 +15,19 @@ router.get("/users", getAllUsers);
 // Route to impersonate a user. (POST with the userId of the user to impersonate.)
 router.post("/impersonate", impersonateUser);
 
+// Route to check impersonation status.
+router.get("/impersonation-status", (req, res) => {
+	if (req.session.impersonatedUserId) {
+		res.json({
+			isImpersonating: true,
+			impersonatedUserId: req.session.impersonatedUserId,
+			originalAdminId: req.session.originalAdminId,
+		});
+	} else {
+		res.json({ isImpersonating: false });
+	}
+});
+
 // Route to stop impersonation.
 router.post("/stop-impersonation", stopImpersonation);
 

@@ -13,19 +13,32 @@ const paymentTransactionSchema = new mongoose.Schema(
 		},
 		transactionType: {
 			type: String,
-			enum: ["single_payment", "bulk_payment"],
+			enum: ["single_payment", "bulk_payment", "settlement"],
 			required: true,
 		},
+		// For regular payments (single/bulk)
 		paidTo: {
 			id: {
 				type: mongoose.Schema.Types.ObjectId,
 				ref: "User",
-				required: true,
 			},
 			name: {
 				type: String,
-				required: true,
 			},
+		},
+		// For settlements
+		settlementWith: {
+			id: {
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "User",
+			},
+			name: {
+				type: String,
+			},
+		},
+		settlementDirection: {
+			type: String,
+			enum: ["paying", "collecting"],
 		},
 		items: [
 			{
@@ -50,6 +63,11 @@ const paymentTransactionSchema = new mongoose.Schema(
 					type: Number,
 					required: true,
 				},
+				// For settlements: indicate if this item was owed to you or by you
+				itemType: {
+					type: String,
+					enum: ["owed", "owing"], // owed = they owed you, owing = you owed them
+				},
 			},
 		],
 		totalAmount: {
@@ -67,12 +85,24 @@ const paymentTransactionSchema = new mongoose.Schema(
 		},
 		method: {
 			type: String,
-			enum: ["Individual Payment", "Bulk Payment"],
+			enum: ["Individual Payment", "Bulk Payment", "Settlement"],
 			required: true,
 		},
 		notes: {
 			type: String,
 			default: "",
+		},
+		// Settlement specific fields
+		netAmount: {
+			type: Number, // The net amount settled (positive = you received, negative = you paid)
+		},
+		owedItemsTotal: {
+			type: Number, // Total amount that was owed to you
+			default: 0,
+		},
+		owingItemsTotal: {
+			type: Number, // Total amount that you owed
+			default: 0,
 		},
 	},
 	{
@@ -83,7 +113,9 @@ const paymentTransactionSchema = new mongoose.Schema(
 // Index for efficient queries
 paymentTransactionSchema.index({ userId: 1, houseCode: 1 });
 paymentTransactionSchema.index({ "paidTo.id": 1 });
+paymentTransactionSchema.index({ "settlementWith.id": 1 });
 paymentTransactionSchema.index({ createdAt: -1 });
+paymentTransactionSchema.index({ transactionType: 1 });
 
 const PaymentTransaction = mongoose.model("PaymentTransaction", paymentTransactionSchema);
 

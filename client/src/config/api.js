@@ -9,7 +9,6 @@ axios.defaults.withCredentials = true;
 // Add request interceptor for debugging
 axios.interceptors.request.use(
 	(config) => {
-		console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
 		return config;
 	},
 	(error) => {

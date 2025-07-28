@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import classes from "./Expenses.module.css";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { RiPencilFill } from "react-icons/ri";
@@ -10,11 +10,12 @@ import formatDateTime from "../../utils/formatDateTime";
 import AddItem from "../../components/AddItem/AddItem";
 import DeleteConfirmation from "../../pages/Expenses/components/DeleteConfirmation/DeleteConfirmation";
 import axios from "axios";
-import socket from "../../socketConfig";
+import ably from "../../ablyConfig";
 
 const Expenses = () => {
-	const { user, houseMembers, items, fetchItems } = useUser();
+	const { user, houseMembers, items, fetchItems, deleteItem } = useUser();
 	const isLoading = useInitialLoading(1000);
+	const memberFiltersRef = useRef(null); // Ref to control the details element
 	const [filteredItems, setFilteredItems] = useState([]);
 	const [selectedFilter, setSelectedFilter] = useState("all");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -31,6 +32,44 @@ const Expenses = () => {
 	useEffect(() => {
 		// Items will be automatically fetched by useUser hook when user data is available
 	}, []);
+
+	// Ably connection and event handling for real-time updates
+	useEffect(() => {
+		if (!user?.houseCode) return;
+
+		// Subscribe to house channel for real-time updates
+		const channel = ably.channels.get(`house:${user.houseCode}`);
+
+		// Listen for fetch updates
+		const fetchUpdateHandler = () => {
+			console.log("Received fetchUpdate event from Ably in Expenses");
+			fetchItems();
+		};
+
+		// Listen for item updates
+		const itemUpdateHandler = (message) => {
+			console.log("Received itemUpdate event from Ably in Expenses:", message.data);
+			fetchItems();
+		};
+
+		// Listen for payment notifications
+		const paymentNotificationHandler = (message) => {
+			console.log("Received paymentNotification event from Ably in Expenses:", message.data);
+			fetchItems();
+		};
+
+		// Subscribe to events
+		channel.subscribe("fetchUpdate", fetchUpdateHandler);
+		channel.subscribe("itemUpdate", itemUpdateHandler);
+		channel.subscribe("paymentNotification", paymentNotificationHandler);
+
+		// Cleanup on unmount
+		return () => {
+			channel.unsubscribe("fetchUpdate", fetchUpdateHandler);
+			channel.unsubscribe("itemUpdate", itemUpdateHandler);
+			channel.unsubscribe("paymentNotification", paymentNotificationHandler);
+		};
+	}, [fetchItems, user?.houseCode]);
 
 	// Fuzzy search function
 	const fuzzySearch = (query, text) => {
@@ -122,13 +161,13 @@ const Expenses = () => {
 		setDisplayedItems((prev) => [...prev, ...newItems]);
 		setCurrentPage(nextPage);
 
-		// Scroll to the newly added content after a brief delay
-		setTimeout(() => {
-			const showMoreButton = document.querySelector(`.${classes.showMoreContainer}`);
-			if (showMoreButton) {
-				showMoreButton.scrollIntoView({ behavior: "smooth", block: "end" });
-			}
-		}, 100);
+		// // Scroll to the newly added content after a brief delay
+		// setTimeout(() => {
+		// 	const showMoreButton = document.querySelector(`.${classes.showMoreContainer}`);
+		// 	if (showMoreButton) {
+		// 		showMoreButton.scrollIntoView({ behavior: "smooth", block: "end" });
+		// 	}
+		// }, 100);
 	};
 
 	// Check if there are more items to load
@@ -166,6 +205,14 @@ const Expenses = () => {
 		setDeleteConfirmation(true);
 	};
 
+	const handleMemberFilterSelect = (memberId) => {
+		setSelectedFilter(memberId);
+		// Close the details panel
+		if (memberFiltersRef.current) {
+			memberFiltersRef.current.open = false;
+		}
+	};
+
 	const handlePayment = async (itemId) => {
 		if (!user?._id) return;
 
@@ -189,12 +236,7 @@ const Expenses = () => {
 				// Update the items state to reflect the change
 				fetchItems();
 
-				// Emit socket event to notify other users
-				socket.emit("itemUpdated", {
-					itemId,
-					userId: user._id,
-					action: userMember.paid ? "unpaid" : "paid",
-				});
+				// The server will handle Ably notifications via AblyService
 			}
 		} catch (error) {
 			console.error("Payment update failed:", error);
@@ -342,15 +384,15 @@ const Expenses = () => {
 											Owed to Me ({getFilterCounts().owedToMe})
 										</button>
 									</div>
-									<details className={classes.secondaryFilters}>
-										<summary>Members</summary>
+									<details className={classes.secondaryFilters} ref={memberFiltersRef}>
+										<summary>Filter by Member</summary>
 										<div className={classes.memberFilters}>
 											{houseMembers
 												.filter((member) => member._id !== user._id) // Exclude current user
 												.map((member) => (
 													<button
 														key={member._id}
-														onClick={() => setSelectedFilter(member._id)}
+														onClick={() => handleMemberFilterSelect(member._id)}
 														className={`${classes.memberFilter} ${selectedFilter === member._id ? classes.active : ""}`}
 													>
 														{member.name.split(" ")[0]}
@@ -693,6 +735,7 @@ const Expenses = () => {
 					setDeleteConfirmation={setDeleteConfirmation}
 					itemToDelete={itemToDelete}
 					onItemDeleted={fetchItems} // Refresh items after deletion
+					deleteItem={deleteItem} // Pass the deleteItem function from useUser hook
 				/>
 			)}
 		</div>

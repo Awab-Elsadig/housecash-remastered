@@ -7,7 +7,7 @@ import { TbLogout } from "react-icons/tb";
 import { FaCopy } from "react-icons/fa6";
 import axios from "axios";
 import { useUser } from "../../hooks/useUser";
-import socket from "../../socketConfig";
+import ably from "../../ablyConfig";
 
 const Settings = () => {
 	useEffect(() => {
@@ -73,7 +73,7 @@ const Settings = () => {
 
 		axios
 			.put(`/api/users/update-user/${user._id}`, { [editingField]: editingValue }, { withCredentials: true })
-			.then(() => {
+			.then(async () => {
 				updateUser({
 					...user,
 					[editingField]: editingValue,
@@ -90,7 +90,19 @@ const Settings = () => {
 					updateHouseMembers(newMembers);
 				}
 
-				socket.emit("SendFetch");
+				// Notify other house members about the update via Ably
+				if (user?.houseCode) {
+					try {
+						const channel = ably.channels.get(`house:${user.houseCode}`);
+						await channel.publish("fetchUpdate", {
+							timestamp: Date.now(),
+							type: "user_update",
+							userId: user._id,
+						});
+					} catch (error) {
+						console.error("Error sending Ably update:", error);
+					}
+				}
 			})
 			.catch((err) => console.error("Error updating user", err));
 		setEditingField(null);

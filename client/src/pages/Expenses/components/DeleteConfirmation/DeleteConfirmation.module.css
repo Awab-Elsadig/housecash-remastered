@@ -42,6 +42,29 @@
 	padding: 1.5rem;
 }
 
+.error {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+	padding: 1rem;
+	background: rgba(239, 68, 68, 0.15);
+	border: 1px solid rgba(239, 68, 68, 0.3);
+	border-radius: 0.5rem;
+}
+
+.errorIcon {
+	font-size: 1.25rem;
+	flex-shrink: 0;
+}
+
+.error p {
+	margin: 0;
+	color: #fca5a5;
+	font-weight: 500;
+	font-size: 0.875rem;
+}
+
 .warning {
 	display: flex;
 	align-items: center;
@@ -193,7 +216,7 @@
 /* Single Mobile Responsive Breakpoint - 768px */
 @media (max-width: 768px) {
 	.modal {
-		margin: 1rem;
+		margin: 2rem;
 		max-width: none;
 		width: auto;
 	}

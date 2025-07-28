@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import classes from "./PaymentHistory.module.css";
-import { FaHistory, FaReceipt, FaHandHoldingUsd, FaTrash } from "react-icons/fa";
+import { FaHistory, FaReceipt, FaHandHoldingUsd, FaExchangeAlt } from "react-icons/fa";
 import { MdPayment, MdDashboard } from "react-icons/md";
 import { PiHandDepositFill } from "react-icons/pi";
 import { useInitialLoading } from "../../hooks/useLoading";
@@ -21,6 +21,7 @@ const PaymentHistory = () => {
 		totalPaid: 0,
 		bulkPayments: 0,
 		singlePayments: 0,
+		settlements: 0,
 		mostFrequentRecipient: "None",
 	});
 	const [transactionFilter, setTransactionFilter] = useState("all");
@@ -71,6 +72,13 @@ const PaymentHistory = () => {
 			filtered = filtered.filter((transaction) => transaction.method === "Bulk Payment");
 		} else if (transactionFilter === "single") {
 			filtered = filtered.filter((transaction) => transaction.method === "Individual Payment");
+		} else if (transactionFilter === "settlement") {
+			filtered = filtered.filter((transaction) => transaction.transactionType === "settlement");
+		} else if (transactionFilter === "payments") {
+			filtered = filtered.filter(
+				(transaction) =>
+					transaction.transactionType === "single_payment" || transaction.transactionType === "bulk_payment"
+			);
 		}
 
 		// Apply sort filter
@@ -93,64 +101,65 @@ const PaymentHistory = () => {
 		setSortFilter(e.target.value);
 	}, []);
 
-	// Optimized delete function with better error handling
-	const deleteTransaction = useCallback(
-		async (transactionId) => {
-			try {
-				const response = await axios.delete(`/api/payment-transactions/${transactionId}`, {
-					withCredentials: true,
-				});
-
-				if (response.data.success) {
-					// Remove the transaction from the local state
-					setPaymentTransactions((prev) => prev.filter((t) => t._id !== transactionId));
-					// Refresh statistics after deletion
-					fetchPaymentStatistics();
-					return { success: true };
-				}
-			} catch (error) {
-				console.error("Error deleting transaction:", error);
-				return {
-					success: false,
-					error: error.response?.data?.message || "Failed to delete transaction",
-				};
-			}
-		},
-		[fetchPaymentStatistics]
-	);
-
-	// Handle delete with confirmation
-	const handleDeleteTransaction = useCallback(
-		async (transactionId, transactionTitle) => {
-			if (
-				window.confirm(
-					`Are you sure you want to delete the transaction "${transactionTitle}"? This action cannot be undone.`
-				)
-			) {
-				const result = await deleteTransaction(transactionId);
-				if (!result.success) {
-					alert(result.error || "Failed to delete transaction");
-				}
-			}
-		},
-		[deleteTransaction]
-	);
-
 	// Render transaction items
 	const renderTransactionItems = useCallback(
 		(transaction, isPaymentMade) => (
 			<div className={classes.transactionItems}>
-				<div className={classes.itemsTitle}>Items:</div>
-				<div className={classes.itemsGrid}>
-					{transaction.items?.map((item, index) => (
-						<div key={index} className={classes.transactionItem}>
-							<span className={classes.itemName}>{item.name}</span>
-							<span className={`${classes.itemAmount} ${isPaymentMade ? classes.paymentOut : classes.paymentIn}`}>
-								${item.yourShare?.toFixed(2) || "0.00"}
-							</span>
+				{transaction.transactionType === "settlement" ? (
+					<>
+						<div className={classes.itemsTitle}>Settlement Details:</div>
+						<div className={classes.settlementSections}>
+							{transaction.items?.filter((item) => item.itemType === "owed").length > 0 && (
+								<div className={classes.settlementSection}>
+									<div className={classes.sectionTitle}>Items you were owed:</div>
+									<div className={classes.itemsGrid}>
+										{transaction.items
+											.filter((item) => item.itemType === "owed")
+											.map((item, index) => (
+												<div key={`owed-${index}`} className={classes.transactionItem}>
+													<span className={classes.itemName}>{item.name}</span>
+													<span className={`${classes.itemAmount} ${classes.paymentIn}`}>
+														+${item.yourShare?.toFixed(2) || "0.00"}
+													</span>
+												</div>
+											))}
+									</div>
+								</div>
+							)}
+							{transaction.items?.filter((item) => item.itemType === "owing").length > 0 && (
+								<div className={classes.settlementSection}>
+									<div className={classes.sectionTitle}>Items you owed:</div>
+									<div className={classes.itemsGrid}>
+										{transaction.items
+											.filter((item) => item.itemType === "owing")
+											.map((item, index) => (
+												<div key={`owing-${index}`} className={classes.transactionItem}>
+													<span className={classes.itemName}>{item.name}</span>
+													<span className={`${classes.itemAmount} ${classes.paymentOut}`}>
+														-${item.yourShare?.toFixed(2) || "0.00"}
+													</span>
+												</div>
+											))}
+									</div>
+								</div>
+							)}
 						</div>
-					))}
-				</div>
+					</>
+				) : (
+					<>
+						<div className={classes.itemsTitle}>Items:</div>
+						<div className={classes.itemsGrid}>
+							{transaction.items?.map((item, index) => (
+								<div key={index} className={classes.transactionItem}>
+									<span className={classes.itemName}>{item.name}</span>
+									<span className={`${classes.itemAmount} ${isPaymentMade ? classes.paymentOut : classes.paymentIn}`}>
+										${item.yourShare?.toFixed(2) || "0.00"}
+									</span>
+								</div>
+							))}
+						</div>
+					</>
+				)}
 			</div>
 		),
 		[]
@@ -212,6 +221,8 @@ const PaymentHistory = () => {
 										title="Filter by transaction type"
 									>
 										<option value="all">All Transactions</option>
+										<option value="payments">Payments Only</option>
+										<option value="settlement">Settlements Only</option>
 										<option value="bulk">Bulk Payments</option>
 										<option value="single">Single Payments</option>
 									</select>
@@ -231,22 +242,50 @@ const PaymentHistory = () => {
 							<div className={classes.transactionsList}>
 								{filteredTransactions.length > 0 ? (
 									filteredTransactions.map((transaction) => {
-										const isPaymentMade = transaction.userId?._id === user?._id;
-										const otherParty = isPaymentMade ? transaction.paidTo?.name : transaction.userId?.name;
+										let isPaymentMade, otherParty, transactionTitle;
+
+										if (transaction.transactionType === "settlement") {
+											// For settlement transactions
+											const isInitiator = transaction.userId?._id === user?._id;
+											otherParty = isInitiator ? transaction.settlementWith?.name : transaction.userId?.name;
+
+											if (isInitiator) {
+												// You initiated the settlement
+												if (transaction.settlementDirection === "paying") {
+													isPaymentMade = true;
+													transactionTitle = `Settled debt with ${otherParty || "Unknown"}`;
+												} else {
+													isPaymentMade = false;
+													transactionTitle = `Collected from ${otherParty || "Unknown"}`;
+												}
+											} else {
+												// You were the settlement partner
+												if (transaction.settlementDirection === "paying") {
+													isPaymentMade = false;
+													transactionTitle = `Settlement from ${otherParty || "Unknown"}`;
+												} else {
+													isPaymentMade = true;
+													transactionTitle = `Paid settlement to ${otherParty || "Unknown"}`;
+												}
+											}
+										} else {
+											// Regular payment transactions
+											isPaymentMade = transaction.userId?._id === user?._id;
+											otherParty = isPaymentMade ? transaction.paidTo?.name : transaction.userId?.name;
+											transactionTitle = isPaymentMade
+												? `Paid ${otherParty || "Unknown"}`
+												: `Received from ${otherParty || "Unknown"}`;
+										}
 
 										return (
 											<div key={transaction._id} className={classes.transactionCard}>
 												<div className={classes.transactionMain}>
 													<div className={classes.transactionLeft}>
 														<div className={classes.transactionIcon}>
-															<FaReceipt />
+															{transaction.transactionType === "settlement" ? <FaHandHoldingUsd /> : <FaReceipt />}
 														</div>
 														<div className={classes.transactionDetails}>
-															<div className={classes.transactionTitle}>
-																{isPaymentMade
-																	? `Paid ${otherParty || "Unknown"}`
-																	: `Received from ${otherParty || "Unknown"}`}
-															</div>
+															<div className={classes.transactionTitle}>{transactionTitle}</div>
 															<div className={classes.transactionMeta}>
 																<span className={classes.transactionDate}>{formatDateTime(transaction.createdAt)}</span>
 																<span className={classes.transactionType}>{transaction.method}</span>
@@ -259,11 +298,31 @@ const PaymentHistory = () => {
 																isPaymentMade ? classes.paymentOut : classes.paymentIn
 															}`}
 														>
-															{isPaymentMade ? "-" : "+"}${transaction.totalAmount?.toFixed(2) || "0.00"}
+															{transaction.transactionType === "settlement" ? (
+																<>
+																	<div className={classes.netAmount}>
+																		{isPaymentMade ? "-" : "+"}$
+																		{Math.abs(transaction.netAmount || transaction.totalAmount || 0).toFixed(2)}
+																	</div>
+																	{transaction.owedItemsTotal > 0 && transaction.owingItemsTotal > 0 && (
+																		<div className={classes.settlementBreakdown}>
+																			<small>
+																				Owed: ${transaction.owedItemsTotal.toFixed(2)} | Owing: $
+																				{transaction.owingItemsTotal.toFixed(2)}
+																			</small>
+																		</div>
+																	)}
+																</>
+															) : (
+																`${isPaymentMade ? "-" : "+"}$${transaction.totalAmount?.toFixed(2) || "0.00"}`
+															)}
 														</div>
 														<div className={classes.transactionItemCount}>
 															{transaction.itemCount || 0} item
 															{(transaction.itemCount || 0) > 1 ? "s" : ""}
+															{transaction.transactionType === "settlement" && (
+																<div className={classes.settlementLabel}>Settlement</div>
+															)}
 														</div>
 													</div>
 												</div>
@@ -275,22 +334,6 @@ const PaymentHistory = () => {
 												<div className={classes.transactionFooter}>
 													<div className={classes.transactionStatus}>
 														<span className={classes.statusBadge}>{transaction.status || "Completed"}</span>
-													</div>
-													<div className={classes.transactionActions}>
-														<button
-															className={classes.deleteBtn}
-															onClick={() =>
-																handleDeleteTransaction(
-																	transaction._id,
-																	isPaymentMade
-																		? `Paid ${otherParty || "Unknown"}`
-																		: `Received from ${otherParty || "Unknown"}`
-																)
-															}
-															title="Delete Transaction"
-														>
-															<FaTrash className={classes.deleteIcon} />
-														</button>
 													</div>
 												</div>
 											</div>
@@ -350,6 +393,15 @@ const PaymentHistory = () => {
 								<div className={classes.statContent}>
 									<div className={classes.statValue}>{paymentStats.singlePayments}</div>
 									<div className={classes.statLabel}>Single Payments</div>
+								</div>
+							</div>
+							<div className={classes.statCard}>
+								<div className={classes.statIcon}>
+									<FaExchangeAlt />
+								</div>
+								<div className={classes.statContent}>
+									<div className={classes.statValue}>{paymentStats.settlements || 0}</div>
+									<div className={classes.statLabel}>Settlements</div>
 								</div>
 							</div>
 						</div>

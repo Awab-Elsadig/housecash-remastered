@@ -9,38 +9,6 @@ export const useUser = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 
-	// Initialize user data from session storage on mount
-	useEffect(() => {
-		const savedUser = sessionStorage.getItem("user");
-		const savedHouseMembers = sessionStorage.getItem("houseMembers");
-		const savedItems = sessionStorage.getItem("items");
-
-		if (savedUser && savedUser !== "undefined") {
-			try {
-				setUser(JSON.parse(savedUser));
-			} catch (error) {
-				console.error("Error parsing saved user data:", error);
-				sessionStorage.removeItem("user");
-			}
-		}
-		if (savedHouseMembers && savedHouseMembers !== "undefined") {
-			try {
-				setHouseMembers(JSON.parse(savedHouseMembers));
-			} catch (error) {
-				console.error("Error parsing saved house members data:", error);
-				sessionStorage.removeItem("houseMembers");
-			}
-		}
-		if (savedItems && savedItems !== "undefined") {
-			try {
-				setItems(JSON.parse(savedItems));
-			} catch (error) {
-				console.error("Error parsing saved items data:", error);
-				sessionStorage.removeItem("items");
-			}
-		}
-	}, []);
-
 	// Update user data
 	const updateUser = useCallback((userData) => {
 		setUser(userData);
@@ -71,6 +39,51 @@ export const useUser = () => {
 		}
 	}, []);
 
+	// Fetch current user from server (works with impersonation)
+	const fetchCurrentUser = useCallback(async () => {
+		setLoading(true);
+		setError(null);
+
+		try {
+			const response = await axios.get("/api/users/me", {
+				withCredentials: true,
+			});
+			if (response.data) {
+				updateUser(response.data);
+
+				// Also fetch house members if we have a house code
+				if (response.data.houseCode) {
+					// Fetch house members using the correct endpoint
+					try {
+						const houseResponse = await axios.get(`/api/users/get-users-by-house-code/${response.data.houseCode}`);
+						if (houseResponse.data?.users) {
+							updateHouseMembers(houseResponse.data.users);
+						}
+					} catch (houseError) {
+						console.error("Error fetching house members:", houseError);
+					}
+				}
+			}
+		} catch (error) {
+			console.error("Error fetching current user:", error);
+			setError(error.response?.data?.error || "Failed to fetch current user");
+		} finally {
+			setLoading(false);
+		}
+	}, [updateUser, updateHouseMembers]);
+
+	// Initialize user data from session storage on mount
+	useEffect(() => {
+		// Don't try to fetch user data on login page
+		if (window.location.pathname === "/" || window.location.pathname === "/login") {
+			setLoading(false);
+			return;
+		}
+
+		// Always fetch fresh data from server to handle impersonation properly
+		fetchCurrentUser();
+	}, [fetchCurrentUser]);
+
 	// Fetch items from backend
 	const fetchItems = useCallback(async () => {
 		if (!user?.houseCode) {
@@ -100,14 +113,16 @@ export const useUser = () => {
 		if (user?.houseCode && user?._id) {
 			fetchItems();
 		}
-	}, [user?.houseCode, user?._id, fetchItems]); // Fetch user profile
+	}, [user?.houseCode, user?._id, fetchItems]);
+
+	// Fetch user profile
 	const fetchUser = useCallback(
 		async (userId) => {
 			setLoading(true);
 			setError(null);
 
 			try {
-				const response = await axios.post("/api/user/get-user", { _id: userId });
+				const response = await axios.post("/api/users/get-user", { _id: userId });
 				if (response.data) {
 					updateUser(response.data);
 				}
@@ -130,9 +145,9 @@ export const useUser = () => {
 			setError(null);
 
 			try {
-				const response = await axios.get(`/api/user/get-users-by-house-code/${houseCode}`);
-				if (response.data?.members) {
-					updateHouseMembers(response.data.members);
+				const response = await axios.get(`/api/users/get-users-by-house-code/${houseCode}`);
+				if (response.data?.users) {
+					updateHouseMembers(response.data.users);
 				}
 			} catch (error) {
 				console.error("Error fetching house members:", error);
@@ -234,7 +249,7 @@ export const useUser = () => {
 			setError(null);
 
 			try {
-				const response = await axios.put(`/api/user/update-user/${userId}`, updateData);
+				const response = await axios.put(`/api/users/update-user/${userId}`, updateData);
 				if (response.data) {
 					updateUser(response.data);
 					return response.data;
@@ -282,6 +297,7 @@ export const useUser = () => {
 		updateUser,
 		updateHouseMembers,
 		updateItems,
+		fetchCurrentUser,
 		fetchUser,
 		fetchHouseMembers,
 		updateUserProfile,

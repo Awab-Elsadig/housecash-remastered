@@ -91,14 +91,16 @@ export const getUserPaymentTransactions = async (req, res) => {
 		const sort = {};
 		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
-		// Get transactions where user is either the payer OR the payee
+		// Get transactions where user is either the payer, payee, or involved in settlements
 		const transactions = await PaymentTransaction.find({
 			$or: [
-				{ userId: userId }, // User made the payment (payer)
+				{ userId: userId }, // User made the payment (payer) or initiated settlement
 				{ "paidTo.id": userId }, // User received the payment (payee)
+				{ "settlementWith.id": userId }, // User was involved in settlement
 			],
 		})
 			.populate("paidTo.id", "name email")
+			.populate("settlementWith.id", "name email")
 			.populate("userId", "name email")
 			.sort(sort)
 			.limit(parseInt(limit))
@@ -107,8 +109,9 @@ export const getUserPaymentTransactions = async (req, res) => {
 		// Get total count for pagination
 		const totalCount = await PaymentTransaction.countDocuments({
 			$or: [
-				{ userId: userId }, // User made the payment (payer)
+				{ userId: userId }, // User made the payment (payer) or initiated settlement
 				{ "paidTo.id": userId }, // User received the payment (payee)
+				{ "settlementWith.id": userId }, // User was involved in settlement
 			],
 		});
 
@@ -149,16 +152,22 @@ export const getPaymentStatistics = async (req, res) => {
 			});
 		}
 
-		// Get all transactions where user is either the payer OR the payee
+		// Get all transactions where user is either the payer OR the payee OR involved in settlements
 		const transactions = await PaymentTransaction.find({
 			$or: [
-				{ userId: userId }, // User made the payment (payer)
+				{ userId: userId }, // User made the payment (payer) or initiated settlement
 				{ "paidTo.id": userId }, // User received the payment (payee)
+				{ "settlementWith.id": userId }, // User was involved in settlement
 			],
 		});
 
-		// Only count statistics for payments made BY the user (not received)
+		// Only count statistics for payments made BY the user (not received) and settlements involving the user
 		const paymentsMade = transactions.filter((t) => t.userId.toString() === userId.toString());
+		const settlementsInvolved = transactions.filter(
+			(t) =>
+				t.transactionType === "settlement" &&
+				(t.userId.toString() === userId.toString() || t.settlementWith?.id?.toString() === userId.toString())
+		);
 
 		// Calculate statistics
 		const stats = {
@@ -166,6 +175,7 @@ export const getPaymentStatistics = async (req, res) => {
 			totalPaid: paymentsMade.reduce((sum, t) => sum + t.totalAmount, 0),
 			bulkPayments: paymentsMade.filter((t) => t.transactionType === "bulk_payment").length,
 			singlePayments: paymentsMade.filter((t) => t.transactionType === "single_payment").length,
+			settlements: settlementsInvolved.length,
 			totalItems: paymentsMade.reduce((sum, t) => sum + t.itemCount, 0),
 		};
 
@@ -257,12 +267,29 @@ export const getPaymentTransactionsByRecipient = async (req, res) => {
 	}
 };
 
-// Delete a payment transaction
-export const deletePaymentTransaction = async (req, res) => {
+// Create a settlement transaction
+export const createSettlementTransaction = async (req, res) => {
 	try {
-		const { transactionId } = req.params;
+		const {
+			settlementWithId,
+			settlementWithName,
+			direction,
+			owedItems = [],
+			owingItems = [],
+			netAmount,
+			notes = "",
+		} = req.body;
+
 		const userId = req.user._id;
 		const houseCode = req.user.houseCode;
+
+		// Validate required fields
+		if (!settlementWithId || !settlementWithName || !direction || !netAmount) {
+			return res.status(400).json({
+				success: false,
+				message: "Missing required fields for settlement",
+			});
+		}
 
 		// Ensure we have valid user ID and house code
 		if (!userId || !houseCode) {
@@ -272,25 +299,66 @@ export const deletePaymentTransaction = async (req, res) => {
 			});
 		}
 
-		// Find and delete the transaction (only if it belongs to the user)
-		const transaction = await PaymentTransaction.findOneAndDelete({
-			_id: transactionId,
-			userId: userId,
-		});
-
-		if (!transaction) {
+		// Validate that settlement partner exists and is in the same house
+		const settlementPartner = await User.findOne({ _id: settlementWithId, houseCode: houseCode });
+		if (!settlementPartner) {
 			return res.status(404).json({
 				success: false,
-				message: "Transaction not found or you don't have permission to delete it",
+				message: "Settlement partner not found or not in the same house",
 			});
 		}
 
-		res.status(200).json({
+		// Combine all items and mark their type
+		const allItems = [
+			...owedItems.map((item) => ({ ...item, itemType: "owed" })),
+			...owingItems.map((item) => ({ ...item, itemType: "owing" })),
+		];
+
+		// Calculate totals
+		const owedTotal = owedItems.reduce((sum, item) => sum + (item.share || 0), 0);
+		const owingTotal = owingItems.reduce((sum, item) => sum + (item.share || 0), 0);
+		const totalAmount = owedTotal + owingTotal; // Total settlement amount (both sides)
+
+		// Create the settlement transaction
+		const settlementTransaction = new PaymentTransaction({
+			userId: userId,
+			houseCode: houseCode,
+			transactionType: "settlement",
+			settlementWith: {
+				id: settlementWithId,
+				name: settlementWithName,
+			},
+			settlementDirection: direction,
+			items: allItems.map((item) => ({
+				id: item.id || item._id,
+				name: item.name,
+				originalPrice: item.price || item.originalPrice || 0,
+				yourShare: item.share || 0,
+				paidAmount: item.share || 0,
+				itemType: item.itemType,
+			})),
+			totalAmount: totalAmount,
+			itemCount: allItems.length,
+			method: "Settlement",
+			notes: notes,
+			netAmount: netAmount,
+			owedItemsTotal: owedTotal,
+			owingItemsTotal: owingTotal,
+		});
+
+		await settlementTransaction.save();
+
+		// Populate the settlement partner details for the response
+		await settlementTransaction.populate("settlementWith.id", "name email");
+		await settlementTransaction.populate("userId", "name email");
+
+		res.status(201).json({
 			success: true,
-			message: "Payment transaction deleted successfully",
+			message: "Settlement transaction created successfully",
+			data: settlementTransaction,
 		});
 	} catch (error) {
-		console.error("Error deleting payment transaction:", error);
+		console.error("Error creating settlement transaction:", error);
 		res.status(500).json({
 			success: false,
 			message: "Internal server error",

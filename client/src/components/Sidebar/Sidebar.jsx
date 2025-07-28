@@ -4,8 +4,11 @@ import classes from "./Sidebar.module.css";
 import { navItems } from "./navigationConfig";
 import NavigationItem from "./NavigationItem";
 import AddItemButton from "../AddItemButton/AddItemButton";
+import { useUser } from "../../hooks/useUser";
 
 const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
+	const { user } = useUser();
+
 	const handleMobileMenuClose = () => {
 		if (setIsMobileMenuOpen) {
 			setIsMobileMenuOpen(false);
@@ -16,6 +19,19 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
 		// Close mobile menu after navigation
 		handleMobileMenuClose();
 	};
+
+	// Filter navigation items based on user role
+	const getFilteredNavItems = () => {
+		return navItems.filter((item) => {
+			// If item is admin-only, only show it to admin users
+			if (item.adminOnly) {
+				return user?.role === "admin";
+			}
+			return true;
+		});
+	};
+
+	const filteredNavItems = getFilteredNavItems();
 
 	return (
 		<div className={`${classes.sidebar} ${isMobileMenuOpen ? classes.mobileOpen : ""}`}>
@@ -31,7 +47,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
 
 			{/* Navigation Links */}
 			<nav className={classes.navLinks}>
-				{navItems.map((item) => (
+				{filteredNavItems.map((item) => (
 					<NavigationItem key={item.id} item={item} onClick={handleNavClick} />
 				))}
 			</nav>

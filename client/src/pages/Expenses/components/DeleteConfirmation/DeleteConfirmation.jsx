@@ -1,51 +1,55 @@
 import React, { useState } from "react";
-import axios from "axios";
 import classes from "./DeleteConfirmation.module.css";
 
-const DeleteConfirmation = ({ setDeleteConfirmation, itemToDelete, onItemDeleted }) => {
+const DeleteConfirmation = ({ setDeleteConfirmation, itemToDelete, onItemDeleted, deleteItem }) => {
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [error, setError] = useState(null);
 
 	const handleDelete = async () => {
 		if (!itemToDelete?._id) {
 			console.error("No item ID provided");
+			setError("No item ID provided");
+			return;
+		}
+
+		if (!deleteItem) {
+			console.error("Delete function not provided");
+			setError("Delete function not available");
 			return;
 		}
 
 		setIsDeleting(true);
+		setError(null); // Clear any previous errors
 
 		try {
-			const response = await axios.delete(`/api/items/${itemToDelete._id}`, {
-				withCredentials: true,
-			});
+			await deleteItem(itemToDelete._id);
 
-			if (response.data.success) {
-				// Refresh the items list
-				if (onItemDeleted) {
-					onItemDeleted();
-				}
-
-				console.log("Item deleted successfully");
-				setDeleteConfirmation(false);
-
-				// You might want to emit a socket event to notify other users
-				// socket.emit("itemDeleted", { itemId: itemToDelete._id });
-			} else {
-				throw new Error(response.data.message || "Delete failed");
+			// Refresh the items list
+			if (onItemDeleted) {
+				onItemDeleted();
 			}
+
+			console.log("Item deleted successfully");
+			setDeleteConfirmation(false);
+
+			// You might want to emit a socket event to notify other users
+			// socket.emit("itemDeleted", { itemId: itemToDelete._id });
 		} catch (error) {
 			console.error("Delete failed:", error);
-			alert(error.response?.data?.message || "Failed to delete item. Please try again.");
+			setError(error.message || "Failed to delete item. Please try again.");
 		} finally {
 			setIsDeleting(false);
 		}
 	};
 
 	const handleCancel = () => {
+		setError(null); // Clear any errors
 		setDeleteConfirmation(false);
 	};
 
 	const handleBackdropClick = (e) => {
 		if (e.target === e.currentTarget) {
+			setError(null); // Clear any errors
 			setDeleteConfirmation(false);
 		}
 	};
@@ -60,6 +64,13 @@ const DeleteConfirmation = ({ setDeleteConfirmation, itemToDelete, onItemDeleted
 				</div>
 
 				<div className={classes.content}>
+					{error && (
+						<div className={classes.error}>
+							<div className={classes.errorIcon}>❌</div>
+							<p>{error}</p>
+						</div>
+					)}
+
 					<div className={classes.warning}>
 						<div className={classes.warningIcon}>⚠️</div>
 						<p>Are you sure you want to delete this expense?</p>

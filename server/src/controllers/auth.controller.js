@@ -78,6 +78,12 @@ export const login = async (req, res) => {
 			return res.status(400).json({ error: "Invalid credentials" });
 		}
 
+		// Clear any existing impersonation data from session
+		if (req.session) {
+			delete req.session.impersonatedUserId;
+			delete req.session.originalAdminId;
+		}
+
 		// Get the same house members
 		const houseMembers = await House.findOne({ houseCode }).populate("members", "-password");
 

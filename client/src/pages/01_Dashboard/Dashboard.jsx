@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import classes from "./Dashboard.module.css";
 import { FaHandHoldingUsd } from "react-icons/fa";
 import { IoIosNotifications } from "react-icons/io";
@@ -8,12 +7,11 @@ import { useUser } from "../../hooks/useUser";
 import { useInitialLoading } from "../../hooks/useLoading";
 import { DashboardSkeleton } from "../../components/Skeleton";
 import axios from "axios";
-import socket from "../../socketConfig";
-import PaymentHistoryWidget from "./PaymentHistoryWidget";
+import ably from "../../ablyConfig";
+import NetBalanceAbly from "./NetBalanceAbly";
 
 const Dashboard = () => {
 	const { user, houseMembers, items, fetchItems, updateItems } = useUser();
-	const navigate = useNavigate();
 	const isLoading = useInitialLoading(1000); // 1 second initial loading
 	const [readyToCollect, setReadyToCollect] = useState(0);
 	const [notPaidAmount, setNotPaidAmount] = useState(0);
@@ -22,46 +20,44 @@ const Dashboard = () => {
 	const [collectData, setCollectData] = useState({});
 	const [notifyData, setNotifyData] = useState({});
 	const [activeSection, setActiveSection] = useState("pay"); // Default to "pay" section
-	const [paymentTransactions, setPaymentTransactions] = useState([]);
-	const [paymentStats, setPaymentStats] = useState({});
 
-	// Fetch payment transactions from database
-	const fetchPaymentTransactions = useCallback(async () => {
-		try {
-			const response = await axios.get("/api/payment-transactions", {
-				params: { limit: 10, page: 1 },
-				withCredentials: true,
-			});
-
-			if (response.data.success) {
-				const transactions = response.data.data.transactions;
-				setPaymentTransactions(transactions);
-			}
-		} catch (error) {
-			// Error fetching payment transactions
-			console.error("Error fetching payment transactions:", error);
-		}
-	}, []);
-
-	// Fetch payment statistics from database
-	const fetchPaymentStats = useCallback(async () => {
-		try {
-			const response = await axios.get("/api/payment-transactions/statistics", {
-				withCredentials: true,
-			});
-			if (response.data.success) {
-				setPaymentStats(response.data.data);
-			}
-		} catch (error) {
-			// Error fetching payment stats
-			console.error("Error fetching payment stats:", error);
-		}
-	}, []);
-
+	// Ably connection and event handling
 	useEffect(() => {
-		fetchPaymentTransactions();
-		fetchPaymentStats();
-	}, [fetchPaymentTransactions, fetchPaymentStats]);
+		if (!user?.houseCode) return;
+
+		// Subscribe to house channel for real-time updates
+		const channel = ably.channels.get(`house:${user.houseCode}`);
+
+		// Listen for fetch updates
+		const fetchUpdateHandler = () => {
+			console.log("Received fetchUpdate event from Ably");
+			fetchItems();
+		};
+
+		// Listen for item updates
+		const itemUpdateHandler = (message) => {
+			console.log("Received itemUpdate event from Ably:", message.data);
+			fetchItems();
+		};
+
+		// Listen for payment notifications
+		const paymentNotificationHandler = (message) => {
+			console.log("Received paymentNotification event from Ably:", message.data);
+			fetchItems();
+		};
+
+		// Subscribe to events
+		channel.subscribe("fetchUpdate", fetchUpdateHandler);
+		channel.subscribe("itemUpdate", itemUpdateHandler);
+		channel.subscribe("paymentNotification", paymentNotificationHandler);
+
+		// Cleanup on unmount
+		return () => {
+			channel.unsubscribe("fetchUpdate", fetchUpdateHandler);
+			channel.unsubscribe("itemUpdate", itemUpdateHandler);
+			channel.unsubscribe("paymentNotification", paymentNotificationHandler);
+		};
+	}, [fetchItems, user?.houseCode]);
 
 	// Calculate amounts and organize data by member
 	useEffect(() => {
@@ -183,40 +179,6 @@ const Dashboard = () => {
 		setActiveSection("pay");
 	};
 
-	// Create payment transaction record
-	const createPaymentTransaction = async (paymentData) => {
-		try {
-			const transactionData = {
-				transactionType: paymentData.type,
-				paidTo: {
-					id: paymentData.memberId,
-					name: paymentData.memberName,
-				},
-				items: paymentData.items.map((item) => ({
-					id: item.id,
-					name: item.name,
-					originalPrice: item.price,
-					yourShare: item.share,
-					paidAmount: item.share,
-				})),
-				totalAmount: paymentData.totalAmount,
-				itemCount: paymentData.items.length,
-				method: paymentData.type === "bulk_payment" ? "Bulk Payment" : "Individual Payment",
-				notes: "",
-			};
-
-			const response = await axios.post("/api/payment-transactions/create", transactionData, {
-				withCredentials: true,
-			});
-
-			if (response.data.success) {
-				return response.data.data;
-			}
-		} catch (error) {
-			console.error("Error creating payment transaction:", error);
-		}
-	};
-
 	const handlePayItem = async (itemId) => {
 		if (!user?._id) return;
 
@@ -231,39 +193,12 @@ const Dashboard = () => {
 				return member;
 			});
 
-			// If paying (not unpaying), save to payment history
-			const userMember = item.members.find((m) => m.userID === user._id);
-			if (userMember && !userMember.paid) {
-				const memberInfo = houseMembers.find((m) => m._id === item.author);
-				const newPayment = {
-					memberId: item.author,
-					memberName: memberInfo?.name || "Unknown",
-					items: [
-						{
-							id: item._id,
-							name: item.name,
-							price: item.price,
-							share: item.price / item.members.length,
-						},
-					],
-					totalAmount: item.price / item.members.length,
-					type: "single_payment",
-				};
-
-				// Create transaction record
-				await createPaymentTransaction(newPayment);
-
-				// Refresh payment transactions after creating a new one
-				await fetchPaymentTransactions();
-				await fetchPaymentStats();
-			}
-
 			await axios.patch(`/api/items/update-item/${itemId}`, {
 				...item,
 				members: updatedMembers,
 			});
 
-			socket.emit("SendFetch");
+			// The server will handle Ably notifications via AblyService
 			fetchItems();
 		} catch (error) {
 			console.error("Error updating payment:", error);
@@ -274,12 +209,12 @@ const Dashboard = () => {
 		if (!user?._id) return;
 
 		try {
-			await axios.post("/api/items/get-all", {
+			await axios.patch("/api/items/get-all", {
 				memberId,
 				userId: user._id,
 			});
 
-			socket.emit("SendFetch");
+			// The server will handle Ably notifications via AblyService
 			fetchItems();
 		} catch (error) {
 			console.error("Error collecting from member:", error);
@@ -342,9 +277,6 @@ const Dashboard = () => {
 		if (!user?._id) return;
 
 		try {
-			const memberInfo = houseMembers.find((m) => m._id === memberId);
-			const itemsToPay = paymentsByMember[memberId]?.items || [];
-
 			const updatedItems = items.map((item) => {
 				if (item.author.toString() === memberId && item.author.toString() !== user._id.toString()) {
 					const updatedMembers = item.members.map((member) => {
@@ -361,33 +293,12 @@ const Dashboard = () => {
 			// Optimistically update UI
 			updateItems(updatedItems);
 
-			// Save payment to history
-			const newPayment = {
-				memberId: memberId,
-				memberName: memberInfo?.name || "Unknown",
-				items: itemsToPay.map((item) => ({
-					id: item._id,
-					name: item.name,
-					price: item.price,
-					share: item.share,
-				})),
-				totalAmount: paymentsByMember[memberId]?.total || 0,
-				type: "bulk_payment",
-			};
-
-			// Create transaction record
-			await createPaymentTransaction(newPayment);
-
-			// Refresh payment transactions after creating a new one
-			await fetchPaymentTransactions();
-			await fetchPaymentStats();
-
 			await axios.patch("/api/items/pay-all", {
 				memberId,
 				userId: user?._id,
 			});
 
-			socket.emit("SendFetch");
+			// The server will handle Ably notifications via AblyService
 			fetchItems();
 		} catch (error) {
 			console.error("Error paying all to member:", error);
@@ -532,10 +443,6 @@ const Dashboard = () => {
 		}
 	};
 
-	const handleShowMoreHistory = () => {
-		navigate("/payment-history");
-	};
-
 	return (
 		<div className={classes.dashboard}>
 			{isLoading || !user ? (
@@ -605,12 +512,7 @@ const Dashboard = () => {
 						</div>
 					</div>
 					<div className={classes.right}>
-						<PaymentHistoryWidget
-							paymentTransactions={paymentTransactions}
-							paymentStats={paymentStats}
-							user={user}
-							onShowMore={handleShowMoreHistory}
-						/>
+						<NetBalanceAbly user={user} houseMembers={houseMembers} items={items} />
 					</div>
 				</>
 			)}

@@ -52,6 +52,11 @@ app.use(
 
 // Add session debug middleware
 app.use((req, res, next) => {
+	if (req.path.includes("resolve-balance")) {
+		console.log(`Request to resolve-balance: ${req.method} ${req.path}`);
+		console.log("Request body:", req.body);
+		console.log("Request headers:", req.headers);
+	}
 	next();
 });
 

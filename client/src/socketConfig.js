@@ -2,7 +2,7 @@
 import { io } from "socket.io-client";
 
 // Connect to dedicated socket server
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 const socket = io(SOCKET_URL, {
 	withCredentials: true,
@@ -11,13 +11,9 @@ const socket = io(SOCKET_URL, {
 });
 
 // Connection event handlers
-socket.on("connect", () => {
-	console.log("Connected to socket server:", socket.id);
-});
+socket.on("connect", () => {});
 
-socket.on("disconnect", () => {
-	console.log("Disconnected from socket server");
-});
+socket.on("disconnect", () => {});
 
 socket.on("connect_error", (error) => {
 	console.error("Socket connection error:", error);

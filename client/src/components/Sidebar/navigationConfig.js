@@ -2,6 +2,7 @@ import { RiDashboardFill } from "react-icons/ri";
 import { FaMoneyBill1Wave } from "react-icons/fa6";
 import { FaHistory } from "react-icons/fa";
 import { IoSettingsOutline } from "react-icons/io5";
+import { RiShieldUserLine } from "react-icons/ri";
 
 // Navigation items configuration
 export const navItems = [
@@ -28,6 +29,13 @@ export const navItems = [
 		label: "Settings",
 		path: "/settings",
 		icon: IoSettingsOutline,
+	},
+	{
+		id: "admin",
+		label: "Admin Panel",
+		path: "/admin",
+		icon: RiShieldUserLine,
+		adminOnly: true, // This nav item will only show for admin users
 	},
 ];
 

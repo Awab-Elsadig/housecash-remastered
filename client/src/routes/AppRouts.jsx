@@ -4,6 +4,7 @@ import Dashboard from "../pages/01_Dashboard/Dashboard";
 import Expenses from "../pages/02_Expenses/Expenses";
 import PaymentHistory from "../pages/03_PaymentHistory/PaymentHistory";
 import Settings from "../pages/04_Settings/Settings";
+import Admin from "../pages/05_Admin/Admin";
 import NotFound from "../pages/NotFound";
 
 const AppRoutes = () => {
@@ -16,6 +17,7 @@ const AppRoutes = () => {
 			<Route path="/expenses" element={<Expenses />} />
 			<Route path="/payment-history" element={<PaymentHistory />} />
 			<Route path="/settings" element={<Settings />} />
+			<Route path="/admin" element={<Admin />} />
 
 			{/* Catch-all route for 404 pages */}
 			<Route path="*" element={<NotFound />} />

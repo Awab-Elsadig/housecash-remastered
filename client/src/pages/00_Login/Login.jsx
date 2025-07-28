@@ -74,17 +74,18 @@ const Login = () => {
 	useEffect(() => {
 		document.title = "Login - HouseCash";
 
+		// Clear all session data including impersonation
 		sessionStorage.removeItem("originalAdmin");
 		sessionStorage.removeItem("user");
 		sessionStorage.removeItem("items");
 		sessionStorage.removeItem("houseMembers");
+		sessionStorage.removeItem("impersonationData");
 	}, []);
 
 	return (
 		<div className={classes.login}>
 			<Helmet>
 				<title>Housecash | Login</title>
-				<link rel="icon" href="/Page_Icons/cart.svg" />
 			</Helmet>
 			<h1>HOUSECASH</h1>
 			<div className={`${classes.formLayout}`}>

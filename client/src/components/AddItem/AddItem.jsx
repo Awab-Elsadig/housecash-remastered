@@ -4,7 +4,6 @@ import classes from "./AddItem.module.css";
 import { useUser } from "../../hooks/useUser";
 import axios from "axios";
 import { IoCloseSharp } from "react-icons/io5";
-import socket from "../../socketConfig";
 
 // Arrays for different categories (moved outside component)
 const groceryProducts = [
@@ -299,7 +298,7 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				);
 				updateItems(updatedItems);
 				setAddItem(false);
-				socket.emit("SendFetch");
+				// The server will handle Ably notifications via AblyService
 			} catch (error) {
 				console.error("Error updating item:", error);
 			}
@@ -319,7 +318,7 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				const createdItem = response.data.item;
 				updateItems([...items, createdItem]);
 				setAddItem(false);
-				socket.emit("SendFetch");
+				// The server will handle Ably notifications via AblyService
 			} catch (error) {
 				console.error("Error adding item:", error);
 			}
