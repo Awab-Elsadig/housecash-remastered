@@ -195,7 +195,7 @@ const Settings = () => {
 						</div>
 						<h1 className={classes.userName}>Loading...</h1>
 					</div>
-					<button className={classes.logout}>
+					<button className={classes.logout} onClick={logout}>
 						<TbLogout />
 					</button>
 				</header>

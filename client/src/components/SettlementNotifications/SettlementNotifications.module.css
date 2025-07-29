@@ -1,0 +1,128 @@
+.settlementNotifications {
+	position: fixed;
+	top: 80px;
+	right: 20px;
+	z-index: 1000;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	max-width: 350px;
+}
+
+.notificationCard {
+	background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 16px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05);
+	animation: slideInRight 0.3s ease-out;
+	backdrop-filter: blur(10px);
+	border-left: 4px solid #3b82f6;
+}
+
+.notificationHeader {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.settlementIcon {
+	color: #3b82f6;
+	font-size: 16px;
+}
+
+.notificationTitle {
+	font-weight: 600;
+	color: #1e293b;
+	font-size: 14px;
+}
+
+.notificationContent {
+	margin-bottom: 16px;
+}
+
+.requestText {
+	color: #475569;
+	font-size: 14px;
+	margin: 0 0 8px 0;
+	line-height: 1.4;
+}
+
+.timeLeft {
+	color: #f59e0b;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.buttonGroup {
+	display: flex;
+	gap: 8px;
+}
+
+.responseBtn {
+	flex: 1;
+	padding: 8px 12px;
+	border: none;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	transition: all 0.2s ease;
+}
+
+.acceptBtn {
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: white;
+}
+
+.acceptBtn:hover {
+	background: linear-gradient(135deg, #059669 0%, #047857 100%);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.declineBtn {
+	background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+	color: white;
+}
+
+.declineBtn:hover {
+	background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+@keyframes slideInRight {
+	from {
+		transform: translateX(100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateX(0);
+		opacity: 1;
+	}
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+	.settlementNotifications {
+		top: 70px;
+		right: 10px;
+		left: 10px;
+		max-width: none;
+	}
+
+	.notificationCard {
+		padding: 14px;
+	}
+
+	.responseBtn {
+		padding: 10px 16px;
+		font-size: 13px;
+	}
+}

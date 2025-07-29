@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import classes from "./PaymentHistory.module.css";
 import { FaHistory, FaReceipt, FaHandHoldingUsd, FaExchangeAlt } from "react-icons/fa";
 import { MdPayment, MdDashboard } from "react-icons/md";
@@ -14,7 +14,6 @@ const PaymentHistory = () => {
 	const { user } = useUser();
 	const navigate = useNavigate();
 	const isLoading = useInitialLoading(1200);
-
 	const [paymentTransactions, setPaymentTransactions] = useState([]);
 	const [paymentStats, setPaymentStats] = useState({
 		totalTransactions: 0,
@@ -28,144 +27,88 @@ const PaymentHistory = () => {
 	const [sortFilter, setSortFilter] = useState("recent");
 	const [error, setError] = useState(null);
 
-	// Memoized API functions
-	const fetchPaymentTransactions = useCallback(async () => {
-		try {
-			setError(null);
-			const response = await axios.get("/api/payment-transactions", {
-				withCredentials: true,
-			});
-			if (response.data.success) {
-				setPaymentTransactions(response.data.data.transactions || []);
-			}
-		} catch (error) {
-			console.error("Error fetching payment transactions:", error);
-			setError("Failed to load payment transactions");
-		}
-	}, []);
-
-	const fetchPaymentStatistics = useCallback(async () => {
-		try {
-			const response = await axios.get("/api/payment-transactions/statistics", {
-				withCredentials: true,
-			});
-			if (response.data.success) {
-				setPaymentStats(response.data.data);
-			}
-		} catch (error) {
-			console.error("Error fetching payment statistics:", error);
-		}
-	}, []);
-
-	// Initialize data on component mount
+	// Fetch transactions and stats from backend
 	useEffect(() => {
-		fetchPaymentTransactions();
-		fetchPaymentStatistics();
-	}, [fetchPaymentTransactions, fetchPaymentStatistics]);
+		const fetchData = async () => {
+			try {
+				const txRes = await axios.get("/api/payment-transactions");
+				// If backend returns { success, data: { transactions, pagination } }
+				const transactions = txRes.data?.data?.transactions || txRes.data?.data || txRes.data?.transactions || [];
+				setPaymentTransactions(transactions);
 
-	// Memoized filtered and sorted transactions
-	const filteredTransactions = useMemo(() => {
-		let filtered = [...paymentTransactions];
-
-		// Apply transaction type filter
-		if (transactionFilter === "bulk") {
-			filtered = filtered.filter((transaction) => transaction.method === "Bulk Payment");
-		} else if (transactionFilter === "single") {
-			filtered = filtered.filter((transaction) => transaction.method === "Individual Payment");
-		} else if (transactionFilter === "settlement") {
-			filtered = filtered.filter((transaction) => transaction.transactionType === "settlement");
-		} else if (transactionFilter === "payments") {
-			filtered = filtered.filter(
-				(transaction) =>
-					transaction.transactionType === "single_payment" || transaction.transactionType === "bulk_payment"
-			);
-		}
-
-		// Apply sort filter
-		if (sortFilter === "recent") {
-			filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-		} else if (sortFilter === "oldest") {
-			filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-		} else if (sortFilter === "amount") {
-			filtered.sort((a, b) => b.totalAmount - a.totalAmount);
-		}
-
-		return filtered;
-	}, [paymentTransactions, transactionFilter, sortFilter]);
-
-	const handleTransactionFilterChange = useCallback((e) => {
-		setTransactionFilter(e.target.value);
+				// Fetch stats
+				const statsRes = await axios.get("/api/payment-transactions/statistics");
+				setPaymentStats(statsRes.data?.data || {});
+			} catch (err) {
+				setError(err.response?.data?.message || "Failed to load payment history");
+			}
+		};
+		fetchData();
 	}, []);
 
-	const handleSortFilterChange = useCallback((e) => {
-		setSortFilter(e.target.value);
-	}, []);
+	// Filter and sort transactions (placeholder, replace with your logic)
+	const filteredTransactions = paymentTransactions; // Add filter/sort logic as needed
 
-	// Render transaction items
+	// Render transaction items (single card for settlements, green for owed, red for owing)
 	const renderTransactionItems = useCallback(
-		(transaction, isPaymentMade) => (
-			<div className={classes.transactionItems}>
-				{transaction.transactionType === "settlement" ? (
-					<>
-						<div className={classes.itemsTitle}>Settlement Details:</div>
-						<div className={classes.settlementSections}>
-							{transaction.items?.filter((item) => item.itemType === "owed").length > 0 && (
-								<div className={classes.settlementSection}>
-									<div className={classes.sectionTitle}>Items you were owed:</div>
-									<div className={classes.itemsGrid}>
-										{transaction.items
-											.filter((item) => item.itemType === "owed")
-											.map((item, index) => (
-												<div key={`owed-${index}`} className={classes.transactionItem}>
-													<span className={classes.itemName}>{item.name}</span>
-													<span className={`${classes.itemAmount} ${classes.paymentIn}`}>
-														+${item.yourShare?.toFixed(2) || "0.00"}
-													</span>
-												</div>
-											))}
+		(transaction) => {
+			if (transaction.transactionType === "settlement") {
+				return (
+					<div className={classes.transactionItems}>
+						<div className={classes.itemsTitle}>Settlement Items:</div>
+						<div className={classes.settlementBreakdown}>
+							{transaction.items?.map((item, index) => {
+								const perspective = item.perspectives?.find((p) => p.userId === user?._id);
+								return (
+									<div
+										key={index}
+										className={classes.settlementItem}
+										style={{
+											color:
+												perspective?.itemType === "owed"
+													? "#2ecc40"
+													: perspective?.itemType === "owing"
+													? "#ff4136"
+													: undefined,
+										}}
+									>
+										<span className={classes.itemName}>{item.name}</span>
+										<span>
+											{perspective?.itemType === "owed"
+												? `+${perspective?.amount?.toFixed(2) || "0.00"}`
+												: perspective?.itemType === "owing"
+												? `-${perspective?.amount?.toFixed(2) || "0.00"}`
+												: `$${perspective?.amount?.toFixed(2) || "0.00"}`}
+										</span>
+										<span style={{ marginLeft: 8, color: "#888" }}>
+											(${item.price?.toFixed(2) || item.originalPrice?.toFixed(2) || "0.00"})
+										</span>
 									</div>
-								</div>
-							)}
-							{transaction.items?.filter((item) => item.itemType === "owing").length > 0 && (
-								<div className={classes.settlementSection}>
-									<div className={classes.sectionTitle}>Items you owed:</div>
-									<div className={classes.itemsGrid}>
-										{transaction.items
-											.filter((item) => item.itemType === "owing")
-											.map((item, index) => (
-												<div key={`owing-${index}`} className={classes.transactionItem}>
-													<span className={classes.itemName}>{item.name}</span>
-													<span className={`${classes.itemAmount} ${classes.paymentOut}`}>
-														-${item.yourShare?.toFixed(2) || "0.00"}
-													</span>
-												</div>
-											))}
-									</div>
-								</div>
-							)}
+								);
+							})}
 						</div>
-					</>
-				) : (
-					<>
-						<div className={classes.itemsTitle}>Items:</div>
-						<div className={classes.itemsGrid}>
+					</div>
+				);
+			} else {
+				return (
+					<div className={classes.transactionItems}>
+						<div className={classes.itemsTitle}>Items included:</div>
+						<div className={classes.paymentItems}>
 							{transaction.items?.map((item, index) => (
-								<div key={index} className={classes.transactionItem}>
+								<div key={index} className={classes.paymentItem}>
 									<span className={classes.itemName}>{item.name}</span>
-									<span className={`${classes.itemAmount} ${isPaymentMade ? classes.paymentOut : classes.paymentIn}`}>
-										${item.yourShare?.toFixed(2) || "0.00"}
-									</span>
+									<span className={classes.itemAmount}>${item.yourShare?.toFixed(2) || "0.00"}</span>
 								</div>
 							))}
 						</div>
-					</>
-				)}
-			</div>
-		),
-		[]
+					</div>
+				);
+			}
+		},
+		[user?._id]
 	);
 
-	// Error state
+	// Error block
 	if (error) {
 		return (
 			<div className={classes.historyPage}>
@@ -185,7 +128,7 @@ const PaymentHistory = () => {
 					<button
 						onClick={() => {
 							setError(null);
-							fetchPaymentTransactions();
+							// Add logic to refetch transactions
 						}}
 						style={{
 							background: "var(--mainColor)",
@@ -203,6 +146,7 @@ const PaymentHistory = () => {
 		);
 	}
 
+	// Main render section
 	return (
 		<div className={classes.historyPage}>
 			{isLoading ? (
@@ -217,7 +161,7 @@ const PaymentHistory = () => {
 									<select
 										className={classes.filterSelect}
 										value={transactionFilter}
-										onChange={handleTransactionFilterChange}
+										onChange={(e) => setTransactionFilter(e.target.value)}
 										title="Filter by transaction type"
 									>
 										<option value="all">All Transactions</option>
@@ -229,7 +173,7 @@ const PaymentHistory = () => {
 									<select
 										className={classes.filterSelect}
 										value={sortFilter}
-										onChange={handleSortFilterChange}
+										onChange={(e) => setSortFilter(e.target.value)}
 										title="Sort transactions"
 									>
 										<option value="recent">Most Recent</option>
@@ -238,104 +182,96 @@ const PaymentHistory = () => {
 									</select>
 								</div>
 							</div>
-
 							<div className={classes.transactionsList}>
 								{filteredTransactions.length > 0 ? (
 									filteredTransactions.map((transaction) => {
-										let isPaymentMade, otherParty, transactionTitle;
-
+										let transactionIcon, transactionTitle, transactionSubtitle, transactionAmount;
+										let isPositive = false;
 										if (transaction.transactionType === "settlement") {
-											// For settlement transactions
-											const isInitiator = transaction.userId?._id === user?._id;
-											otherParty = isInitiator ? transaction.settlementWith?.name : transaction.userId?.name;
-
-											if (isInitiator) {
-												// You initiated the settlement
-												if (transaction.settlementDirection === "paying") {
-													isPaymentMade = true;
-													transactionTitle = `Settled debt with ${otherParty || "Unknown"}`;
-												} else {
-													isPaymentMade = false;
-													transactionTitle = `Collected from ${otherParty || "Unknown"}`;
+											transactionIcon = <FaExchangeAlt />;
+											// Find the other user for subtitle
+											const otherUser = transaction.users?.find((u) => u.id !== user?._id);
+											transactionTitle = `Settlement`;
+											transactionSubtitle = otherUser?.name || "Unknown";
+											// Calculate sum of owed and owing for current user
+											let sumOwed = 0,
+												sumOwing = 0;
+											transaction.items?.forEach((item) => {
+												const perspective = item.perspectives?.find((p) => p.userId === user?._id);
+												if (perspective?.itemType === "owed") {
+													sumOwed += perspective.amount || 0;
+												} else if (perspective?.itemType === "owing") {
+													sumOwing += perspective.amount || 0;
 												}
-											} else {
-												// You were the settlement partner
-												if (transaction.settlementDirection === "paying") {
-													isPaymentMade = false;
-													transactionTitle = `Settlement from ${otherParty || "Unknown"}`;
-												} else {
-													isPaymentMade = true;
-													transactionTitle = `Paid settlement to ${otherParty || "Unknown"}`;
-												}
-											}
+											});
+											// If owed is greater, green; if owing is greater, red
+											isPositive = sumOwed >= sumOwing;
+											// Show net amount (owed - owing)
+											const netAmount = sumOwed - sumOwing;
+											transactionAmount = `${netAmount >= 0 ? "+" : "-"}$${Math.abs(netAmount).toFixed(2)}`;
 										} else {
-											// Regular payment transactions
-											isPaymentMade = transaction.userId?._id === user?._id;
-											otherParty = isPaymentMade ? transaction.paidTo?.name : transaction.userId?.name;
-											transactionTitle = isPaymentMade
-												? `Paid ${otherParty || "Unknown"}`
-												: `Received from ${otherParty || "Unknown"}`;
+											const isPaymentMade = transaction.userId?._id === user?._id;
+											const otherParty = isPaymentMade ? transaction.paidTo?.name : transaction.userId?.name;
+											if (transaction.method === "Bulk Payment") {
+												transactionIcon = <FaHandHoldingUsd />;
+												transactionTitle = isPaymentMade ? "Bulk Payment Made" : "Bulk Payment Received";
+												transactionSubtitle = isPaymentMade
+													? `To ${otherParty || "Unknown"}`
+													: `From ${otherParty || "Unknown"}`;
+											} else {
+												transactionIcon = <FaReceipt />;
+												transactionTitle = isPaymentMade ? "Single Payment Made" : "Single Payment Received";
+												transactionSubtitle = isPaymentMade
+													? `To ${otherParty || "Unknown"}`
+													: `From ${otherParty || "Unknown"}`;
+											}
+											transactionAmount = `${isPaymentMade ? "-" : "+"}$${
+												transaction.totalAmount?.toFixed(2) || "0.00"
+											}`;
+											isPositive = !isPaymentMade;
 										}
-
 										return (
 											<div key={transaction._id} className={classes.transactionCard}>
-												<div className={classes.transactionMain}>
+												<div className={classes.transactionHeader}>
 													<div className={classes.transactionLeft}>
-														<div className={classes.transactionIcon}>
-															{transaction.transactionType === "settlement" ? <FaHandHoldingUsd /> : <FaReceipt />}
+														<div
+															className={`${classes.transactionIcon} ${
+																transaction.transactionType === "settlement"
+																	? classes.settlementIcon
+																	: transaction.method === "Bulk Payment"
+																	? classes.bulkIcon
+																	: classes.singleIcon
+															}`}
+														>
+															{transactionIcon}
 														</div>
-														<div className={classes.transactionDetails}>
+														<div className={classes.transactionInfo}>
 															<div className={classes.transactionTitle}>{transactionTitle}</div>
+															<div className={classes.transactionSubtitle}>{transactionSubtitle}</div>
 															<div className={classes.transactionMeta}>
 																<span className={classes.transactionDate}>{formatDateTime(transaction.createdAt)}</span>
-																<span className={classes.transactionType}>{transaction.method}</span>
+																<span className={classes.transactionBadge}>
+																	{transaction.transactionType === "settlement" ? "Settlement" : transaction.method}
+																</span>
 															</div>
 														</div>
 													</div>
 													<div className={classes.transactionRight}>
 														<div
 															className={`${classes.transactionAmount} ${
-																isPaymentMade ? classes.paymentOut : classes.paymentIn
+																isPositive ? classes.positive : classes.negative
 															}`}
 														>
-															{transaction.transactionType === "settlement" ? (
-																<>
-																	<div className={classes.netAmount}>
-																		{isPaymentMade ? "-" : "+"}$
-																		{Math.abs(transaction.netAmount || transaction.totalAmount || 0).toFixed(2)}
-																	</div>
-																	{transaction.owedItemsTotal > 0 && transaction.owingItemsTotal > 0 && (
-																		<div className={classes.settlementBreakdown}>
-																			<small>
-																				Owed: ${transaction.owedItemsTotal.toFixed(2)} | Owing: $
-																				{transaction.owingItemsTotal.toFixed(2)}
-																			</small>
-																		</div>
-																	)}
-																</>
-															) : (
-																`${isPaymentMade ? "-" : "+"}$${transaction.totalAmount?.toFixed(2) || "0.00"}`
-															)}
+															{transactionAmount}
 														</div>
 														<div className={classes.transactionItemCount}>
-															{transaction.itemCount || 0} item
-															{(transaction.itemCount || 0) > 1 ? "s" : ""}
-															{transaction.transactionType === "settlement" && (
-																<div className={classes.settlementLabel}>Settlement</div>
-															)}
+															{transaction.itemCount || 0} item{(transaction.itemCount || 0) !== 1 ? "s" : ""}
 														</div>
 													</div>
 												</div>
-
-												{transaction.items &&
-													transaction.items.length > 0 &&
-													renderTransactionItems(transaction, isPaymentMade)}
-
-												<div className={classes.transactionFooter}>
-													<div className={classes.transactionStatus}>
-														<span className={classes.statusBadge}>{transaction.status || "Completed"}</span>
-													</div>
-												</div>
+												{transaction.items && transaction.items.length > 0 && (
+													<div className={classes.transactionExpanded}>{renderTransactionItems(transaction)}</div>
+												)}
 											</div>
 										);
 									})
@@ -355,7 +291,6 @@ const PaymentHistory = () => {
 							</div>
 						</div>
 					</div>
-
 					<div className={classes.sidebar}>
 						<h3 className={classes.sidebarTitle}>Payment Statistics</h3>
 						<div className={classes.statsGrid}>

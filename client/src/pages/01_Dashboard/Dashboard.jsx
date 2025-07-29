@@ -8,7 +8,7 @@ import { useInitialLoading } from "../../hooks/useLoading";
 import { DashboardSkeleton } from "../../components/Skeleton";
 import axios from "axios";
 import ably from "../../ablyConfig";
-import NetBalanceAbly from "./NetBalanceAbly";
+import NetBalance from "./NetBalance";
 
 const Dashboard = () => {
 	const { user, houseMembers, items, fetchItems, updateItems } = useUser();
@@ -512,7 +512,7 @@ const Dashboard = () => {
 						</div>
 					</div>
 					<div className={classes.right}>
-						<NetBalanceAbly user={user} houseMembers={houseMembers} items={items} />
+						<NetBalance user={user} houseMembers={houseMembers} items={items} onDataRefresh={fetchItems} />
 					</div>
 				</>
 			)}

@@ -5,7 +5,6 @@ import { RiUserUnfollowLine, RiUserFollowLine } from "react-icons/ri";
 import classes from "./Header.module.css";
 import { useUser } from "../../hooks/useUser";
 import { useImpersonationContext } from "../../hooks/useImpersonationContext";
-import NotificationDropdown from "../NotificationDropdown/NotificationDropdown";
 import { getProfilePictureUrl } from "../../utils/imagekitUtils";
 
 const Header = ({ toggleMobileMenu }) => {
@@ -116,7 +115,6 @@ const Header = ({ toggleMobileMenu }) => {
 				</div>
 
 				<div className={classes.profile}>
-					<NotificationDropdown />
 					<span className={classes.greeting}>
 						<span>Hello</span>
 						<span>{user?.name ? user.name.split(" ")[0] : "User"}</span>

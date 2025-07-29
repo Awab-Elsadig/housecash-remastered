@@ -2,21 +2,26 @@ import mongoose from "mongoose";
 
 const paymentTransactionSchema = new mongoose.Schema(
 	{
+		users: [
+			{
+				id: {
+					type: mongoose.Schema.Types.ObjectId,
+					ref: "User",
+					required: true,
+				},
+				name: {
+					type: String,
+					required: true,
+				},
+			},
+		],
+		// Add userId for legacy and population compatibility
 		userId: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
-			required: true,
+			required: false,
 		},
-		houseCode: {
-			type: String,
-			required: true,
-		},
-		transactionType: {
-			type: String,
-			enum: ["single_payment", "bulk_payment", "settlement"],
-			required: true,
-		},
-		// For regular payments (single/bulk)
+		// Added paidTo field for legacy and population compatibility
 		paidTo: {
 			id: {
 				type: mongoose.Schema.Types.ObjectId,
@@ -26,19 +31,14 @@ const paymentTransactionSchema = new mongoose.Schema(
 				type: String,
 			},
 		},
-		// For settlements
-		settlementWith: {
-			id: {
-				type: mongoose.Schema.Types.ObjectId,
-				ref: "User",
-			},
-			name: {
-				type: String,
-			},
-		},
-		settlementDirection: {
+		houseCode: {
 			type: String,
-			enum: ["paying", "collecting"],
+			required: true,
+		},
+		transactionType: {
+			type: String,
+			enum: ["single_payment", "bulk_payment", "settlement"],
+			required: true,
 		},
 		items: [
 			{
@@ -55,19 +55,29 @@ const paymentTransactionSchema = new mongoose.Schema(
 					type: Number,
 					required: true,
 				},
-				yourShare: {
+				price: {
 					type: Number,
 					required: true,
 				},
-				paidAmount: {
-					type: Number,
-					required: true,
-				},
-				// For settlements: indicate if this item was owed to you or by you
-				itemType: {
-					type: String,
-					enum: ["owed", "owing"], // owed = they owed you, owing = you owed them
-				},
+				// For each user, show their perspective
+				perspectives: [
+					{
+						userId: {
+							type: mongoose.Schema.Types.ObjectId,
+							ref: "User",
+							required: true,
+						},
+						itemType: {
+							type: String,
+							enum: ["owed", "owing"],
+							required: true,
+						},
+						amount: {
+							type: Number,
+							required: true,
+						},
+					},
+				],
 			},
 		],
 		totalAmount: {
@@ -75,6 +85,10 @@ const paymentTransactionSchema = new mongoose.Schema(
 			required: true,
 		},
 		itemCount: {
+			type: Number,
+			required: true,
+		},
+		algebraicSum: {
 			type: Number,
 			required: true,
 		},
@@ -91,18 +105,6 @@ const paymentTransactionSchema = new mongoose.Schema(
 		notes: {
 			type: String,
 			default: "",
-		},
-		// Settlement specific fields
-		netAmount: {
-			type: Number, // The net amount settled (positive = you received, negative = you paid)
-		},
-		owedItemsTotal: {
-			type: Number, // Total amount that was owed to you
-			default: 0,
-		},
-		owingItemsTotal: {
-			type: Number, // Total amount that you owed
-			default: 0,
 		},
 	},
 	{

@@ -9,7 +9,12 @@ axios.defaults.withCredentials = true;
 // Request interceptor
 axios.interceptors.request.use(
 	(config) => {
-		// You can add auth headers here if needed
+		// Attach JWT token from sessionStorage if available
+		const user = sessionStorage.getItem("user");
+		const token = user ? JSON.parse(user).token : null;
+		if (token) {
+			config.headers.Authorization = `Bearer ${token}`;
+		}
 		return config;
 	},
 	(error) => {

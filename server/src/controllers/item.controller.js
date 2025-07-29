@@ -533,3 +533,89 @@ export const resolveBalance = async (req, res) => {
 		return res.status(500).json({ error: error.message || "Error resolving balance" });
 	}
 };
+
+// Batch resolve balances for settlement - more efficient than individual calls
+export const resolveBalanceBatch = async (req, res) => {
+	console.log("=== BATCH RESOLVE BALANCE ENDPOINT HIT ===");
+	const { items } = req.body;
+
+	console.log("resolveBalanceBatch called with items:", items);
+	console.log("Request user:", req.user);
+
+	try {
+		// Get house code from the authenticated user
+		const houseCode = req.user?.houseCode;
+		if (!houseCode) {
+			return res.status(400).json({ error: "User must belong to a house" });
+		}
+
+		console.log("House code:", houseCode);
+		console.log("Authenticated user:", req.user._id.toString());
+
+		if (!items || items.length === 0) {
+			return res.status(400).json({ error: "No items provided for batch resolution" });
+		}
+
+		let successfulUpdates = 0;
+		const updatePromises = [];
+
+		for (const itemData of items) {
+			const { id, senderId, recipientId, direction } = itemData;
+
+			console.log(`Processing item ${id} with direction ${direction}, sender: ${senderId}, recipient: ${recipientId}`);
+
+			// Validate that the authenticated user is involved in this transaction
+			if (req.user._id.toString() !== recipientId && req.user._id.toString() !== senderId) {
+				console.log(`Skipping item ${id} - user not involved`);
+				continue;
+			}
+
+			if (direction === "paying") {
+				// Sender is paying recipient: mark sender as paid
+				const updatePromise = Item.findOneAndUpdate(
+					{
+						_id: id,
+						houseCode,
+						"members.userID": senderId,
+					},
+					{
+						$set: { "members.$.paid": true },
+					},
+					{ new: true }
+				).then((result) => {
+					if (result) {
+						console.log(`Successfully updated item ${id} for sender ${senderId}`);
+						return result;
+					} else {
+						console.log(`Failed to update item ${id} for sender ${senderId}`);
+						return null;
+					}
+				});
+
+				updatePromises.push(updatePromise);
+			}
+		}
+
+		const results = await Promise.all(updatePromises);
+		successfulUpdates = results.filter((result) => result !== null).length;
+
+		console.log("Batch update completed:", { totalItems: items.length, successfulUpdates });
+
+		if (successfulUpdates === 0) {
+			return res.status(404).json({ error: "No items were successfully updated" });
+		}
+
+		// Send Ably notification to update all house members
+		await AblyService.sendFetchUpdate(houseCode);
+
+		return res.status(200).json({
+			success: true,
+			message: `Successfully resolved ${successfulUpdates} items in batch`,
+			totalProcessed: items.length,
+			successfulUpdates,
+		});
+	} catch (error) {
+		console.error("Error in batch resolve balance:", error);
+		return res.status(500).json({ error: error.message || "Error resolving balance batch" });
+	}
+};

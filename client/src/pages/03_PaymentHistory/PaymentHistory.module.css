@@ -15,7 +15,8 @@
 }
 
 .sidebar {
-	/* Sidebar styles will be added as needed */
+	display: flex;
+	flex-direction: column;
 }
 
 .sidebarTitle {
@@ -128,12 +129,32 @@
 	background: rgba(255, 255, 255, 0.15);
 }
 
+.filterSelect option {
+	background: rgba(30, 41, 59, 0.95);
+	color: #ffffff;
+	padding: 0.75rem;
+	border: none;
+	font-size: 0.875rem;
+}
+
+.filterSelect option:hover,
+.filterSelect option:focus {
+	background: rgba(99, 102, 241, 0.3);
+	color: #ffffff;
+}
+
+.filterSelect option:checked {
+	background: rgba(99, 102, 241, 0.5);
+	font-weight: 600;
+}
+
 .transactionsList {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
 }
 
+/* Transaction Card Styles */
 .transactionCard {
 	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
@@ -145,12 +166,12 @@
 }
 
 .transactionCard:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 	border-color: rgba(124, 58, 237, 0.3);
 }
 
-.transactionMain {
+.transactionHeader {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -161,23 +182,36 @@
 	display: flex;
 	align-items: center;
 	gap: 1rem;
+	flex: 1;
 }
 
 .transactionIcon {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 2.5rem;
-	height: 2.5rem;
-	border-radius: 50%;
-	background: linear-gradient(135deg, var(--mainColor), #8b5cf6);
+	width: 3rem;
+	height: 3rem;
+	border-radius: 0.75rem;
 	color: white;
-	font-size: 1rem;
+	font-size: 1.25rem;
 	flex-shrink: 0;
 }
 
-.transactionDetails {
+.transactionIcon.singleIcon {
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.transactionIcon.bulkIcon {
+	background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.transactionIcon.settlementIcon {
+	background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.transactionInfo {
 	flex: 1;
+	min-width: 0;
 }
 
 .transactionTitle {
@@ -187,24 +221,35 @@
 	margin-bottom: 0.25rem;
 }
 
+.transactionSubtitle {
+	font-size: 0.9rem;
+	color: var(--textSecondary);
+	margin-bottom: 0.5rem;
+	opacity: 0.8;
+}
+
 .transactionMeta {
 	display: flex;
-	gap: 1rem;
-	font-size: 0.85rem;
-	color: var(--textSecondary);
+	align-items: center;
+	gap: 0.75rem;
 	flex-wrap: wrap;
 }
 
 .transactionDate {
-	opacity: 0.8;
+	font-size: 0.8rem;
+	color: var(--textSecondary);
+	opacity: 0.7;
 }
 
-.transactionType {
+.transactionBadge {
 	background: rgba(124, 58, 237, 0.1);
 	color: var(--mainColor);
-	padding: 0.2rem 0.5rem;
-	border-radius: 0.25rem;
-	font-weight: 500;
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.375rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
 }
 
 .transactionRight {
@@ -213,93 +258,139 @@
 }
 
 .transactionAmount {
-	font-size: 1.3rem;
+	font-size: 1.5rem;
 	font-weight: 700;
 	margin-bottom: 0.25rem;
 }
 
-.transactionAmount.paymentOut {
-	color: #ef4444;
-}
-
-.transactionAmount.paymentIn {
+.transactionAmount.positive {
 	color: #10b981;
 }
 
+.transactionAmount.negative {
+	color: #ef4444;
+}
+
 .transactionItemCount {
-	font-size: 0.85rem;
+	font-size: 0.8rem;
 	color: var(--textSecondary);
 	font-weight: 500;
+	opacity: 0.8;
+}
+
+/* Transaction Items Styles */
+.transactionExpanded {
+	border-top: 1px solid var(--glassStroke);
+	background: rgba(0, 0, 0, 0.02);
 }
 
 .transactionItems {
-	padding: 0 1.5rem 1rem 1.5rem;
-	border-top: 1px solid var(--glassStroke);
-	background: rgba(0, 0, 0, 0.1);
+	padding: 1.5rem;
 }
 
 .itemsTitle {
 	font-size: 0.9rem;
 	font-weight: 600;
 	color: var(--textSecondary);
-	margin: 1rem 0 0.75rem 0;
+	margin-bottom: 1rem;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 }
 
-.itemsGrid {
+/* Payment Items (Single/Bulk) */
+.paymentItems {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 	gap: 0.75rem;
 }
 
-.transactionItem {
+.paymentItem {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 0.75rem;
+	padding: 0.75rem 1rem;
 	background: rgba(255, 255, 255, 0.03);
-	border-radius: 0.5rem;
 	border: 1px solid rgba(255, 255, 255, 0.05);
+	border-radius: 0.5rem;
 }
 
-.itemName {
+.paymentItem .itemName {
 	font-size: 0.9rem;
 	color: var(--textColor);
 	font-weight: 500;
 }
 
-.itemAmount {
+.paymentItem .itemAmount {
 	font-size: 0.9rem;
 	font-weight: 600;
+	color: var(--textColor);
 }
 
-.itemAmount.paymentOut {
-	color: #ef4444;
+/* Settlement Breakdown */
+.settlementBreakdown {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
 }
 
-.itemAmount.paymentIn {
-	color: #10b981;
+.settlementCategory {
+	background: rgba(255, 255, 255, 0.02);
+	border-radius: 0.75rem;
+	padding: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.transactionFooter {
+.categoryHeader {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 1rem 1.5rem;
-	border-top: 1px solid var(--glassStroke);
-	background: rgba(0, 0, 0, 0.05);
+	margin-bottom: 0.75rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.transactionStatus .statusBadge {
-	background: rgba(16, 185, 129, 0.1);
-	color: #10b981;
-	padding: 0.35rem 0.75rem;
-	border-radius: 0.5rem;
-	font-size: 0.8rem;
+.categoryTitle {
+	font-size: 0.9rem;
 	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
+	color: var(--textColor);
+}
+
+.categoryAmount {
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+.itemsList {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.settlementItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.5rem 0.75rem;
+	background: rgba(255, 255, 255, 0.02);
+	border-radius: 0.375rem;
+}
+
+.settlementItem .itemName {
+	font-size: 0.85rem;
+	color: var(--textColor);
+	font-weight: 500;
+}
+
+.owedAmount {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: #10b981 !important;
+}
+
+.owingAmount {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: #ef4444 !important;
 }
 
 .noTransactions {
@@ -456,7 +547,8 @@
 		min-width: auto;
 	}
 
-	.transactionMain {
+	/* Transaction Card Mobile */
+	.transactionHeader {
 		flex-direction: column;
 		gap: 1rem;
 		align-items: stretch;
@@ -464,41 +556,65 @@
 	}
 
 	.transactionLeft {
-		justify-content: center;
-		text-align: center;
+		justify-content: flex-start;
+		text-align: left;
 	}
 
 	.transactionRight {
 		text-align: center;
+		align-self: center;
 	}
 
-	.transactionMeta {
-		justify-content: center;
-		gap: 0.5rem;
+	.transactionIcon {
+		width: 2.5rem;
+		height: 2.5rem;
+		font-size: 1rem;
+	}
+
+	.transactionTitle {
+		font-size: 1rem;
 	}
 
 	.transactionAmount {
-		font-size: 1.5rem;
+		font-size: 1.25rem;
 	}
 
 	.transactionItems {
-		padding: 0 1rem 1rem 1rem;
+		padding: 1rem;
 	}
 
-	.itemsGrid {
+	.paymentItems {
 		grid-template-columns: 1fr;
 		gap: 0.5rem;
 	}
 
-	.transactionItem {
-		padding: 0.5rem;
+	.paymentItem {
+		padding: 0.625rem 0.75rem;
+		font-size: 0.85rem;
 	}
 
-	.transactionFooter {
-		flex-direction: column;
+	.settlementBreakdown {
 		gap: 1rem;
-		padding: 1rem;
-		text-align: center;
+	}
+
+	.settlementCategory {
+		padding: 0.75rem;
+	}
+
+	.categoryHeader {
+		flex-direction: column;
+		gap: 0.25rem;
+		align-items: flex-start;
+		text-align: left;
+	}
+
+	.categoryAmount {
+		font-size: 0.9rem;
+	}
+
+	.settlementItem {
+		padding: 0.5rem;
+		font-size: 0.8rem;
 	}
 
 	.noTransactions {
@@ -518,47 +634,4 @@
 		justify-content: center;
 		padding: 1rem;
 	}
-}
-
-/* Settlement-specific styles */
-.settlementSections {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
-.settlementSection {
-	background: rgba(255, 255, 255, 0.05);
-	border-radius: 0.5rem;
-	padding: 1rem;
-	border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sectionTitle {
-	font-size: 0.9rem;
-	font-weight: 500;
-	color: var(--textSecondary);
-	margin-bottom: 0.5rem;
-}
-
-.netAmount {
-	font-size: 1.1rem;
-	font-weight: 600;
-}
-
-.settlementBreakdown {
-	margin-top: 0.25rem;
-	opacity: 0.8;
-}
-
-.settlementBreakdown small {
-	font-size: 0.7rem;
-	color: var(--textSecondary);
-}
-
-.settlementLabel {
-	font-size: 0.7rem;
-	color: var(--mainColor);
-	font-weight: 500;
-	margin-top: 0.25rem;
 }

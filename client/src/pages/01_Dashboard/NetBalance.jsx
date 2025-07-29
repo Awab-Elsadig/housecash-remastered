@@ -1,14 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { FaHandHoldingUsd, FaExchangeAlt } from "react-icons/fa";
 import { PiHandDepositFill } from "react-icons/pi";
 import classes from "./NetBalance.module.css";
 import axios from "axios";
+import { useSettlement } from "../../contexts/SettlementContext";
 
-const NetBalance = ({ user, houseMembers, items }) => {
+const NetBalance = ({ user, houseMembers, items, onDataRefresh = () => {} }) => {
 	const [balances, setBalances] = useState({});
-	const [isProcessing, setIsProcessing] = useState({});
+	const [allMemberBalances, setAllMemberBalances] = useState({}); // Store all balances including zero ones
 
-	// Calculate net balances for all members
+	// Use global settlement context
+	const { settlementRequests, isProcessing, setIsProcessing, sendSettlementRequest, clearSettlementRequest } =
+		useSettlement();
+
+	// Use refs to store current balance data for event handlers
+	const balancesRef = useRef({});
+	const allMemberBalancesRef = useRef({});
+
+	// ...existing code...
 	useEffect(() => {
 		if (!user?._id || !items.length || !houseMembers.length) return;
 
@@ -17,6 +26,7 @@ const NetBalance = ({ user, houseMembers, items }) => {
 		// Initialize balances for all house members
 		houseMembers.forEach((member) => {
 			if (member._id !== user._id) {
+				console.log("Initializing balance for member:", member._id, member.name);
 				memberBalances[member._id] = {
 					memberInfo: member,
 					owed: 0, // Money they owe you (you should collect)
@@ -72,111 +82,189 @@ const NetBalance = ({ user, houseMembers, items }) => {
 			balance.net = balance.owed - balance.owing;
 		});
 
-		// Filter out members with zero balances
+		console.log("Final memberBalances after calculation:", Object.keys(memberBalances));
+		console.log("Member balances details:", memberBalances);
+
+		// Filter out members with zero balances for display
 		const activeBalances = Object.keys(memberBalances)
 			.filter((memberId) => {
 				const balance = memberBalances[memberId];
-				return balance.owed > 0 || balance.owing > 0;
+				const hasBalance = balance.owed > 0 || balance.owing > 0;
+				console.log(
+					`Member ${memberId} (${balance.memberInfo.name}): owed=${balance.owed}, owing=${balance.owing}, hasBalance=${hasBalance}`
+				);
+				return hasBalance;
 			})
 			.reduce((acc, memberId) => {
 				acc[memberId] = memberBalances[memberId];
 				return acc;
 			}, {});
 
+		console.log("Active balances after filtering:", Object.keys(activeBalances));
+
+		// Store all member balances (including zero balances) for settlement processing
+		setAllMemberBalances(memberBalances);
 		setBalances(activeBalances);
+
+		// Update refs for event handlers to access current data
+		balancesRef.current = activeBalances;
+		allMemberBalancesRef.current = memberBalances;
 	}, [user, items, houseMembers]);
 
-	const handleSettleUp = async (memberId) => {
-		const balance = balances[memberId];
-		if (!balance || isProcessing[memberId]) return;
+	// Process the actual settlement - SIMPLIFIED VERSION
+	const processSettlement = useCallback(
+		async (memberId) => {
+			console.log("processSettlement called with memberId:", memberId);
 
-		setIsProcessing((prev) => ({ ...prev, [memberId]: true }));
+			// Get balance data - if not found, create a basic member info
+			let balance =
+				balances[memberId] ||
+				allMemberBalances[memberId] ||
+				balancesRef.current[memberId] ||
+				allMemberBalancesRef.current[memberId];
 
-		try {
-			// Process owed items (they owe you - mark them as paid)
-			if (balance.items.owedItems.length > 0) {
-				for (const item of balance.items.owedItems) {
+			// If we still can't find balance, create a basic one from houseMembers
+			if (!balance) {
+				const member = houseMembers.find((m) => m._id === memberId);
+				if (!member) {
+					console.error("Member not found in houseMembers:", memberId);
+					alert("Settlement failed - member not found.");
+					return;
+				}
+
+				balance = {
+					memberInfo: member,
+					owed: 0,
+					owing: 0,
+					net: 0,
+					items: { owedItems: [], owingItems: [] },
+				};
+			}
+
+			console.log("Processing settlement for balance:", balance);
+			setIsProcessing((prev) => ({ ...prev, [memberId]: true }));
+
+			try {
+				// Batch process all items in a single call to avoid multiple API requests
+				const allItemsToResolve = [
+					// Items where they owe you
+					...balance.items.owedItems.map((item) => ({
+						id: item._id,
+						name: item.name,
+						share: item.share,
+						type: "owed",
+						direction: "paying",
+						senderId: memberId,
+						recipientId: user._id,
+					})),
+					// Items where you owe them
+					...balance.items.owingItems.map((item) => ({
+						id: item._id,
+						name: item.name,
+						share: item.share,
+						type: "owing",
+						direction: "paying",
+						senderId: user._id,
+						recipientId: memberId,
+					})),
+				];
+
+				// Process all items in a single batch call
+				if (allItemsToResolve.length > 0) {
 					await axios.patch(
-						"/api/items/resolve-balance",
+						"/api/items/resolve-balance-batch",
 						{
-							senderId: memberId, // The person who owes money (to be marked paid)
-							recipientId: user._id, // The person who is owed money (author)
-							items: [
-								{
-									id: item._id,
-									name: item.name,
-									share: item.share,
-									type: "owed",
-								},
-							],
-							direction: "paying",
+							items: allItemsToResolve,
 						},
 						{
 							withCredentials: true,
 						}
 					);
 				}
-			}
 
-			// Process owing items (you owe them - mark yourself as paid)
-			if (balance.items.owingItems.length > 0) {
-				for (const item of balance.items.owingItems) {
-					await axios.patch(
-						"/api/items/resolve-balance",
-						{
-							senderId: user._id, // You are paying
-							recipientId: memberId, // They are being paid (author)
-							items: [
-								{
-									id: item._id,
-									name: item.name,
-									share: item.share,
-									type: "owing",
-								},
-							],
-							direction: "paying",
-						},
-						{
-							withCredentials: true,
-						}
-					);
+				// Create settlement transaction record with proper item categorization
+				const settlementData = {
+					settlementWithId: memberId,
+					settlementWithName: balance.memberInfo.name,
+					amount: Math.abs(balance.net || 0), // Always positive amount
+					netAmount: balance.net, // Keep the signed net amount
+					items: [
+						// Items where they owe you (you should collect) - marked as "owed"
+						...balance.items.owedItems.map((item) => ({
+							id: item._id,
+							name: item.name,
+							share: item.share,
+							itemType: "owed",
+						})),
+						// Items where you owe them (you should pay) - marked as "owing"
+						...balance.items.owingItems.map((item) => ({
+							id: item._id,
+							name: item.name,
+							share: item.share,
+							itemType: "owing",
+						})),
+					],
+					notes: `Settlement with ${balance.memberInfo.name}`,
+				};
+
+				await axios.post("/api/payment-transactions/create-settlement", settlementData, {
+					withCredentials: true,
+				});
+
+				console.log("Settlement transaction created successfully");
+
+				// Clear settlement requests and processing state
+				clearSettlementRequest(memberId);
+
+				// Optimistically update balances by removing the settled member
+				setBalances((prev) => {
+					const updated = { ...prev };
+					delete updated[memberId];
+					return updated;
+				});
+
+				// Refresh data
+				if (onDataRefresh) {
+					onDataRefresh();
 				}
+			} catch (error) {
+				console.error("Error processing settlement:", error);
+				const errorMessage = error.response?.data?.message || error.message || "Unknown error";
+				alert(`Settlement failed: ${errorMessage}`);
+				throw error;
+			} finally {
+				setIsProcessing((prev) => ({ ...prev, [memberId]: false }));
 			}
+		},
+		[balances, allMemberBalances, user._id, onDataRefresh, houseMembers, clearSettlementRequest, setIsProcessing]
+	);
 
-			// Create settlement transaction record
-			const settlementData = {
-				settlementWithId: memberId,
-				settlementWithName: balance.memberInfo.name,
-				direction: "settling",
-				owedItems: balance.items.owedItems.map((item) => ({
-					id: item._id,
-					name: item.name,
-					share: item.share,
-					type: "owed",
-				})),
-				owingItems: balance.items.owingItems.map((item) => ({
-					id: item._id,
-					name: item.name,
-					share: item.share,
-					type: "owing",
-				})),
-				netAmount: balance.net,
-				notes: `Settlement with ${balance.memberInfo.name} - All items resolved`,
-			};
+	// Listen for custom settlement accepted events from the global context
+	useEffect(() => {
+		const handleSettlementAccepted = (event) => {
+			const { senderId } = event.detail;
+			console.log("Processing settlement for accepted request:", senderId);
+			processSettlement(senderId);
+		};
 
-			await axios.post("/api/payment-transactions/create-settlement", settlementData, {
-				withCredentials: true,
-			});
+		window.addEventListener("settlementAccepted", handleSettlementAccepted);
+		return () => window.removeEventListener("settlementAccepted", handleSettlementAccepted);
+	}, [processSettlement]); // Calculate net balances for all members
 
-			// Refresh the page to show updated data
-			window.location.reload();
-		} catch (error) {
-			console.error("Error settling up:", error);
-			alert("Failed to settle up. Please try again.");
-		} finally {
-			setIsProcessing((prev) => ({ ...prev, [memberId]: false }));
-		}
-	};
+	// Wrapper function to send settlement request with proper data
+	const handleSendSettlementRequest = useCallback(
+		async (memberId) => {
+			const balance = balances[memberId];
+			if (!balance || isProcessing[memberId]) return;
+
+			const success = await sendSettlementRequest(memberId, balance.memberInfo.name, balance.net);
+
+			if (!success) {
+				alert("Failed to send settlement request. Please try again.");
+			}
+		},
+		[balances, isProcessing, sendSettlementRequest]
+	);
 
 	return (
 		<div className={classes.netBalance}>
@@ -185,47 +273,10 @@ const NetBalance = ({ user, houseMembers, items }) => {
 				Net Balance
 			</h3>
 
-			{/* Incoming Resolution Requests */}
-			{Object.keys(incomingResolutions).length > 0 && (
-				<div className={classes.incomingSection}>
-					<h4 className={classes.sectionTitle}>Pending Confirmations</h4>
-					{Object.entries(incomingResolutions).map(([senderId, resolution]) => (
-						<div key={senderId} className={classes.resolutionRequest}>
-							<div className={classes.requestHeader}>
-								<span className={classes.senderName}>{resolution.senderName}</span>
-								<span className={classes.amount}>${resolution.amount.toFixed(2)}</span>
-							</div>
-							<p className={classes.requestText}>
-								Wants to settle up all {resolution.items.length} item{resolution.items.length > 1 ? "s" : ""} between
-								you
-							</p>
-							<div className={classes.requestActions}>
-								<button
-									onClick={() => handleResolutionResponse(senderId, true)}
-									className={`${classes.actionBtn} ${classes.acceptBtn}`}
-								>
-									<FaCheck /> Accept
-								</button>
-								<button
-									onClick={() => handleResolutionResponse(senderId, false)}
-									className={`${classes.actionBtn} ${classes.rejectBtn}`}
-								>
-									<FaTimes /> Decline
-								</button>
-							</div>
-							<div className={classes.timer}>
-								<FaClock /> {formatTimeRemaining(resolution.expiresAt)}
-							</div>
-						</div>
-					))}
-				</div>
-			)}
-
 			{/* Member Balances */}
 			<div className={classes.balancesSection}>
 				{Object.keys(balances).length > 0 ? (
 					Object.entries(balances).map(([memberId, balance]) => {
-						const isPending = pendingResolutions[memberId];
 						const netAmount = balance.net;
 						const isPositive = netAmount > 0;
 
@@ -245,9 +296,9 @@ const NetBalance = ({ user, houseMembers, items }) => {
 										<div className={classes.balanceRow}>
 											<span className={classes.balanceLabel}>
 												<FaHandHoldingUsd className={classes.balanceIcon} />
-												They owe you:
+												Settlement:
 											</span>
-											<span className={classes.owedAmount}>${balance.owed.toFixed(2)}</span>
+											<span className={`${classes.owedAmount} ${classes.positive}`}>${balance.owed.toFixed(2)}</span>
 										</div>
 									)}
 
@@ -255,25 +306,37 @@ const NetBalance = ({ user, houseMembers, items }) => {
 										<div className={classes.balanceRow}>
 											<span className={classes.balanceLabel}>
 												<PiHandDepositFill className={classes.balanceIcon} />
-												You owe them:
+												Settlement:
 											</span>
-											<span className={classes.owingAmount}>${balance.owing.toFixed(2)}</span>
+											<span className={`${classes.owingAmount} ${classes.negative}`}>${balance.owing.toFixed(2)}</span>
 										</div>
 									)}
 								</div>
 
-								{/* Show settle button for any balance (positive or negative) */}
+								{/* Settlement button or status */}
 								<div className={classes.actionSection}>
-									{isPending ? (
-										<div className={classes.pendingStatus}>
-											<FaClock className={classes.pendingIcon} />
-											<span>Awaiting confirmation...</span>
-											<span className={classes.pendingTimer}>{formatTimeRemaining(isPending.expiresAt)}</span>
+									{/* Show waiting state if we sent a request to this user */}
+									{settlementRequests[memberId]?.type === "outgoing" ? (
+										<div className={classes.pendingRequest}>
+											<span>
+												Awaiting confirmation from {balance.memberInfo.name.split(" ")[0]}...
+												{settlementRequests[memberId].expiresAt && (
+													<div className={classes.timeLeft}>
+														Expires in{" "}
+														{Math.max(0, Math.ceil((settlementRequests[memberId].expiresAt - Date.now()) / 1000))}s
+													</div>
+												)}
+											</span>
 										</div>
 									) : (
-										<button onClick={() => handleResolveBalance(memberId)} className={classes.resolveBtn}>
+										/* Normal settle button */
+										<button
+											onClick={() => handleSendSettlementRequest(memberId)}
+											className={classes.resolveBtn}
+											disabled={isProcessing[memberId]}
+										>
 											<FaExchangeAlt className={classes.resolveIcon} />
-											Settle Up ${Math.abs(netAmount).toFixed(2)}
+											{isProcessing[memberId] ? "Processing..." : `Settle Up $${netAmount.toFixed(2)}`}
 										</button>
 									)}
 								</div>

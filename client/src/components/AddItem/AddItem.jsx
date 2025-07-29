@@ -91,10 +91,8 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 	const [itemPrice, setItemPrice] = useState("");
 	const [itemDescription, setItemDescription] = useState("");
 
-	// Custom dropdown state
+	// Payer selection state
 	const [selectedPayer, setSelectedPayer] = useState(user?._id || "");
-	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-	const dropdownRef = useRef();
 
 	// Trigger phrases logic remains unchanged
 	const triggerMap = {
@@ -190,19 +188,6 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 		}
 	}, [user, selectedPayer]);
 
-	// Handle dropdown click outside
-	useEffect(() => {
-		const handleClickOutside = (event) => {
-			if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-				setIsDropdownOpen(false);
-			}
-		};
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => {
-			document.removeEventListener("mousedown", handleClickOutside);
-		};
-	}, []);
-
 	// Prepopulate fields if editing and when houseMembers are available
 	useEffect(() => {
 		if (itemToEdit) {
@@ -234,17 +219,6 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				setSelectedMembers(houseMembers);
 			}
 		}
-	};
-
-	// Custom dropdown handlers
-	const handlePayerSelect = (payerId) => {
-		setSelectedPayer(payerId);
-		setIsDropdownOpen(false);
-	};
-
-	const getSelectedPayerName = () => {
-		const selectedMember = houseMembers?.find((member) => member._id === selectedPayer);
-		return selectedMember ? selectedMember.name.split(" ")[0] : "Select Payer";
 	};
 
 	// Submit handler: Create new item or update existing one
@@ -431,28 +405,15 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 
 					<div className={classes.inputGroup}>
 						<label htmlFor="payer">Payer *</label>
-						<div className={classes.customDropdown} ref={dropdownRef}>
-							<div className={classes.dropdownToggle} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-								{getSelectedPayerName()}
-								<span className={classes.dropdownArrow}>▼</span>
-							</div>
-							{isDropdownOpen && (
-								<div className={classes.dropdownMenu}>
-									{houseMembers &&
-										houseMembers.map((member) => (
-											<div
-												key={member._id}
-												className={`${classes.dropdownOption} ${
-													selectedPayer === member._id ? classes.selectedOption : ""
-												}`}
-												onClick={() => handlePayerSelect(member._id)}
-											>
-												{member.name.split(" ")[0]}
-											</div>
-										))}
-								</div>
-							)}
-						</div>
+						<select id="payer" value={selectedPayer} onChange={(e) => setSelectedPayer(e.target.value)} required>
+							<option value="">Select Payer</option>
+							{houseMembers &&
+								houseMembers.map((member) => (
+									<option key={member._id} value={member._id}>
+										{member.name.split(" ")[0]}
+									</option>
+								))}
+						</select>
 					</div>
 
 					<button className={classes.submitButton} type="submit">
