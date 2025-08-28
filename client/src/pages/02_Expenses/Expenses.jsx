@@ -3,6 +3,7 @@ import classes from "./Expenses.module.css";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { RiPencilFill } from "react-icons/ri";
 import { RiSearchLine } from "react-icons/ri";
+import { FaDollarSign, FaHistory, FaArrowUp, FaArrowDown, FaUser } from "react-icons/fa";
 import { useUser } from "../../hooks/useUser";
 import { useInitialLoading } from "../../hooks/useLoading";
 import { ExpensesSkeleton } from "../../components/Skeleton";
@@ -662,31 +663,56 @@ const Expenses = () => {
 							<h2>Payment Overview</h2>
 						</div>
 						<div className={classes.statisticsContent}>
-							<div style={{ padding: "1rem", color: "#fff" }}>
+							<div style={{ padding: "0" }}>
 								<div className={classes.paymentStats}>
 									<div className={classes.statItem}>
-										<span className={classes.statLabel}>Total Monthly Spending:</span>
-										<span className={classes.statPrice}>
-											${getPaymentOverviewStats().totalMonthlySpending.toFixed(2)}
-										</span>
+										<div className={classes.statIcon}>
+											<FaDollarSign />
+										</div>
+										<div className={classes.statContent}>
+											<div className={classes.statLabel}>Total Monthly Spending</div>
+											<div className={classes.statPrice}>
+												${getPaymentOverviewStats().totalMonthlySpending.toFixed(2)}
+											</div>
+										</div>
 									</div>
 									<div className={classes.statItem}>
-										<span className={classes.statLabel}>Total Monthly Share:</span>
-										<span className={classes.statPrice}>${getPaymentOverviewStats().totalMonthlyShare.toFixed(2)}</span>
+										<div className={classes.statIcon}>
+											<FaArrowDown />
+										</div>
+										<div className={classes.statContent}>
+											<div className={classes.statLabel}>Total Monthly Share</div>
+											<div className={classes.statPrice}>${getPaymentOverviewStats().totalMonthlyShare.toFixed(2)}</div>
+										</div>
 									</div>
 									<div className={classes.statItem}>
-										<span className={classes.statLabel}>Average Expense:</span>
-										<span className={classes.statPrice}>${getPaymentOverviewStats().averageExpense.toFixed(2)}</span>
+										<div className={classes.statIcon}>
+											<FaHistory />
+										</div>
+										<div className={classes.statContent}>
+											<div className={classes.statLabel}>Average Expense</div>
+											<div className={classes.statPrice}>${getPaymentOverviewStats().averageExpense.toFixed(2)}</div>
+										</div>
 									</div>
 									<div className={classes.statItem}>
-										<span className={classes.statLabel}>Most Expensive Item:</span>
-										<span className={classes.statPrice}>
-											${getPaymentOverviewStats().mostExpensiveAmount.toFixed(2)}
-										</span>
+										<div className={classes.statIcon}>
+											<FaArrowUp />
+										</div>
+										<div className={classes.statContent}>
+											<div className={classes.statLabel}>Most Expensive Item</div>
+											<div className={classes.statPrice}>
+												${getPaymentOverviewStats().mostExpensiveAmount.toFixed(2)}
+											</div>
+										</div>
 									</div>
 									<div className={classes.statItem}>
-										<span className={classes.statLabel}>Most Active Payer:</span>
-										<span className={classes.statPrice}>{getPaymentOverviewStats().mostActivePayer}</span>
+										<div className={classes.statIcon}>
+											<FaUser />
+										</div>
+										<div className={classes.statContent}>
+											<div className={classes.statLabel}>Most Active Payer</div>
+											<div className={classes.statPrice}>{getPaymentOverviewStats().mostActivePayer}</div>
+										</div>
 									</div>
 								</div>
 							</div>

@@ -66,9 +66,11 @@
 }
 .statCard[data-type="owing"] .statNumber {
 	color: var(--badColor);
+	font-weight: 500;
 }
 .statCard[data-type="owed"] .statNumber {
 	color: var(--goodColor);
+	font-weight: 500;
 }
 .statCard[data-type="net"][data-positive="true"] .statNumber {
 	color: var(--goodColor);
@@ -188,7 +190,7 @@
 	padding: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 0.4rem;
+	gap: 0.6rem;
 }
 .itemRow {
 	display: flex;
@@ -196,21 +198,59 @@
 	justify-content: space-between;
 	gap: 0.75rem;
 	font-size: 0.8rem;
+	padding: 0.5rem 0.7rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 0.5rem;
+	background: rgba(255, 255, 255, 0.04);
+	position: relative;
+	overflow: hidden;
+	transition: 0.2s border-color, 0.2s background;
+}
+
+.itemRow:hover {
+	border-color: rgba(255, 255, 255, 0.18);
+	background: rgba(255, 255, 255, 0.06);
+}
+
+.itemRow::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 3px;
+	background: var(--badColor);
+	opacity: 0.6;
+	transition: 0.2s width, 0.2s opacity;
+}
+
+.itemRow:hover::before {
+	width: 4px;
+	opacity: 0.8;
 }
 .itemName {
-	font-size: 0.8rem;
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: #fff;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 .itemMoney {
 	display: flex;
 	align-items: center;
-	gap: 0.4rem;
+	gap: 0.5rem;
 	font-size: 0.7rem;
 	color: rgba(255, 255, 255, 0.65);
+	flex-shrink: 0;
 }
 .share {
-	font-size: 0.8rem;
+	font-size: 0.85rem;
 	font-weight: 600;
-	color: #fff;
+	color: var(--badColor);
+	text-shadow: 0 0 4px rgba(var(--badColor-rgb), 0.2);
 }
 .ofTotal {
 	opacity: 0.55;
@@ -221,12 +261,12 @@
 	border-top: 1px solid rgba(255, 255, 255, 0.08);
 	display: flex;
 	justify-content: space-between;
-	font-size: 0.7rem;
+	font-size: 1rem;
 	color: rgba(255, 255, 255, 0.65);
 }
 .totalOwing {
-	font-size: 0.85rem;
-	font-weight: 600;
+	font-size: 1.25rem;
+	font-weight: 700;
 	color: var(--badColor);
 }
 .netList {
@@ -318,10 +358,12 @@
 }
 .figTotalPositive {
 	color: var(--goodColor);
+	font-weight: 800;
 	text-shadow: 0 0 4px rgba(var(--goodColor-rgb), 0.35);
 }
 .figTotalNegative {
 	color: var(--badColor);
+	font-weight: 800;
 	text-shadow: 0 0 4px rgba(var(--badColor-rgb), 0.35);
 }
 .positive {
@@ -669,9 +711,10 @@
 	color: var(--badColor);
 }
 /* removed accentPulse animation */
-@media (max-width: 700px) {
+@media (max-width: 768px) {
 	.dashboard {
 		padding: 0.75rem;
+		padding-bottom: 6rem;
 	}
 	.summaryBar {
 		grid-template-columns: repeat(3, 1fr);

@@ -253,51 +253,8 @@ const PaymentHistory = () => {
 
 	return (
 		<div className={classes.historyPage}>
-			<div className={classes.sidebar}>
-				<h2 className={classes.sidebarTitle}>Overview</h2>
-				<div className={classes.statsGrid}>
-					<div className={classes.statCard}>
-						<div className={classes.statIcon}>
-							<FaHistory />
-						</div>
-						<div className={classes.statContent}>
-							<div className={classes.statValue}>{stats.totalTransactions}</div>
-							<div className={classes.statLabel}>Total Transactions</div>
-						</div>
-					</div>
-					<div className={classes.statCard}>
-						<div className={classes.statIcon}>
-							<FaArrowUp />
-						</div>
-						<div className={classes.statContent}>
-							<div className={classes.statValue}>{formatCurrency(stats.totalSent)}</div>
-							<div className={classes.statLabel}>Total Sent</div>
-						</div>
-					</div>
-					<div className={classes.statCard}>
-						<div className={classes.statIcon}>
-							<FaArrowDown />
-						</div>
-						<div className={classes.statContent}>
-							<div className={classes.statValue}>{formatCurrency(stats.totalReceived)}</div>
-							<div className={classes.statLabel}>Total Received</div>
-						</div>
-					</div>
-					<div className={classes.statCard}>
-						<div className={classes.statIcon}>
-							<FaExchangeAlt />
-						</div>
-						<div className={classes.statContent}>
-							<div className={classes.statValue}>{stats.settlements}</div>
-							<div className={classes.statLabel}>Settlements</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
 			<div className={classes.mainContent}>
 				<div className={classes.filtersHeader}>
-					<h1 className={classes.filtersTitle}>Payment History</h1>
 					<div className={classes.transactionsFilters}>
 						<select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={classes.filterSelect}>
 							<option value="all">All Types</option>
@@ -374,6 +331,48 @@ const PaymentHistory = () => {
 						})}
 					</div>
 				)}
+			</div>
+
+			<div className={classes.sidebar}>
+				<h2 className={classes.sidebarTitle}>Overview</h2>
+				<div className={classes.statsGrid}>
+					<div className={classes.statCard}>
+						<div className={classes.statIcon}>
+							<FaHistory />
+						</div>
+						<div className={classes.statContent}>
+							<div className={classes.statValue}>{stats.totalTransactions}</div>
+							<div className={classes.statLabel}>Total Transactions</div>
+						</div>
+					</div>
+					<div className={classes.statCard}>
+						<div className={classes.statIcon}>
+							<FaArrowUp />
+						</div>
+						<div className={classes.statContent}>
+							<div className={classes.statValue}>{formatCurrency(stats.totalSent)}</div>
+							<div className={classes.statLabel}>Total Sent</div>
+						</div>
+					</div>
+					<div className={classes.statCard}>
+						<div className={classes.statIcon}>
+							<FaArrowDown />
+						</div>
+						<div className={classes.statContent}>
+							<div className={classes.statValue}>{formatCurrency(stats.totalReceived)}</div>
+							<div className={classes.statLabel}>Total Received</div>
+						</div>
+					</div>
+					<div className={classes.statCard}>
+						<div className={classes.statIcon}>
+							<FaExchangeAlt />
+						</div>
+						<div className={classes.statContent}>
+							<div className={classes.statValue}>{stats.settlements}</div>
+							<div className={classes.statLabel}>Settlements</div>
+						</div>
+					</div>
+				</div>
 			</div>
 
 			<SettlementDetailsModal
