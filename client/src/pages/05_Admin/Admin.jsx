@@ -4,6 +4,82 @@ import axios from "axios";
 import classes from "./Admin.module.css";
 import { RiUserLine, RiUserFollowLine, RiUserUnfollowLine, RiShieldUserLine } from "react-icons/ri";
 
+const BackfillComponent = () => {
+	const [missingCount, setMissingCount] = useState(0);
+	const [isChecking, setIsChecking] = useState(true);
+	const [isBackfilling, setIsBackfilling] = useState(false);
+	const [backfillResult, setBackfillResult] = useState(null);
+	const [error, setError] = useState(null);
+
+	const checkMissing = async () => {
+		setIsChecking(true);
+		setError(null);
+		try {
+			const response = await axios.get("/api/items/maintenance/list-missing-housecode");
+			setMissingCount(response.data.total);
+		} catch (err) {
+			setError(err.response?.data?.error || "Failed to check for missing house codes.");
+		} finally {
+			setIsChecking(false);
+		}
+	};
+
+	const runBackfill = async () => {
+		if (missingCount === 0) return;
+		setIsBackfilling(true);
+		setError(null);
+		setBackfillResult(null);
+		try {
+			const response = await axios.post("/api/items/maintenance/backfill-housecode");
+			setBackfillResult(response.data);
+			// Re-check the count after backfill
+			checkMissing();
+		} catch (err) {
+			setError(err.response?.data?.error || "Backfill operation failed.");
+		} finally {
+			setIsBackfilling(false);
+		}
+	};
+
+	useEffect(() => {
+		checkMissing();
+	}, []);
+
+	return (
+		<div className={classes.maintenanceSection}>
+			<h3>Data Maintenance</h3>
+			<div className={classes.backfillControl}>
+				<div className={classes.backfillInfo}>
+					<p>
+						Items with missing <code>houseCode</code>: <strong>{isChecking ? "Checking..." : missingCount}</strong>
+					</p>
+					{error && <p className={classes.errorText}>{error}</p>}
+				</div>
+				<button onClick={runBackfill} disabled={isChecking || isBackfilling || missingCount === 0}>
+					{isBackfilling ? "Running..." : "Run HouseCode Backfill"}
+				</button>
+			</div>
+			{backfillResult && (
+				<div className={classes.backfillResult}>
+					<h4>Backfill Complete</h4>
+					<p>
+						- Items Updated: <strong>{backfillResult.updated}</strong>
+					</p>
+					<p>
+						- Items Failed: <strong>{backfillResult.failed}</strong>
+					</p>
+					{backfillResult.failed > 0 && (
+						<p className={classes.failureInfo}>
+							Failures occur when a <code>houseCode</code> cannot be derived from the item's author, creator, or
+							members. Check server logs for details.
+						</p>
+					)}
+				</div>
+			)}
+		</div>
+	);
+};
+
 const Admin = () => {
 	const { user } = useUser();
 	const [allUsers, setAllUsers] = useState([]);
@@ -256,6 +332,8 @@ const Admin = () => {
 					</div>
 				)}
 			</div>
+
+			<BackfillComponent />
 		</div>
 	);
 };

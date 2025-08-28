@@ -169,7 +169,7 @@ export const useUser = () => {
 				const response = await axios.post("/api/items/create-item", {
 					...itemData,
 					createdBy: user?._id,
-					author: user?.name,
+					author: user?._id,
 				});
 
 				if (response.data?.item) {
@@ -197,7 +197,7 @@ export const useUser = () => {
 			try {
 				const response = await axios.patch(`/api/items/update-item/${itemId}`, {
 					...itemData,
-					author: user?.name,
+					author: user?._id,
 				});
 
 				if (response.data?.item) {

@@ -235,32 +235,22 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 		}
 
 		setLoading(true);
-		// Build the members array and mark the payer as paid
+
+		// Build the members array. The payer is marked as paid if they are also a participant.
 		const members = selectedMembers.map((member) => ({
 			userID: member._id,
-			paid: false,
-			got: false, // ensure the got property is set
+			paid: member._id === selectedPayer,
+			got: false,
 		}));
-		const updatedMembers = members.map((member) =>
-			member.userID === selectedPayer ? { ...member, paid: true, got: true } : member
-		);
 
 		if (itemToEdit) {
 			// --- EDIT MODE: Update the existing item ---
-			const updatedMembersMerged = selectedMembers.map((member) => {
-				const existing = itemToEdit.members.find((m) => m.userID.toString() === member._id);
-				return existing ? existing : { userID: member._id, paid: false, got: false };
-			});
-			const finalMembers = updatedMembersMerged.map((member) =>
-				member.userID === selectedPayer ? { ...member, paid: true } : member
-			);
-
 			const updatedItem = {
 				...itemToEdit,
 				name: itemName,
 				price: itemPrice,
 				description: itemDescription,
-				members: finalMembers,
+				members: members, // Use the new members array
 				author: selectedPayer,
 			};
 
@@ -272,7 +262,6 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				);
 				updateItems(updatedItems);
 				setAddItem(false);
-				// The server will handle Ably notifications via AblyService
 			} catch (error) {
 				console.error("Error updating item:", error);
 			}
@@ -282,7 +271,7 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				name: itemName,
 				price: itemPrice,
 				description: itemDescription,
-				members: updatedMembers,
+				members: members, // Use the new members array
 				createdBy: user?._id,
 				author: selectedPayer,
 			};
@@ -292,7 +281,6 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 				const createdItem = response.data.item;
 				updateItems([...items, createdItem]);
 				setAddItem(false);
-				// The server will handle Ably notifications via AblyService
 			} catch (error) {
 				console.error("Error adding item:", error);
 			}

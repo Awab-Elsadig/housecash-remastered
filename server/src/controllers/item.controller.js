@@ -3,6 +3,8 @@ import { User } from "../models/user.model.js";
 import { House } from "../models/house.model.js";
 import PaymentTransaction from "../models/paymentTransaction.model.js";
 import AblyService from "../services/ablyService.js";
+import mongoose from "mongoose";
+import Payment from "../models/payment.model.js";
 
 // Helper function to check if a payment transaction already exists for a specific item and user
 const paymentTransactionExists = async (userId, itemId, transactionType) => {
@@ -31,6 +33,7 @@ export const createItem = async (req, res) => {
 			members,
 			createdBy,
 			author,
+			// Force houseCode to be set from auth user to avoid missing houseCode
 			houseCode,
 		});
 
@@ -56,11 +59,303 @@ export const getItems = async (req, res) => {
 		}
 
 		// Filter items by house code
-		const items = await Item.find({ houseCode }).exec();
+		const items = await Item.find({ houseCode }).sort({ createdAt: -1 }).exec();
 		return res.status(200).json({ items });
 	} catch (error) {
 		console.error("Error fetching items:", error);
 		return res.status(500).json({ error: error.message || "Error fetching items" });
+	}
+};
+
+// Diagnostic: summarize items returned for the current user's house and flag potential data issues
+export const getItemsDebugSummary = async (req, res) => {
+	try {
+		const houseCode = req.user?.houseCode;
+		if (!houseCode) {
+			return res.status(400).json({ error: "User must belong to a house to view items" });
+		}
+
+		const items = await Item.find({ houseCode }).lean().exec();
+		const total = items.length;
+
+		const invalidAuthors = [];
+		const invalidMembers = [];
+
+		for (const it of items) {
+			// Author should be a valid ObjectId
+			const authorValid = mongoose.Types.ObjectId.isValid(String(it.author || ""));
+			if (!authorValid) {
+				invalidAuthors.push({ id: it._id, author: it.author });
+			}
+
+			// Members should be non-empty array with valid userID ObjectIds
+			if (!Array.isArray(it.members) || it.members.length === 0) {
+				invalidMembers.push({ id: it._id, reason: "no_members" });
+			} else {
+				const bad = it.members.filter((m) => !m || !mongoose.Types.ObjectId.isValid(String(m.userID || "")));
+				if (bad.length) {
+					invalidMembers.push({ id: it._id, badCount: bad.length });
+				}
+			}
+		}
+
+		return res.status(200).json({
+			houseCode,
+			total,
+			invalidAuthorCount: invalidAuthors.length,
+			invalidMemberCount: invalidMembers.length,
+			sampleInvalidAuthors: invalidAuthors.slice(0, 10),
+			sampleInvalidMembers: invalidMembers.slice(0, 10),
+		});
+	} catch (error) {
+		console.error("Error in getItemsDebugSummary:", error);
+		return res.status(500).json({ error: error.message || "Error building items summary" });
+	}
+};
+
+// Deep diagnostics: return all items with validation flags to spot mismatches
+export const getItemsDiagnostics = async (req, res) => {
+	try {
+		const houseCode = req.user?.houseCode;
+		if (!houseCode) {
+			return res.status(400).json({ error: "User must belong to a house to view items" });
+		}
+
+		// Get all users in the same house for membership checks
+		const houseUsers = await User.find({ houseCode }).select("_id").lean();
+		const houseUserIds = new Set(houseUsers.map((u) => String(u._id)));
+
+		const items = await Item.find({ houseCode }).sort({ createdAt: -1 }).lean();
+
+		const diagnostics = [];
+		let invalidAuthorCount = 0;
+		let authorNotInHouseCount = 0;
+		let invalidMembersCount = 0;
+		let membersNotInHouseCount = 0;
+		let houseCodeMismatchCount = 0;
+
+		for (const it of items) {
+			const authorStr = String(it.author || "");
+			const authorValid = mongoose.Types.ObjectId.isValid(authorStr);
+			const authorIsMember = houseUserIds.has(authorStr);
+
+			const members = Array.isArray(it.members) ? it.members : [];
+			const invalidMemberIds = members
+				.filter((m) => !m || !mongoose.Types.ObjectId.isValid(String(m.userID || "")))
+				.map((m) => (m ? m.userID : null));
+			const membersNotInHouse = members
+				.filter((m) => m && mongoose.Types.ObjectId.isValid(String(m.userID)) && !houseUserIds.has(String(m.userID)))
+				.map((m) => String(m.userID));
+
+			const houseCodeMismatch = it.houseCode !== houseCode;
+
+			if (!authorValid) invalidAuthorCount++;
+			if (authorValid && !authorIsMember) authorNotInHouseCount++;
+			if (invalidMemberIds.length) invalidMembersCount += invalidMemberIds.length;
+			if (membersNotInHouse.length) membersNotInHouseCount += membersNotInHouse.length;
+			if (houseCodeMismatch) houseCodeMismatchCount++;
+
+			diagnostics.push({
+				id: it._id,
+				name: it.name,
+				price: it.price,
+				createdAt: it.createdAt,
+				updatedAt: it.updatedAt,
+				houseCode: it.houseCode,
+				author: it.author,
+				authorStr,
+				authorValid,
+				authorIsMember,
+				membersCount: members.length,
+				invalidMemberIds,
+				membersNotInHouse,
+				houseCodeMismatch,
+			});
+		}
+
+		return res.status(200).json({
+			houseCode,
+			total: items.length,
+			invalidAuthorCount,
+			authorNotInHouseCount,
+			invalidMembersCount,
+			membersNotInHouseCount,
+			houseCodeMismatchCount,
+			items: diagnostics,
+		});
+	} catch (error) {
+		console.error("Error in getItemsDiagnostics:", error);
+		return res.status(500).json({ error: error.message || "Error building items diagnostics" });
+	}
+};
+
+// Investigation endpoint: find items likely excluded from house fetch
+export const getItemsInvestigation = async (req, res) => {
+	try {
+		const houseCode = req.user?.houseCode;
+		if (!houseCode) {
+			return res.status(400).json({ error: "User must belong to a house to view items" });
+		}
+
+		const houseUsers = await User.find({ houseCode }).select("_id").lean();
+		const houseUserIds = houseUsers.map((u) => u._id);
+
+		// Items returned by normal fetch (ground truth baseline)
+		const itemsForHouse = await Item.find({ houseCode }).select("_id createdAt name").lean();
+
+		// Counts by houseCode to spot typos/casing issues
+		const countsByHouse = await Item.aggregate([
+			{ $group: { _id: "$houseCode", count: { $sum: 1 } } },
+			{ $sort: { count: -1 } },
+		]);
+
+		// Items that involve house users but have a different houseCode (strays)
+		const strayByAuthor = await Item.find({
+			author: { $in: houseUserIds },
+			houseCode: { $ne: houseCode },
+		})
+			.select("_id houseCode author createdAt name")
+			.sort({ createdAt: -1 })
+			.lean();
+
+		const strayByMember = await Item.find({
+			"members.userID": { $in: houseUserIds },
+			houseCode: { $ne: houseCode },
+		})
+			.select("_id houseCode author createdAt name members.userID")
+			.sort({ createdAt: -1 })
+			.lean();
+
+		// Items with missing/empty houseCode
+		const missingHouseCode = await Item.find({
+			$or: [{ houseCode: { $exists: false } }, { houseCode: null }, { houseCode: "" }],
+		})
+			.select("_id author createdAt name members.userID")
+			.sort({ createdAt: -1 })
+			.lean();
+
+		// Totals
+		const baselineCount = itemsForHouse.length;
+		const strayUniqueIds = new Set([
+			...strayByAuthor.map((i) => String(i._id)),
+			...strayByMember.map((i) => String(i._id)),
+			...missingHouseCode.map((i) => String(i._id)),
+		]);
+
+		return res.status(200).json({
+			houseCode,
+			baselineCount, // what GET /get-items would return
+			countsByHouse, // distribution across all houseCodes
+			strayByAuthorCount: strayByAuthor.length,
+			strayByMemberCount: strayByMember.length,
+			missingHouseCodeCount: missingHouseCode.length,
+			estimatedMissingTotal: strayUniqueIds.size,
+			strayByAuthor: strayByAuthor.slice(0, 50), // cap payload
+			strayByMember: strayByMember.slice(0, 50),
+			missingHouseCode: missingHouseCode.slice(0, 50),
+		});
+	} catch (error) {
+		console.error("Error in getItemsInvestigation:", error);
+		return res.status(500).json({ error: error.message || "Error running items investigation" });
+	}
+};
+
+// List items missing houseCode
+export const listItemsMissingHouseCode = async (req, res) => {
+	try {
+		const items = await Item.find({
+			$or: [{ houseCode: { $exists: false } }, { houseCode: null }, { houseCode: "" }],
+		})
+			.sort({ createdAt: -1 })
+			.lean();
+
+		return res.status(200).json({ total: items.length, items });
+	} catch (error) {
+		console.error("Error in listItemsMissingHouseCode:", error);
+		return res.status(500).json({ error: error.message || "Error listing items with missing houseCode" });
+	}
+};
+
+// Backfill missing houseCode using author -> createdBy -> members
+export const backfillItemsHouseCode = async (req, res) => {
+	try {
+		// Find all items with missing/empty houseCode
+		const missing = await Item.find({
+			$or: [{ houseCode: { $exists: false } }, { houseCode: null }, { houseCode: "" }],
+		})
+			.select("_id author createdBy members houseCode")
+			.lean();
+
+		let updated = 0;
+		let failed = 0;
+		const failures = [];
+		const updatedIds = [];
+		const updatedHouseCodes = new Set();
+
+		for (const it of missing) {
+			let houseCode = null;
+
+			// Try author
+			if (it.author && mongoose.Types.ObjectId.isValid(String(it.author))) {
+				const u = await User.findById(it.author).select("houseCode").lean();
+				if (u?.houseCode) houseCode = u.houseCode;
+			}
+
+			// Try createdBy
+			if (!houseCode && it.createdBy && mongoose.Types.ObjectId.isValid(String(it.createdBy))) {
+				const u = await User.findById(it.createdBy).select("houseCode").lean();
+				if (u?.houseCode) houseCode = u.houseCode;
+			}
+
+			// Try members consensus
+			if (!houseCode && Array.isArray(it.members) && it.members.length) {
+				const memberIds = it.members
+					.map((m) => (m && mongoose.Types.ObjectId.isValid(String(m.userID)) ? String(m.userID) : null))
+					.filter(Boolean);
+				if (memberIds.length) {
+					const memberUsers = await User.find({ _id: { $in: memberIds } })
+						.select("houseCode")
+						.lean();
+					const codes = Array.from(new Set(memberUsers.map((m) => m.houseCode).filter(Boolean)));
+					if (codes.length === 1) houseCode = codes[0];
+				}
+			}
+
+			if (houseCode) {
+				const result = await Item.updateOne({ _id: it._id }, { $set: { houseCode } }).exec();
+				if (result.modifiedCount === 1) {
+					updated++;
+					updatedIds.push(it._id);
+					updatedHouseCodes.add(houseCode);
+				} else {
+					failed++;
+					failures.push({ id: it._id, reason: "update_failed" });
+				}
+			} else {
+				failed++;
+				failures.push({ id: it._id, reason: "could_not_derive_houseCode" });
+			}
+		}
+
+		// Notify houses to refresh
+		for (const code of updatedHouseCodes) {
+			try {
+				await AblyService.sendFetchUpdate(code);
+			} catch (_) {
+				// ignore notification errors
+			}
+		}
+
+		return res.status(200).json({
+			totalMissing: missing.length,
+			updated,
+			failed,
+			updatedIds,
+			failures: failures.slice(0, 100),
+		});
+	} catch (error) {
+		console.error("Error in backfillItemsHouseCode:", error);
+		return res.status(500).json({ error: error.message || "Error backfilling items houseCode" });
 	}
 };
 
@@ -93,41 +388,19 @@ export const updateItem = async (req, res) => {
 
 				// If someone just marked themselves as paid (was false, now true)
 				if (oldMember && !oldMember.paid && newMember.paid) {
-					// Check if transaction already exists to prevent duplicates
-					const transactionExists = await paymentTransactionExists(newMember.userID, updatedItem._id, "single_payment");
+					const payingUser = await User.findById(newMember.userID);
+					const paidToUser = await User.findById(updatedItem.author);
 
-					if (!transactionExists) {
-						// Get user information
-						const payingUser = await User.findById(newMember.userID);
-						const paidToUser = await User.findById(updatedItem.author);
-
-						if (payingUser && paidToUser && payingUser.houseCode === paidToUser.houseCode) {
-							// Create individual payment transaction
-							const paymentTransaction = new PaymentTransaction({
-								userId: newMember.userID,
-								houseCode: payingUser.houseCode,
-								transactionType: "single_payment",
-								paidTo: {
-									id: updatedItem.author,
-									name: paidToUser.name,
-								},
-								items: [
-									{
-										id: updatedItem._id,
-										name: updatedItem.name,
-										originalPrice: updatedItem.price,
-										yourShare: updatedItem.price / updatedItem.members.length,
-										paidAmount: updatedItem.price / updatedItem.members.length,
-									},
-								],
-								totalAmount: updatedItem.price / updatedItem.members.length,
-								itemCount: 1,
-								method: "Individual Payment",
-								notes: "",
-							});
-
-							await paymentTransaction.save();
-						}
+					if (payingUser && paidToUser && payingUser.houseCode === paidToUser.houseCode) {
+						const payment = new Payment({
+							houseCode: payingUser.houseCode,
+							type: "single",
+							fromUser: newMember.userID,
+							toUser: updatedItem.author,
+							amount: updatedItem.price / updatedItem.members.length,
+							settledItemId: updatedItem._id,
+						});
+						await payment.save();
 					}
 				}
 			}
@@ -246,49 +519,21 @@ export const payAll = async (req, res) => {
 		});
 
 		if (unpaidItems.length > 0) {
-			// Check if a bulk payment transaction already exists for this user and author
-			const existingBulkTransaction = await PaymentTransaction.findOne({
-				userId: userId,
-				"paidTo.id": memberId,
-				transactionType: "bulk_payment",
-				createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }, // Within last 5 minutes
-			});
+			const paidToUser = await User.findById(memberId);
+			const payingUser = await User.findById(userId);
 
-			if (!existingBulkTransaction) {
-				// Get the payer (who we're paying to) information
-				const paidToUser = await User.findById(memberId);
-				const payingUser = await User.findById(userId);
+			if (paidToUser && payingUser && paidToUser.houseCode === payingUser.houseCode) {
+				const totalAmount = unpaidItems.reduce((sum, item) => sum + item.price / item.members.length, 0);
 
-				if (paidToUser && payingUser && paidToUser.houseCode === payingUser.houseCode) {
-					// Calculate payment details
-					const items = unpaidItems.map((item) => ({
-						id: item._id,
-						name: item.name,
-						originalPrice: item.price,
-						yourShare: item.price / item.members.length,
-						paidAmount: item.price / item.members.length,
-					}));
-
-					const totalAmount = items.reduce((sum, item) => sum + item.yourShare, 0);
-
-					// Create payment transaction
-					const paymentTransaction = new PaymentTransaction({
-						userId: userId,
-						houseCode: payingUser.houseCode,
-						transactionType: "bulk_payment",
-						paidTo: {
-							id: memberId,
-							name: paidToUser.name,
-						},
-						items: items,
-						totalAmount: totalAmount,
-						itemCount: items.length,
-						method: "Bulk Payment",
-						notes: "",
-					});
-
-					await paymentTransaction.save();
-				}
+				const payment = new Payment({
+					houseCode: payingUser.houseCode,
+					type: "bulk",
+					fromUser: userId,
+					toUser: memberId,
+					amount: totalAmount,
+					settledItemIds: unpaidItems.map((item) => item._id),
+				});
+				await payment.save();
 			}
 		}
 
@@ -359,31 +604,15 @@ export const updatePaymentStatus = async (req, res) => {
 				const paidToUser = await User.findById(updatedItem.author);
 
 				if (payingUser && paidToUser && payingUser.houseCode === paidToUser.houseCode) {
-					// Create individual payment transaction
-					const paymentTransaction = new PaymentTransaction({
-						userId: userId,
+					const payment = new Payment({
 						houseCode: payingUser.houseCode,
-						transactionType: "single_payment",
-						paidTo: {
-							id: updatedItem.author,
-							name: paidToUser.name,
-						},
-						items: [
-							{
-								id: updatedItem._id,
-								name: updatedItem.name,
-								originalPrice: updatedItem.price,
-								yourShare: updatedItem.price / updatedItem.members.length,
-								paidAmount: updatedItem.price / updatedItem.members.length,
-							},
-						],
-						totalAmount: updatedItem.price / updatedItem.members.length,
-						itemCount: 1,
-						method: "Individual Payment",
-						notes: "",
+						type: "single",
+						fromUser: userId,
+						toUser: updatedItem.author,
+						amount: updatedItem.price / updatedItem.members.length,
+						settledItemId: updatedItem._id,
 					});
-
-					await paymentTransaction.save();
+					await payment.save();
 				}
 			}
 		}
@@ -537,9 +766,9 @@ export const resolveBalance = async (req, res) => {
 // Batch resolve balances for settlement - more efficient than individual calls
 export const resolveBalanceBatch = async (req, res) => {
 	console.log("=== BATCH RESOLVE BALANCE ENDPOINT HIT ===");
-	const { items } = req.body;
+	const { items, userIds, settlementId } = req.body;
 
-	console.log("resolveBalanceBatch called with items:", items);
+	console.log("resolveBalanceBatch called with:", { items, userIds, settlementId });
 	console.log("Request user:", req.user);
 
 	try {
@@ -556,53 +785,81 @@ export const resolveBalanceBatch = async (req, res) => {
 			return res.status(400).json({ error: "No items provided for batch resolution" });
 		}
 
+		if (!userIds || userIds.length !== 2) {
+			return res.status(400).json({ error: "Exactly two user IDs must be provided for settlement" });
+		}
+
+		// Validate that the authenticated user is one of the users involved
+		if (!userIds.includes(req.user._id.toString())) {
+			return res.status(403).json({ error: "Unauthorized: You must be involved in this settlement" });
+		}
+
 		let successfulUpdates = 0;
 		const updatePromises = [];
 
-		for (const itemData of items) {
-			const { id, senderId, recipientId, direction } = itemData;
+		// Extract item IDs
+		const itemIds = items.map((item) => item.id || item._id);
+		console.log("Processing item IDs:", itemIds);
 
-			console.log(`Processing item ${id} with direction ${direction}, sender: ${senderId}, recipient: ${recipientId}`);
+		for (const itemId of itemIds) {
+			console.log(`Processing item ${itemId} for settlement between users: ${userIds.join(", ")}`);
 
-			// Validate that the authenticated user is involved in this transaction
-			if (req.user._id.toString() !== recipientId && req.user._id.toString() !== senderId) {
-				console.log(`Skipping item ${id} - user not involved`);
+			// Get the item to determine author and members
+			const item = await Item.findById(itemId);
+			if (!item) {
+				console.log(`Item ${itemId} not found, skipping`);
 				continue;
 			}
 
-			if (direction === "paying") {
-				// Sender is paying recipient: mark sender as paid
-				const updatePromise = Item.findOneAndUpdate(
-					{
-						_id: id,
-						houseCode,
-						"members.userID": senderId,
-					},
-					{
-						$set: { "members.$.paid": true },
-					},
-					{ new: true }
-				).then((result) => {
-					if (result) {
-						console.log(`Successfully updated item ${id} for sender ${senderId}`);
-						return result;
-					} else {
-						console.log(`Failed to update item ${id} for sender ${senderId}`);
-						return null;
-					}
-				});
+			console.log(`Item ${itemId} details:`, {
+				author: item.author,
+				members: item.members.map((m) => ({ userID: m.userID, paid: m.paid, got: m.got })),
+			});
 
-				updatePromises.push(updatePromise);
+			// For settlement, mark unpaid members as paid (this clears the debt)
+			for (const userId of userIds) {
+				const memberIndex = item.members.findIndex((m) => m.userID.toString() === userId);
+				if (memberIndex !== -1 && !item.members[memberIndex].paid) {
+					console.log(`Marking user ${userId} as paid for item ${itemId} (settlement)`);
+
+					const updatePromise = Item.findOneAndUpdate(
+						{
+							_id: itemId,
+							houseCode,
+							"members.userID": userId,
+						},
+						{
+							$set: { "members.$.paid": true },
+						},
+						{ new: true }
+					).then((result) => {
+						if (result) {
+							console.log(`Successfully updated item ${itemId} for user ${userId} - marked as paid`);
+							return result;
+						} else {
+							console.log(`Failed to update item ${itemId} for user ${userId}`);
+							return null;
+						}
+					});
+
+					updatePromises.push(updatePromise);
+				} else {
+					console.log(`User ${userId} already paid for item ${itemId} or not found`);
+				}
 			}
 		}
 
 		const results = await Promise.all(updatePromises);
 		successfulUpdates = results.filter((result) => result !== null).length;
 
-		console.log("Batch update completed:", { totalItems: items.length, successfulUpdates });
+		console.log("Batch settlement update completed:", {
+			totalItems: items.length,
+			successfulUpdates,
+			settlementId,
+		});
 
 		if (successfulUpdates === 0) {
-			return res.status(404).json({ error: "No items were successfully updated" });
+			return res.status(404).json({ error: "No items were successfully updated in settlement" });
 		}
 
 		// Send Ably notification to update all house members
@@ -610,9 +867,10 @@ export const resolveBalanceBatch = async (req, res) => {
 
 		return res.status(200).json({
 			success: true,
-			message: `Successfully resolved ${successfulUpdates} items in batch`,
+			message: `Successfully resolved ${successfulUpdates} items in settlement`,
 			totalProcessed: items.length,
 			successfulUpdates,
+			settlementId,
 		});
 	} catch (error) {
 		console.error("Error in batch resolve balance:", error);

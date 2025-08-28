@@ -1,6 +1,6 @@
 import { User } from "../models/user.model.js";
 
-export const authMiddleware = async (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
 	try {
 		// Now, check if the current session has an impersonated user ID.
 		// In your auth.middleware:
@@ -17,3 +17,5 @@ export const authMiddleware = async (req, res, next) => {
 		next(error);
 	}
 };
+
+export default authMiddleware;

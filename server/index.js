@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import session from "express-session";
 import MongoStore from "connect-mongo"; // for storing sessions in MongoDB
+import mongoose from "mongoose";
 import { connectDB } from "./src/db/connectDB.js";
 import authRoutes from "./src/routes/auth.route.js";
 import validationRoutes from "./src/routes/validation.route.js";
@@ -13,7 +14,9 @@ import adminRoutes from "./src/routes/admin.route.js"; // new admin routes
 import paymentTransactionRoutes from "./src/routes/paymentTransaction.route.js";
 import notificationRoutes from "./src/routes/notification.route.js";
 import uploadRoutes from "./src/routes/upload.route.js";
+import settlementRoutes from "./src/routes/settlement.route.js";
 import cookieParser from "cookie-parser";
+import paymentRoutes from "./src/routes/payment.route.js";
 
 dotenv.config();
 
@@ -41,7 +44,8 @@ app.use(
 		resave: false,
 		saveUninitialized: false,
 		store: MongoStore.create({
-			mongoUrl: process.env.MONGO_URI,
+			// Reuse the active mongoose client (supports fallback URIs)
+			client: mongoose.connection.getClient(),
 		}),
 		cookie: {
 			secure: false,
@@ -75,6 +79,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payment-transactions", paymentTransactionRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/settlements", settlementRoutes);
+app.use("/api/payments", paymentRoutes);
 
 app.listen(process.env.PORT, () => {
 	console.log(`Server is running on port ${process.env.PORT}`);

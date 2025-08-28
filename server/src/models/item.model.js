@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { User } from "./user.model.js";
 
 const itemSchema = new mongoose.Schema(
 	{
@@ -53,5 +54,34 @@ const itemSchema = new mongoose.Schema(
 	},
 	{ collection: "items", timestamps: true }
 );
+
+// Ensure houseCode is always present; derive from author/createdBy if missing
+itemSchema.pre("validate", async function (next) {
+	if (this.houseCode) return next();
+
+	try {
+		// Try author
+		if (this.author && mongoose.Types.ObjectId.isValid(String(this.author))) {
+			const u = await User.findById(this.author).select("houseCode");
+			if (u?.houseCode) {
+				this.houseCode = u.houseCode;
+				return next();
+			}
+		}
+		// Try createdBy
+		if (this.createdBy && mongoose.Types.ObjectId.isValid(String(this.createdBy))) {
+			const u = await User.findById(this.createdBy).select("houseCode");
+			if (u?.houseCode) {
+				this.houseCode = u.houseCode;
+				return next();
+			}
+		}
+		// Could not derive
+		this.invalidate("houseCode", "houseCode is required and could not be derived");
+		return next();
+	} catch (err) {
+		return next(err);
+	}
+});
 
 export const Item = mongoose.model("Item", itemSchema);

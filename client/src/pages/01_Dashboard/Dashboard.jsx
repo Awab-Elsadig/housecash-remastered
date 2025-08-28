@@ -1,522 +1,401 @@
-import React, { useEffect, useState } from "react";
-import classes from "./Dashboard.module.css";
-import { FaHandHoldingUsd } from "react-icons/fa";
-import { IoIosNotifications } from "react-icons/io";
+import React, { useEffect, useCallback, useRef, useState, useMemo } from "react";
 import { PiHandDepositFill } from "react-icons/pi";
+import { FaExchangeAlt } from "react-icons/fa";
+import classes from "./Dashboard.module.css";
 import { useUser } from "../../hooks/useUser";
 import { useInitialLoading } from "../../hooks/useLoading";
 import { DashboardSkeleton } from "../../components/Skeleton";
+import { useSettlement } from "../../contexts/useSettlement";
+import formatCurrency from "../../utils/formatCurrency";
 import axios from "axios";
 import ably from "../../ablyConfig";
-import NetBalance from "./NetBalance";
+import { useDashboardData, buildDetailItems, bilateralItemIds } from "../../hooks/useDashboardData";
 
 const Dashboard = () => {
 	const { user, houseMembers, items, fetchItems, updateItems } = useUser();
-	const isLoading = useInitialLoading(1000); // 1 second initial loading
-	const [readyToCollect, setReadyToCollect] = useState(0);
-	const [notPaidAmount, setNotPaidAmount] = useState(0);
-	const [shouldPay, setShouldPay] = useState(0);
-	const [paymentsByMember, setPaymentsByMember] = useState({});
-	const [collectData, setCollectData] = useState({});
-	const [notifyData, setNotifyData] = useState({});
-	const [activeSection, setActiveSection] = useState("pay"); // Default to "pay" section
+	const {
+		settlementRequests,
+		settleUp,
+		acceptSettlement,
+		declineSettlement,
+		cancelSettlementRequest,
+		getSettlementTimeRemaining,
+	} = useSettlement();
+	const isLoading = useInitialLoading(500);
+	const rollbackRef = useRef(null);
 
-	// Ably connection and event handling
+	// Realtime refresh
 	useEffect(() => {
 		if (!user?.houseCode) return;
-
-		// Subscribe to house channel for real-time updates
 		const channel = ably.channels.get(`house:${user.houseCode}`);
-
-		// Listen for fetch updates
-		const fetchUpdateHandler = () => {
-			console.log("Received fetchUpdate event from Ably");
-			fetchItems();
-		};
-
-		// Listen for item updates
-		const itemUpdateHandler = (message) => {
-			console.log("Received itemUpdate event from Ably:", message.data);
-			fetchItems();
-		};
-
-		// Listen for payment notifications
-		const paymentNotificationHandler = (message) => {
-			console.log("Received paymentNotification event from Ably:", message.data);
-			fetchItems();
-		};
-
-		// Subscribe to events
-		channel.subscribe("fetchUpdate", fetchUpdateHandler);
-		channel.subscribe("itemUpdate", itemUpdateHandler);
-		channel.subscribe("paymentNotification", paymentNotificationHandler);
-
-		// Cleanup on unmount
-		return () => {
-			channel.unsubscribe("fetchUpdate", fetchUpdateHandler);
-			channel.unsubscribe("itemUpdate", itemUpdateHandler);
-			channel.unsubscribe("paymentNotification", paymentNotificationHandler);
-		};
+		const refresh = () => fetchItems();
+		["fetchUpdate", "itemUpdate", "paymentNotification"].forEach((evt) => channel.subscribe(evt, refresh));
+		return () =>
+			["fetchUpdate", "itemUpdate", "paymentNotification"].forEach((evt) => channel.unsubscribe(evt, refresh));
 	}, [fetchItems, user?.houseCode]);
 
-	// Calculate amounts and organize data by member
+	const { paymentsByMember, netPerMember, bilateral, totals } = useDashboardData(
+		user?._id?.toString(),
+		items,
+		houseMembers
+	);
+
+	const [detailMemberId, setDetailMemberId] = useState(null);
+	const [, forceUpdate] = useState(0);
+	const closeDetail = useCallback(() => setDetailMemberId(null), []);
+
+	// Force re-render every second when there are active settlement requests
 	useEffect(() => {
-		if (!user?._id || !items.length) return;
+		const hasActiveRequests = Object.keys(settlementRequests).length > 0;
+		if (!hasActiveRequests) return;
+		const interval = setInterval(() => {
+			forceUpdate((prev) => prev + 1);
+		}, 1000);
+		return () => clearInterval(interval);
+	}, [settlementRequests, forceUpdate]);
 
-		let totalReadyToCollect = 0;
-		let totalNotPaid = 0;
-		let totalShouldPay = 0;
-		const memberPayments = {};
-		const collectData = {};
-		const notifyData = {};
-		const newNotifications = [];
+	const detailItems = useMemo(
+		() => buildDetailItems(user?._id?.toString(), detailMemberId, items),
+		[detailMemberId, items, user?._id]
+	);
 
-		items.forEach((item) => {
-			const share = item.price / item.members.length;
-			const itemDate = new Date(item.createdAt);
+	useEffect(() => {
+		const onKey = (e) => {
+			if (e.key === "Escape") closeDetail();
+		};
+		if (detailMemberId) window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [detailMemberId, closeDetail]);
 
-			// Generate notifications
-			if (item.author.toString() === user._id.toString()) {
-				// Check for unpaid members
-				item.members.forEach((member) => {
-					const memberInfo = houseMembers.find((m) => m._id === member.userID);
-					if (memberInfo && member.userID !== user._id && !member.paid) {
-						newNotifications.push({
-							id: `${item._id}-${member.userID}`,
-							type: "payment_reminder",
-							message: `${memberInfo.name.split(" ")[0]} hasn't paid for ${item.name}`,
-							amount: share,
-							itemName: item.name,
-							memberName: memberInfo.name.split(" ")[0],
-							date: itemDate,
-							priority: "medium",
-						});
-					}
+	const payItem = useCallback(
+		async (itemId) => {
+			if (!user?._id) return;
+			const snapshot = items;
+			try {
+				const item = items.find((i) => i._id === itemId);
+				if (!item) return;
+				const members = item.members.map((m) =>
+					m.userID.toString() === user._id.toString() ? { ...m, paid: !m.paid } : m
+				);
+				const updated = items.map((i) => (i._id === itemId ? { ...i, members } : i));
+				rollbackRef.current = snapshot;
+				updateItems(updated);
+				await axios.patch(`/api/items/update-item/${itemId}`, { ...item, members });
+				fetchItems();
+			} catch (e) {
+				console.error(e);
+				if (rollbackRef.current) updateItems(rollbackRef.current);
+			}
+		},
+		[items, updateItems, user?._id, fetchItems]
+	);
+
+	const payAllToMember = useCallback(
+		async (memberId) => {
+			if (!user?._id) return;
+			const snapshot = items;
+			try {
+				const updated = items.map((item) => {
+					if (item.author.toString() !== memberId || item.author.toString() === user._id.toString()) return item;
+					const members = item.members.map((m) =>
+						m.userID.toString() === user._id.toString() ? { ...m, paid: true } : m
+					);
+					return { ...item, members };
 				});
+				rollbackRef.current = snapshot;
+				updateItems(updated);
+				await axios.patch("/api/items/pay-all", { memberId, userId: user._id });
+				fetchItems();
+			} catch (e) {
+				console.error(e);
+				if (rollbackRef.current) updateItems(rollbackRef.current);
 			}
+		},
+		[items, updateItems, user?._id, fetchItems]
+	);
 
-			if (item.author.toString() === user._id.toString()) {
-				// For items you authored
-				item.members.forEach((member) => {
-					const memberInfo = houseMembers.find((m) => m._id === member.userID);
-					if (memberInfo && member.userID !== user._id) {
-						if (member.paid && !member.got) {
-							totalReadyToCollect += share;
-							// Add to collect data
-							if (!collectData[member.userID]) {
-								collectData[member.userID] = {
-									memberInfo,
-									items: [],
-									total: 0,
-								};
+	const getBilateralItemIds = useCallback(
+		(memberId) => bilateralItemIds(user?._id?.toString(), memberId, items),
+		[items, user?._id]
+	);
+
+	const finalizeSettlement = async () => {
+		try {
+			await fetchItems();
+		} catch (e) {
+			console.error("Post-settlement refresh failed", e);
+		}
+	};
+
+	const settlementActionButtons = (memberId, signedAmount) => {
+		const req = settlementRequests?.[memberId];
+		if (req) {
+			const outgoing = req.fromUserId === user._id && req.type === "outgoing";
+			if (outgoing) {
+				const timeRemaining = getSettlementTimeRemaining(memberId);
+				return (
+					<div className={classes.settlePending}>
+						<span>Awaiting response ({timeRemaining}s)</span>
+						<button
+							onClick={() => cancelSettlementRequest(memberId)}
+							aria-label="Cancel settlement request"
+							className={classes.btnGhost}
+						>
+							Cancel
+						</button>
+					</div>
+				);
+			}
+			return (
+				<div className={classes.settleIncoming}>
+					<button
+						onClick={async () => {
+							const ids = getBilateralItemIds(memberId);
+							const result = await acceptSettlement(memberId, ids);
+							if (result?.success) {
+								if (result.settlementProcessed) {
+									alert(`Settlement completed successfully! ${ids.length} items marked as settled.`);
+								} else {
+									alert("Settlement accepted, but there was an issue processing the items.");
+								}
+							} else {
+								alert(`Settlement failed: ${result?.message || "An unknown error occurred."}`);
 							}
-							collectData[member.userID].items.push({
-								...item,
-								share,
-							});
-							collectData[member.userID].total += share;
-						} else if (!member.paid) {
-							totalNotPaid += share;
-							// Add to notify data
-							if (!notifyData[member.userID]) {
-								notifyData[member.userID] = {
-									memberInfo,
-									items: [],
-									total: 0,
-								};
+							finalizeSettlement();
+						}}
+						className={classes.btnPrimary}
+						aria-label="Accept settlement"
+					>
+						Accept
+					</button>
+					<button
+						onClick={async () => {
+							const result = await declineSettlement(memberId);
+							if (result.success) {
+								alert("Settlement declined.");
+							} else {
+								alert(`Failed to decline settlement: ${result.message || "An unknown error occurred."}`);
 							}
-							notifyData[member.userID].items.push({
-								...item,
-								share,
-							});
-							notifyData[member.userID].total += share;
-						}
-					}
-				});
-			} else {
-				// For items where you are a participant
-				const userMember = item.members.find((m) => m.userID === user._id);
-				if (userMember && !userMember.paid) {
-					totalShouldPay += share;
-
-					const authorInfo = houseMembers.find((m) => m._id === item.author);
-					if (authorInfo) {
-						if (!memberPayments[item.author]) {
-							memberPayments[item.author] = {
-								memberInfo: authorInfo,
-								items: [],
-								total: 0,
-							};
-						}
-						memberPayments[item.author].items.push({
-							...item,
-							share,
-						});
-						memberPayments[item.author].total += share;
-					}
-				}
-			}
-		});
-
-		setReadyToCollect(totalReadyToCollect);
-		setNotPaidAmount(totalNotPaid);
-		setShouldPay(totalShouldPay);
-		setPaymentsByMember(memberPayments);
-		setCollectData(collectData);
-		setNotifyData(notifyData);
-	}, [items, user, houseMembers]);
-
-	// Handle section changes without executing functions
-	const handleCollectAll = () => {
-		setActiveSection("collect");
-	};
-
-	const handleNotifyAll = () => {
-		setActiveSection("notify");
-	};
-
-	const handlePayAllDebts = () => {
-		setActiveSection("pay");
-	};
-
-	const handlePayItem = async (itemId) => {
-		if (!user?._id) return;
-
-		try {
-			const item = items.find((i) => i._id === itemId);
-			if (!item) return;
-
-			const updatedMembers = item.members.map((member) => {
-				if (member.userID === user._id) {
-					return { ...member, paid: !member.paid };
-				}
-				return member;
-			});
-
-			await axios.patch(`/api/items/update-item/${itemId}`, {
-				...item,
-				members: updatedMembers,
-			});
-
-			// The server will handle Ably notifications via AblyService
-			fetchItems();
-		} catch (error) {
-			console.error("Error updating payment:", error);
+						}}
+						className={classes.btnGhost}
+						aria-label="Decline settlement"
+					>
+						Decline
+					</button>
+				</div>
+			);
 		}
+		return (
+			<button
+				className={classes.btnPrimary}
+				onClick={() => {
+					const targetMember = houseMembers.find((m) => m._id.toString() === memberId);
+					settleUp(memberId, user?.name, Math.abs(signedAmount), targetMember?.name);
+				}}
+				aria-label="Send settlement request"
+			>
+				Settle <FaExchangeAlt />
+			</button>
+		);
 	};
 
-	const handleCollectFromMember = async (memberId) => {
-		if (!user?._id) return;
+	if (isLoading || !user) {
+		return (
+			<div className={classes.dashboard}>
+				<DashboardSkeleton />
+			</div>
+		);
+	}
 
-		try {
-			await axios.patch("/api/items/get-all", {
-				memberId,
-				userId: user._id,
-			});
-
-			// The server will handle Ably notifications via AblyService
-			fetchItems();
-		} catch (error) {
-			console.error("Error collecting from member:", error);
-		}
-	};
-
-	const handleNotifyMember = async (memberId) => {
-		try {
-			const memberData = notifyData[memberId];
-			if (!memberData) return;
-
-			// Create context-aware notification message
-			const itemCount = memberData.items.length;
-			const totalAmount = memberData.total;
-			const memberName = memberData.memberInfo.name.split(" ")[0];
-
-			let message;
-			if (itemCount === 1) {
-				message = `💰 Hey ${memberName}! You owe $${totalAmount.toFixed(2)} for "${
-					memberData.items[0].name
-				}". Time to settle up! 🏠`;
-			} else {
-				message = `💰 Hey ${memberName}! You owe $${totalAmount.toFixed(
-					2
-				)} for ${itemCount} items totaling $${totalAmount.toFixed(2)}. Time to settle up! 🏠`;
-			}
-
-			// Send notification through API
-			const notificationPayload = {
-				recipientId: memberId,
-				message: message,
-				type: "payment_reminder",
-				metadata: {
-					itemCount,
-					totalAmount,
-					items: memberData.items.map((item) => ({
-						id: item._id,
-						name: item.name,
-						amount: item.share,
-					})),
-				},
-			};
-
-			const response = await axios.post("/api/notifications", notificationPayload, {
-				withCredentials: true,
-			});
-
-			if (response.data.success) {
-				console.log(`Notification sent to ${memberName}`);
-				// Optional: Show success message to user
-				// You could add a toast notification here
-			}
-		} catch (error) {
-			console.error("Error sending notification:", error);
-			// Optional: Show error message to user
-		}
-	};
-
-	const handlePayAllToMember = async (memberId) => {
-		if (!user?._id) return;
-
-		try {
-			const updatedItems = items.map((item) => {
-				if (item.author.toString() === memberId && item.author.toString() !== user._id.toString()) {
-					const updatedMembers = item.members.map((member) => {
-						if (member.userID.toString() === user._id.toString() && !member.paid) {
-							return { ...member, paid: true };
-						}
-						return member;
-					});
-					return { ...item, members: updatedMembers };
-				}
-				return item;
-			});
-
-			// Optimistically update UI
-			updateItems(updatedItems);
-
-			await axios.patch("/api/items/pay-all", {
-				memberId,
-				userId: user?._id,
-			});
-
-			// The server will handle Ably notifications via AblyService
-			fetchItems();
-		} catch (error) {
-			console.error("Error paying all to member:", error);
-			// Revert on error
-			fetchItems();
-		}
-	};
-
-	const renderMiddleSection = () => {
-		switch (activeSection) {
-			case "collect":
-				return (
-					<>
-						<span className={classes.title}>Ready to Collect</span>
-						{Object.keys(collectData).length > 0 ? (
-							Object.entries(collectData).map(([memberId, memberData]) => (
-								<div key={memberId} className={classes.member}>
-									<div className={classes.memberTop}>
-										<h3>{memberData.memberInfo.name.split(" ")[0]}</h3>
-										<button
-											onClick={() => handleCollectFromMember(memberId)}
-											className={`${classes.actionButton} ${classes.collectButton}`}
-										>
-											Collect from {memberData.memberInfo.name.split(" ")[0]}{" "}
-											<FaHandHoldingUsd className={classes.icon} />
-										</button>
-									</div>
-									<ul className={classes.items}>
-										{memberData.items.map((item) => (
-											<li key={item._id} className={classes.item}>
-												<span className={classes.itemName}>{item.name}</span>
-												<span className={classes.itemRight}>
-													<span className={classes.itemPrice}>
-														<span className={classes.share}>${item.share.toFixed(2)}</span>
-														/${item.price.toFixed(2)}
-													</span>
-												</span>
-											</li>
-										))}
-									</ul>
-									<div className={classes.total}>
-										<span className={classes.totalText}>Total to Collect</span>
-										<span className={`${classes.totalPrice} ${classes.collectPrice}`}>
-											${memberData.total.toFixed(2)}
-										</span>
-									</div>
-								</div>
-							))
-						) : (
-							<p>Nothing ready to collect</p>
-						)}
-					</>
-				);
-
-			case "notify":
-				return (
-					<>
-						<span className={classes.title}>Notify the following</span>
-						{Object.keys(notifyData).length > 0 ? (
-							Object.entries(notifyData).map(([memberId, memberData]) => (
-								<div key={memberId} className={classes.member}>
-									<div className={classes.memberTop}>
-										<h3>{memberData.memberInfo.name.split(" ")[0]}</h3>
-										<button
-											onClick={() => handleNotifyMember(memberId)}
-											className={`${classes.actionButton} ${classes.notifyButton}`}
-										>
-											Notify {memberData.memberInfo.name.split(" ")[0]} <IoIosNotifications className={classes.icon} />
-										</button>
-									</div>
-									<ul className={classes.items}>
-										{memberData.items.map((item) => (
-											<li key={item._id} className={classes.item}>
-												<span className={classes.itemName}>{item.name}</span>
-												<span className={classes.itemRight}>
-													<span className={classes.itemPrice}>
-														<span className={classes.share}>${item.share.toFixed(2)}</span>
-														/${item.price.toFixed(2)}
-													</span>
-												</span>
-											</li>
-										))}
-									</ul>
-									<div className={classes.total}>
-										<span className={classes.totalText}>Total Owed</span>
-										<span className={`${classes.totalPrice} ${classes.notifyPrice}`}>
-											${memberData.total.toFixed(2)}
-										</span>
-									</div>
-								</div>
-							))
-						) : (
-							<p>Everyone has paid!</p>
-						)}
-					</>
-				);
-
-			case "pay":
-			default:
-				return (
-					<>
-						<span className={classes.title}>Pay the following</span>
-						{Object.keys(paymentsByMember).length > 0 ? (
-							Object.entries(paymentsByMember).map(([memberId, memberData]) => (
-								<div key={memberId} className={classes.member}>
-									<div className={classes.memberTop}>
-										<h3>{memberData.memberInfo.name.split(" ")[0]}</h3>
-										<button
-											onClick={() => handlePayAllToMember(memberId)}
-											className={`${classes.actionButton} ${classes.payButton}`}
-										>
-											Pay {memberData.memberInfo.name.split(" ")[0]} <PiHandDepositFill className={classes.icon} />
-										</button>
-									</div>
-									<ul className={classes.items}>
-										{memberData.items.map((item) => (
-											<li key={item._id} className={classes.item}>
-												<span className={classes.itemName}>{item.name}</span>
-												<span className={classes.itemRight}>
-													<span className={classes.itemPrice}>
-														<span className={classes.share}>${item.share.toFixed(2)}</span>
-														/${item.price.toFixed(2)}
-													</span>
-													<button onClick={() => handlePayItem(item._id)} className={classes.payItemButton}>
-														<PiHandDepositFill className={classes.icon} />
-													</button>
-												</span>
-											</li>
-										))}
-									</ul>
-									<div className={classes.total}>
-										<span className={classes.totalText}>Total</span>
-										<span className={`${classes.totalPrice} ${classes.payPrice}`}>${memberData.total.toFixed(2)}</span>
-									</div>
-								</div>
-							))
-						) : (
-							<p>No pending payments</p>
-						)}
-					</>
-				);
-		}
-	};
+	const paymentEntries = Object.entries(paymentsByMember);
+	const netEntries = Object.entries(netPerMember).sort((a, b) => a[0].localeCompare(b[0]));
 
 	return (
-		<div className={classes.dashboard}>
-			{isLoading || !user ? (
-				<DashboardSkeleton />
-			) : (
-				<>
-					<div className={classes.left}>
-						<div className={classes.readyToCollect}>
-							<span className={classes.paymentSpan}>
-								<p>Ready to Collect</p>
-								<button
-									onClick={handleCollectAll}
-									className={`${classes.paymentButton} ${activeSection === "collect" ? classes.activeButton : ""}`}
-									style={{
-										opacity: activeSection === "collect" ? 1 : 0.8,
-										transform: activeSection === "collect" ? "scale(1.02)" : "scale(1)",
-										transition: "all 0.3s ease",
-										boxShadow: activeSection === "collect" ? "0 4px 12px rgba(0,0,0,0.2)" : "none",
-									}}
-								>
-									<FaHandHoldingUsd className={classes.icon} /> Collect
-								</button>
-							</span>
-							<span className={classes.price}>${readyToCollect.toFixed(2)}</span>
-						</div>
-						<div className={classes.shouldCollect}>
-							<span className={classes.paymentSpan}>
-								<p>Should Collect</p>
-								<button
-									onClick={handleNotifyAll}
-									className={`${classes.paymentButton} ${activeSection === "notify" ? classes.activeButton : ""}`}
-									style={{
-										opacity: activeSection === "notify" ? 1 : 0.8,
-										transform: activeSection === "notify" ? "scale(1.02)" : "scale(1)",
-										transition: "all 0.3s ease",
-										boxShadow: activeSection === "notify" ? "0 4px 12px rgba(0,0,0,0.2)" : "none",
-									}}
-								>
-									<IoIosNotifications className={classes.icon} />
-									Notify
-								</button>
-							</span>
-							<span className={classes.price}>${notPaidAmount.toFixed(2)}</span>
-						</div>
-						<div className={classes.shouldPay}>
-							<span className={classes.paymentSpan}>
-								<p>Should Pay</p>
-								<button
-									onClick={handlePayAllDebts}
-									className={`${classes.paymentButton} ${activeSection === "pay" ? classes.activeButton : ""}`}
-									style={{
-										opacity: activeSection === "pay" ? 1 : 0.8,
-										transform: activeSection === "pay" ? "scale(1.02)" : "scale(1)",
-										transition: "all 0.3s ease",
-										boxShadow: activeSection === "pay" ? "0 4px 12px rgba(0,0,0,0.2)" : "none",
-									}}
-								>
-									<PiHandDepositFill className={classes.icon} /> Pay
-								</button>
-							</span>
-							<span className={classes.price}>${shouldPay.toFixed(2)}</span>
-						</div>
+		<>
+			<div className={classes.dashboard}>
+				<div className={classes.summaryGrid} aria-label="Financial summary">
+					<div className={classes.statCard} data-type="owing">
+						<span className={classes.statLabel}>You Owe</span>
+						<span className={classes.statNumber}>{formatCurrency(totals.owing)}</span>
+						<span className={classes.statSub}>Across items you haven't paid</span>
 					</div>
-					<div className={classes.middle}>
-						<div className={`${classes.middleContent} ${classes[activeSection + "Section"]}`} key={activeSection}>
-							{renderMiddleSection()}
+					<div className={classes.statCard} data-type="owed">
+						<span className={classes.statLabel}>Owed To You</span>
+						<span className={classes.statNumber}>{formatCurrency(totals.owed)}</span>
+						<span className={classes.statSub}>Others still owe you</span>
+					</div>
+					<div
+						className={classes.statCard}
+						data-type="net"
+						data-positive={totals.net >= 0}
+						aria-live="polite"
+						aria-label={`Net balance ${totals.net >= 0 ? "positive" : "negative"}`}
+					>
+						<span className={classes.statLabel}>Net</span>
+						<span className={classes.statNumber}>{formatCurrency(totals.net)}</span>
+						<span className={classes.statSub}>{totals.net >= 0 ? "In your favor" : "You owe overall"}</span>
+					</div>
+				</div>
+
+				<section className={`${classes.panel} ${classes.netPanel}`} aria-labelledby="net-heading">
+					<h2 id="net-heading" className={classes.panelTitle}>
+						Net balances
+					</h2>
+					{netEntries.length === 0 && <p className={classes.empty}>No outstanding balances</p>}
+					<ul className={classes.netList}>
+						{netEntries.map(([memberId, amount]) => {
+							const member = houseMembers.find((m) => m._id.toString() === memberId);
+							const positive = amount > 0; // they owe user
+							const breakdown = bilateral[memberId] || {
+								theyOwe: positive ? amount : 0,
+								youOwe: positive ? 0 : Math.abs(amount),
+								total: Math.abs(amount),
+							};
+							return (
+								<li
+									key={memberId}
+									className={classes.netRow}
+									data-positive={positive}
+									onClick={() => setDetailMemberId(memberId)}
+									role="button"
+									tabIndex={0}
+									onKeyDown={(e) => e.key === "Enter" && setDetailMemberId(memberId)}
+									aria-label={`Details for ${member?.name}`}
+								>
+									<div className={classes.netAccent} aria-hidden="true" />
+									<div className={classes.netLeft}>
+										<span className={classes.netName}>{member?.name || "Member"}</span>
+										<div className={classes.netFigures}>
+											<div className={classes.figure}>
+												<span className={classes.figLabel}>Total</span>
+												<span
+													className={`${classes.figValue} ${
+														positive ? classes.figTotalPositive : amount < 0 ? classes.figTotalNegative : ""
+													}`}
+												>
+													{formatCurrency(breakdown.total)}
+												</span>
+											</div>
+											<div className={classes.figure}>
+												<span className={classes.figLabel}>Owed</span>
+												<span className={`${classes.figValue} ${classes.positive}`}>
+													{formatCurrency(breakdown.theyOwe)}
+												</span>
+											</div>
+											<div className={classes.figure}>
+												<span className={classes.figLabel}>Owe</span>
+												<span className={`${classes.figValue} ${classes.negative}`}>
+													{formatCurrency(breakdown.youOwe)}
+												</span>
+											</div>
+										</div>
+									</div>
+									<div className={classes.netActions} onClick={(e) => e.stopPropagation()}>
+										{settlementActionButtons(memberId, amount)}
+									</div>
+								</li>
+							);
+						})}
+					</ul>
+				</section>
+
+				<section className={classes.panel} aria-labelledby="pending-heading">
+					<h2 id="pending-heading" className={classes.panelTitle}>
+						Pending payments
+					</h2>
+					<div id="pending-section">
+						{paymentEntries.length === 0 && <p className={classes.empty}>You're all settled ✅</p>}
+						{paymentEntries.map(([memberId, data]) => (
+							<article key={memberId} className={classes.card}>
+								<header className={classes.cardHead}>
+									<h3 className={classes.cardTitle}>{data.memberInfo?.name?.split(" ")[0] || "Member"}</h3>
+									<button
+										onClick={() => payAllToMember(memberId)}
+										className={classes.btnSmall}
+										aria-label="Pay all to member"
+									>
+										Pay all <PiHandDepositFill />
+									</button>
+								</header>
+								<ul className={classes.itemList}>
+									{data.items.map((it) => (
+										<li key={it._id} className={classes.itemRow}>
+											<span className={classes.itemName}>{it.name}</span>
+											<span className={classes.itemMoney}>
+												<span className={classes.share}>{formatCurrency(it.share)}</span>
+												<span className={classes.ofTotal}>/ {formatCurrency(it.price)}</span>
+												<button onClick={() => payItem(it._id)} className={classes.btnIcon} aria-label="Mark item paid">
+													<PiHandDepositFill />
+												</button>
+											</span>
+										</li>
+									))}
+								</ul>
+								<footer className={classes.cardFoot}>
+									<span>Total</span>
+									<span className={classes.totalOwing}>{formatCurrency(data.total)}</span>
+								</footer>
+							</article>
+						))}
+					</div>
+				</section>
+			</div>
+			{detailMemberId ? (
+				<div
+					className={classes.modalOverlay}
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="detail-title"
+					onClick={(e) => {
+						if (e.target === e.currentTarget) closeDetail();
+					}}
+				>
+					<div className={classes.modal}>
+						<header className={classes.modalHeader}>
+							<h3 id="detail-title" className={classes.modalTitle}>
+								Details – {houseMembers.find((m) => m._id.toString() === detailMemberId)?.name || "Member"}
+							</h3>
+							<button className={classes.modalClose} aria-label="Close details" onClick={closeDetail}>
+								×
+							</button>
+						</header>
+						<div className={classes.modalSummary}>
+							{(() => {
+								const b = bilateral[detailMemberId] || { theyOwe: 0, youOwe: 0, total: 0 };
+								return (
+									<div className={classes.modalStats}>
+										<div className={classes.mStat}>
+											<span>Total</span>
+											<strong>{formatCurrency(b.total)}</strong>
+										</div>
+										<div className={classes.mStat}>
+											<span>Owed</span>
+											<strong className={classes.positive}>{formatCurrency(b.theyOwe)}</strong>
+										</div>
+										<div className={classes.mStat}>
+											<span>Owe</span>
+											<strong className={classes.negative}>{formatCurrency(b.youOwe)}</strong>
+										</div>
+									</div>
+								);
+							})()}
 						</div>
+						<ul className={classes.modalItems}>
+							{detailItems.length === 0 && <li className={classes.empty}>No direct unsettled items</li>}
+							{detailItems.map((it) => (
+								<li key={it.id} className={classes.modalItem} data-direction={it.direction}>
+									<span className={classes.itemName}>{it.name}</span>
+									<span className={classes.itemShare}>{formatCurrency(it.share)}</span>
+									<span className={classes.itemDirection} data-direction={it.direction}>
+										{it.direction === "theyOwe" ? "Owed to you" : "You owe"}
+									</span>
+								</li>
+							))}
+						</ul>
 					</div>
-					<div className={classes.right}>
-						<NetBalance user={user} houseMembers={houseMembers} items={items} onDataRefresh={fetchItems} />
-					</div>
-				</>
-			)}
-		</div>
+				</div>
+			) : null}
+		</>
 	);
 };
 

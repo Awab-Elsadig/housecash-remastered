@@ -16,7 +16,7 @@ const Expenses = () => {
 	const { user, houseMembers, items, fetchItems, deleteItem } = useUser();
 	const isLoading = useInitialLoading(1000);
 	const memberFiltersRef = useRef(null); // Ref to control the details element
-	const [filteredItems, setFilteredItems] = useState([]);
+	// derived in applyFilters and directly rendered
 	const [selectedFilter, setSelectedFilter] = useState("all");
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showAddItem, setShowAddItem] = useState(false);
@@ -24,9 +24,7 @@ const Expenses = () => {
 	const [deleteConfirmation, setDeleteConfirmation] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState(null);
 	const [expandedItem, setExpandedItem] = useState(null);
-	// Pagination state
-	const [itemsPerPage] = useState(50);
-	const [currentPage, setCurrentPage] = useState(1);
+	// Displayed list state (show all by default)
 	const [displayedItems, setDisplayedItems] = useState([]);
 
 	useEffect(() => {
@@ -93,9 +91,7 @@ const Expenses = () => {
 	// Enhanced filtering logic
 	const applyFilters = () => {
 		if (!user?._id) {
-			setFilteredItems([]);
 			setDisplayedItems([]);
-			setCurrentPage(1);
 			return;
 		}
 
@@ -143,35 +139,11 @@ const Expenses = () => {
 		// Sort by date (most recent first) - this is the key change
 		filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-		setFilteredItems(filtered);
-		// Reset pagination when filters change
-		setCurrentPage(1);
-		// Show first page of items (most recent 50)
-		setDisplayedItems(filtered.slice(0, itemsPerPage));
+		// Show all filtered items by default (avoid pagination hiding older items)
+		setDisplayedItems(filtered);
 	};
 
-	// Function to load more items
-	const loadMoreItems = () => {
-		const nextPage = currentPage + 1;
-		const startIndex = currentPage * itemsPerPage;
-		const endIndex = nextPage * itemsPerPage;
-
-		// Append new items to existing displayed items
-		const newItems = filteredItems.slice(startIndex, endIndex);
-		setDisplayedItems((prev) => [...prev, ...newItems]);
-		setCurrentPage(nextPage);
-
-		// // Scroll to the newly added content after a brief delay
-		// setTimeout(() => {
-		// 	const showMoreButton = document.querySelector(`.${classes.showMoreContainer}`);
-		// 	if (showMoreButton) {
-		// 		showMoreButton.scrollIntoView({ behavior: "smooth", block: "end" });
-		// 	}
-		// }, 100);
-	};
-
-	// Check if there are more items to load
-	const hasMoreItems = displayedItems.length < filteredItems.length;
+	// No pagination when showing all
 
 	useEffect(() => {
 		applyFilters();
@@ -677,14 +649,7 @@ const Expenses = () => {
 												)}
 											</div>
 										))}
-										{/* Show More Button */}
-										{hasMoreItems && (
-											<div className={classes.showMoreContainer}>
-												<button onClick={loadMoreItems} className={classes.showMoreButton}>
-													Show More ({filteredItems.length - displayedItems.length} remaining)
-												</button>
-											</div>
-										)}
+										{/* No pagination; showing all items */}
 									</>
 								) : (
 									<p style={{ textAlign: "center", padding: "2rem", color: "#fff" }}>No expenses found</p>

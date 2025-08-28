@@ -1,504 +1,685 @@
 .dashboard {
 	display: flex;
-	padding: 2rem;
-	overflow-y: auto;
-	flex-wrap: wrap;
-	gap: 1rem;
-}
-
-.top {
-	display: flex;
-	justify-content: space-between;
-	width: 100%;
-	padding: 2rem;
-}
-
-.profile {
-	display: flex;
-	gap: 1rem;
-}
-
-.greeting {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
-}
-
-.greeting span {
-	line-height: 1.2;
-}
-
-.profile img {
-	height: 3rem;
-	border-radius: 50%;
-}
-
-.left,
-.right {
-	flex: 1;
-	min-width: min(15rem, 100%);
-}
-
-.left {
-	display: flex;
 	flex-direction: column;
 	gap: 1rem;
-}
-
-/* Payment Actions */
-.readyToCollect,
-.shouldCollect,
-.shouldPay {
-	display: flex;
-	flex-direction: column;
-	gap: 1.5rem;
 	padding: 1rem;
-	border: 0.1rem solid var(--glassStroke);
-	border-radius: 0.75rem;
+	overflow-y: auto;
 }
-
-.readyToCollect {
-	background: var(--glassBackground), rgba(var(--goodColor-rgb), 0.2);
-}
-
-.shouldCollect {
-	background: var(--glassBackground), rgba(var(--mainColor-rgb), 0.2);
-}
-
-.shouldPay {
-	background: var(--glassBackground), rgba(var(--badColor-rgb), 0.2);
-}
-
-.readyToCollect button {
-	background: var(--goodColor);
-}
-
-.shouldCollect button {
-	background: var(--mainColor);
-}
-
-.shouldPay button {
-	background: var(--badColor);
-}
-
-/* Payment Action Buttons */
-.paymentButton {
-	color: #fff;
-	border: none;
-	padding: 0.5rem 1rem;
-	border-radius: 0.75rem;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
+.summaryBar {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
 	gap: 0.75rem;
-	font-weight: 600;
-	transition: all 0.3s ease;
-}
-
-.paymentButton:hover {
-	opacity: 0.8;
-	transform: translateY(-2px);
-}
-
-.paymentButton:active {
-	transform: translateY(0px);
-}
-
-.paymentButton.activeButton {
-	box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
-}
-
-.paymentButton .icon {
-	font-size: 1.2rem;
-	transition: transform 0.2s ease;
-}
-
-.paymentButton.activeButton .icon {
-	transform: scale(1.1);
-}
-
-.paymentSpan {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.price {
-	font-size: 2.5rem;
-	font-weight: 700;
-	line-height: 1;
-}
-
-/* Middle Section */
-.middle {
-	flex: 1.5;
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
 	background: var(--glassBackground);
-	border: 0.1rem solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
+	border: 1px solid var(--glassStroke);
+	padding: 0.75rem 1rem;
 	border-radius: 0.75rem;
-	padding: 1rem;
-	overflow-y: auto;
-	position: relative;
-	min-width: min(30rem, 100%);
+}
+/* New stats style summary grid (replaces summaryBar in JSX) */
+.summaryGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 1rem;
 }
 
-.middleContent {
+.statCard {
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	border-radius: 1rem;
+	padding: 1rem 1.25rem;
 	display: flex;
 	flex-direction: column;
-	gap: 1.5rem;
-	animation: slideInFade 0.5s ease-out;
+	gap: 0.4rem;
+	position: relative;
+	overflow: hidden;
+	transition: 0.25s border, 0.25s transform, 0.25s box-shadow;
 }
-
-.middleContent.collectSection span.share {
-	color: var(--goodColor);
+.statCard:before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.06), transparent 70%);
+	opacity: 0.7;
+	pointer-events: none;
 }
-
-.middleContent.notifySection span.share {
+.statCard:hover {
+	border-color: var(--mainColor);
+	transform: translateY(-2px);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.statLabel {
+	font-size: 0.65rem;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.55);
+	font-weight: 600;
+}
+.statNumber {
+	font-size: 2rem;
+	font-weight: 700;
+	letter-spacing: -0.5px;
+	line-height: 1.05;
 	color: var(--mainColor);
 }
-
-.middleContent.paySection span.share {
+.statSub {
+	font-size: 0.65rem;
+	color: rgba(255, 255, 255, 0.45);
+}
+.statCard[data-type="owing"] .statNumber {
 	color: var(--badColor);
 }
-
-@keyframes slideInFade {
-	0% {
+.statCard[data-type="owed"] .statNumber {
+	color: var(--goodColor);
+}
+.statCard[data-type="net"][data-positive="true"] .statNumber {
+	color: var(--goodColor);
+}
+.statCard[data-type="net"][data-positive="false"] .statNumber {
+	color: var(--badColor);
+}
+.statDelta {
+	font-size: 0.65rem;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.6);
+}
+.metric {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+.metricLabel {
+	font-size: 0.65rem;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.55);
+}
+.metricValue {
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: #fff;
+}
+.metricValueLg {
+	font-size: 1.6rem;
+	font-weight: 700;
+	letter-spacing: -0.5px;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+}
+.metricAccent {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	position: relative;
+	padding: 0.4rem 0.75rem;
+	border-radius: 0.5rem;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.metricAccent[data-positive="false"] {
+	background: rgba(var(--badColor-rgb), 0.08);
+}
+.metricValue[data-positive="true"] {
+	color: var(--goodColor);
+}
+.middle {
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	border-radius: 0.75rem;
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	min-height: 12rem;
+}
+.title {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: #fff;
+}
+.empty {
+	margin: 0;
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 0.9rem;
+}
+.panel {
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	border-radius: 0.75rem;
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+.panelTitle {
+	margin: 0;
+	font-size: 1.15rem;
+	font-weight: 600;
+	color: #fff;
+	letter-spacing: -0.5px;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.65rem;
+	padding: 0.75rem 0.9rem;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 0.6rem;
+	background: rgba(255, 255, 255, 0.02);
+}
+.cardHead {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+.cardTitle {
+	margin: 0;
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: #fff;
+}
+.itemList {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+.itemRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	font-size: 0.8rem;
+}
+.itemName {
+	font-size: 0.8rem;
+}
+.itemMoney {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.65);
+}
+.share {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: #fff;
+}
+.ofTotal {
+	opacity: 0.55;
+}
+.cardFoot {
+	margin-top: 0.25rem;
+	padding-top: 0.4rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	display: flex;
+	justify-content: space-between;
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.65);
+}
+.totalOwing {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--badColor);
+}
+.netList {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+.netPanel {
+	position: relative;
+}
+.netList {
+	position: relative;
+}
+.netRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.65rem 0.85rem;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 0.6rem;
+	background: rgba(255, 255, 255, 0.03);
+	font-size: 0.85rem;
+	gap: 0.75rem;
+	position: relative;
+	overflow: hidden;
+}
+.netRow:hover {
+	border-color: rgba(255, 255, 255, 0.2);
+}
+.netAccent {
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 4px;
+	background: var(--badColor);
+	opacity: 0.55;
+	transition: 0.25s;
+}
+.netRow[data-positive="true"] .netAccent {
+	background: var(--goodColor);
+}
+.netRow:hover .netAccent {
+	width: 6px;
+}
+.netRow[data-positive="true"] {
+	border-color: rgba(var(--goodColor-rgb), 0.35);
+}
+.netLeft {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+.netName {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: #fff;
+	letter-spacing: 0.2px;
+}
+.netAmount {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--badColor);
+	text-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+}
+.netFigures {
+	display: flex;
+	gap: 0.75rem;
+	margin-top: 0.15rem;
+}
+.figure {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+.figLabel {
+	font-size: 0.6rem;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.45);
+}
+.figValue {
+	font-size: 1.05rem;
+	font-weight: 600;
+	color: #fff;
+}
+.figTotalPositive {
+	color: var(--goodColor);
+	text-shadow: 0 0 4px rgba(var(--goodColor-rgb), 0.35);
+}
+.figTotalNegative {
+	color: var(--badColor);
+	text-shadow: 0 0 4px rgba(var(--badColor-rgb), 0.35);
+}
+.positive {
+	color: var(--goodColor);
+}
+.negative {
+	color: var(--badColor);
+}
+.netRow[data-positive="true"] .netAmount {
+	color: var(--goodColor);
+}
+.netActions {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+.settlePending,
+.settleIncoming {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+.btnPrimary,
+.btnGhost,
+.btnSmall,
+.btnIcon {
+	font: inherit;
+	border: none;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	border-radius: 0.45rem;
+	line-height: 1;
+}
+.btnPrimary {
+	background: var(--mainColor);
+	color: #fff;
+	padding: 0.5rem 0.85rem;
+	font-size: 0.7rem;
+	font-weight: 600;
+	box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.35);
+	transition: 0.2s;
+}
+.btnPrimary:hover {
+	background: var(--mainColorHover, #2563eb);
+}
+.btnGhost {
+	background: rgba(255, 255, 255, 0.08);
+	color: #fff;
+	padding: 0.4rem 0.6rem;
+	font-size: 0.6rem;
+}
+.btnGhost:hover {
+	background: rgba(255, 255, 255, 0.15);
+}
+.btnSmall {
+	background: rgba(var(--badColor-rgb), 0.6);
+	color: #fff;
+	padding: 0.45rem 0.65rem;
+	font-size: 0.65rem;
+	font-weight: 600;
+}
+.btnSmall:hover {
+	background: rgba(var(--badColor-rgb), 0.75);
+}
+.btnIcon {
+	background: rgba(var(--badColor-rgb), 0.55);
+	color: #fff;
+	padding: 0.4rem 0.5rem;
+	font-size: 0.65rem;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.btnIcon:hover {
+	background: rgba(var(--badColor-rgb), 0.7);
+}
+.btnIcon svg {
+	font-size: 0.8rem;
+}
+/* Modal */
+.modalOverlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.55);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 1rem;
+}
+.modal {
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	border-radius: 0.9rem;
+	width: min(560px, 100%);
+	max-height: 80vh;
+	display: flex;
+	flex-direction: column;
+	padding: 1rem 1.1rem 1.25rem;
+	gap: 0.75rem;
+	backdrop-filter: blur(10px);
+	animation: fadeIn 0.25s ease;
+}
+.modalHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+.modalTitle {
+	margin: 0;
+	font-size: 1.15rem;
+	font-weight: 600;
+	color: #fff;
+}
+.modalClose {
+	background: none;
+	border: none;
+	color: #fff;
+	font-size: 1.4rem;
+	line-height: 1;
+	cursor: pointer;
+}
+.modalSummary {
+	border-bottom: 1px solid var(--glassStroke);
+	padding-bottom: 0.5rem;
+}
+.modalStats {
+	display: flex;
+	gap: 1rem;
+}
+.mStat {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	font-size: 0.65rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+.mStat strong {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: #fff;
+}
+.mStat strong.positive {
+	color: var(--goodColor);
+}
+.mStat strong.negative {
+	color: var(--badColor);
+}
+.modalItems {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	overflow-y: auto;
+}
+.modalItem {
+	display: grid;
+	grid-template-columns: 1fr auto auto;
+	align-items: center;
+	gap: 0.85rem;
+	padding: 0.6rem 0.7rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 0.55rem;
+	background: rgba(255, 255, 255, 0.04);
+	font-size: 0.8rem;
+}
+.modalItem[data-direction="theyOwe"] {
+	border-color: rgba(var(--goodColor-rgb), 0.4);
+}
+.modalItem[data-direction="youOwe"] {
+	border-color: rgba(var(--badColor-rgb), 0.45);
+}
+.itemShare {
+	font-weight: 600;
+	font-size: 0.85rem;
+}
+.itemDirection[data-direction="theyOwe"] {
+	color: var(--goodColor);
+	font-weight: 600;
+	font-size: 0.7rem;
+}
+.itemDirection[data-direction="youOwe"] {
+	color: var(--badColor);
+	font-weight: 600;
+	font-size: 0.7rem;
+}
+@keyframes fadeIn {
+	from {
 		opacity: 0;
-		transform: translateX(20px) scale(0.98);
+		transform: translateY(4px);
 	}
-	50% {
-		opacity: 0.5;
-		transform: translateX(10px) scale(0.99);
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+.settlePending span {
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.8);
+	font-weight: 600;
+	position: relative;
+	padding-left: 0.9rem;
+}
+.settlePending span:before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 50%;
+	width: 0.55rem;
+	height: 0.55rem;
+	border-radius: 50%;
+	background: linear-gradient(90deg, var(--mainColor), var(--goodColor));
+	transform: translateY(-50%);
+	animation: pulseDot 1.4s ease-in-out infinite;
+}
+@keyframes pulseDot {
+	0% {
+		transform: translateY(-50%) scale(1);
+		opacity: 0.9;
+	}
+	60% {
+		transform: translateY(-50%) scale(1.5);
+		opacity: 0;
 	}
 	100% {
-		opacity: 1;
-		transform: translateX(0) scale(1);
+		transform: translateY(-50%) scale(1);
+		opacity: 0;
 	}
 }
-
-.title {
-	font-size: 1.5rem;
-	font-weight: 700;
-	color: white;
-	margin-bottom: 1.5rem;
-	letter-spacing: -0.02em;
-	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+.settleIncoming button {
+	font-size: 0.6rem;
 }
-
 .member {
 	display: flex;
 	flex-direction: column;
-	gap: 1.25rem;
-	padding: 1rem;
-	background: rgba(255, 255, 255, 0.03);
-	border: 0.1rem solid rgba(255, 255, 255, 0.08);
+	gap: 0.75rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.08);
 	border-radius: 0.5rem;
-	transition: all 0.2s ease;
+	background: rgba(255, 255, 255, 0.02);
 }
-
-.member:hover {
-	background: rgba(255, 255, 255, 0.05);
-	border-color: rgba(255, 255, 255, 0.12);
-}
-
 .memberTop {
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-}
-
-.memberTop h3 {
-	font-size: 1.125rem;
-	font-weight: 600;
-	color: rgba(255, 255, 255, 0.95);
-	letter-spacing: -0.01em;
-}
-
-.actionButton {
-	border: 0.1rem solid var(--glassStroke);
-	padding: 0.5rem 0.75rem;
-	border-radius: 0.375rem;
 	cursor: pointer;
-	font-weight: 600;
-	font-size: 0.875rem;
-	color: #fff;
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	transition: all 0.2s ease;
-	backdrop-filter: blur(8px);
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+	justify-content: space-between;
+	gap: 0.75rem;
+	border-color: rgba(255, 255, 255, 0.25);
+	background: rgba(255, 255, 255, 0.05);
+	/* add padding or hover effect if needed */
 }
-
-.actionButton:hover {
-	opacity: 0.9;
-	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.actionButton .icon {
+.memberTop h3 {
+	margin: 0;
 	font-size: 1rem;
+	font-weight: 600;
+	color: #fff;
 }
-
-.collectButton {
-	background: var(--glassBackground), rgba(var(--goodColor-rgb), 0.6);
+.actionButton {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.45rem 0.7rem;
+	border-radius: 0.4rem;
+	background: rgba(var(--badColor-rgb), 0.5);
+	color: #fff;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	cursor: pointer;
+	transition: 0.15s background;
 }
-
-.notifyButton {
-	background: var(--glassBackground), rgba(var(--mainColor-rgb), 0.6);
+.actionButton:hover {
+	background: rgba(var(--badColor-rgb), 0.65);
 }
-
-.payButton {
-	background: var(--glassBackground), rgba(var(--badColor-rgb), 0.6);
-}
-
 .items {
+	list-style: none;
+	margin: 0;
+	padding: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
-	margin-top: 0.25rem;
+	gap: 0.4rem;
 }
-
 .item {
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-	padding: 0.5rem 0.75rem;
-	background: rgba(255, 255, 255, 0.02);
-	border-radius: 0.25rem;
-	transition: all 0.2s ease;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.4rem 0.5rem;
+	border-radius: 0.35rem;
+	background: rgba(255, 255, 255, 0.03);
 }
-
-.item:hover {
-	background: rgba(255, 255, 255, 0.04);
-}
-
 .itemName {
-	font-size: 0.95rem;
-	font-weight: 500;
-	color: rgba(255, 255, 255, 0.9);
-	text-wrap: nowrap;
+	flex: 1;
+	min-width: 0;
+	font-size: 0.85rem;
+	color: #fff;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	max-width: 50%;
+	white-space: nowrap;
 }
-
 .itemRight {
 	display: flex;
-	justify-content: flex-end;
 	align-items: center;
 	gap: 0.5rem;
 }
-
 .itemPrice {
-	font-size: 0.8rem;
-	color: rgba(255, 255, 255, 0.7);
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.6);
 }
-
 .itemPrice .share {
-	font-size: 1.05rem;
-	font-weight: 700;
-	color: white;
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: #fff;
+	margin-right: 0.15rem;
 }
-
 .payItemButton {
 	display: grid;
 	place-items: center;
-	border: 0.1rem solid var(--glassStroke);
-	border-radius: 0.25rem;
-	cursor: pointer;
-	font-weight: 600;
+	padding: 0.35rem 0.45rem;
+	border-radius: 0.4rem;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: rgba(var(--badColor-rgb), 0.55);
 	color: #fff;
-	padding: 0.35rem;
-	background: var(--glassBackground), rgba(var(--badColor-rgb), 0.6);
+	cursor: pointer;
+	transition: 0.15s background;
 }
-
 .payItemButton:hover {
-	opacity: 0.8;
+	background: rgba(var(--badColor-rgb), 0.7);
 }
-
 .total {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	gap: 0.5rem;
-	font-weight: 600;
-	font-size: 1.125rem;
-	padding: 0.75rem 0;
-	margin-top: 0.5rem;
-	border-top: 0.1rem solid rgba(255, 255, 255, 0.1);
-	color: rgba(255, 255, 255, 0.95);
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	padding-top: 0.5rem;
+	margin-top: 0.25rem;
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.7);
 }
-
 .totalPrice {
-	font-size: 1.75rem;
-	font-weight: 800;
-	letter-spacing: -0.02em;
-	text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3); /* 0: no offset, 2px: vertical offset, 8px: blur radius */
-}
-
-.totalPrice.collectPrice {
-	color: var(--goodColor);
-}
-
-.totalPrice.notifyPrice {
-	color: var(--mainColor);
-}
-
-.totalPrice.payPrice {
+	font-size: 1rem;
+	font-weight: 700;
 	color: var(--badColor);
 }
-
-.divider {
-	border: none;
-	border-top: 0.1rem solid rgba(255, 255, 255, 0.1);
-	margin: 1rem 0;
-}
-
-/* Right Section */
-.right {
-	flex: 1;
-	background: var(--glassBackground);
-	border: 0.1rem solid var(--glassStroke);
-	border-radius: 0.75rem;
-	padding: 1rem;
-	color: white;
-	overflow-y: auto;
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* removed accentPulse animation */
+@media (max-width: 700px) {
 	.dashboard {
-		padding: 1rem;
-		padding-bottom: 6rem;
-	}
-
-	.top {
-		padding: 1rem;
-		flex-direction: column;
-		gap: 1rem;
-		text-align: center;
-	}
-
-	.profile {
-		justify-content: center;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.greeting {
-		align-items: center;
-	}
-
-	.greeting span {
-		font-size: 0.9rem;
-	}
-
-	.profile img {
-		height: 2.5rem;
-	}
-
-	.dashboard > main {
-		flex-direction: column;
-		gap: 1rem;
-		overflow-y: auto;
-	}
-
-	/* Mobile Payment Actions */
-	.readyToCollect,
-	.shouldCollect,
-	.shouldPay {
-		gap: 1rem;
 		padding: 0.75rem;
 	}
-
-	.paymentButton {
-		padding: 0.5rem;
-		font-size: 0.9rem;
-		gap: 0.5rem;
+	.summaryBar {
+		grid-template-columns: repeat(3, 1fr);
 	}
-
-	.paymentButton .icon {
-		font-size: 1rem;
+	.member {
+		padding: 0.6rem 0.75rem;
 	}
-
-	.paymentSpan p {
-		margin: 0;
-		font-size: 0.9rem;
-	}
-
-	.price {
-		font-size: 2rem;
-	}
-
-	/* Mobile Middle Section */
-	.middle {
-		padding: 0.75rem;
-	}
-
 	.title {
 		font-size: 1.1rem;
-		margin-bottom: 0.75rem;
-	}
-
-	.member {
-		gap: 0.75rem;
-	}
-
-	.memberTop {
-		flex-direction: column;
-		gap: 0.5rem;
-		align-items: stretch;
-	}
-
-	.memberTop h3 {
-		font-size: 1rem;
-		margin: 0;
-		text-align: center;
-	}
-
-	.actionButton {
-		padding: 0.5rem;
-		font-size: 0.85rem;
-		justify-content: center;
-	}
-
-	.item {
-		flex-direction: column;
-		gap: 0.5rem;
-		align-items: stretch;
-		padding: 0.5rem;
-		background: rgba(255, 255, 255, 0.05);
-		border-radius: 0.25rem;
-	}
-
-	.itemName {
-		max-width: 100%;
-		text-align: center;
-		font-weight: 600;
-	}
-
-	.itemRight {
-		justify-content: space-between;
-		width: 100%;
-	}
-
-	.itemPrice {
-		font-size: 0.8rem;
-	}
-
-	.total {
-		flex-direction: column;
-		gap: 0.25rem;
-		text-align: center;
-		font-size: 1rem;
-	}
-
-	.totalPrice {
-		font-size: 1.3rem;
 	}
 }

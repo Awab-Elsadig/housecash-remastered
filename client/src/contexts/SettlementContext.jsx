@@ -1,394 +1,190 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import { Realtime } from "ably";
-import { useUser } from "../hooks/useUser";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { SettlementContext } from "./SettlementContextDef";
+import ably from "../ablyConfig"; // shared singleton
+import axios from "axios";
 
-const SettlementContext = createContext();
+// New settlement flow (stateless backend assisted):
+// 1. Client sends POST /api/settlements/request { targetUserId }
+// 2. Server validates bilateral outstanding items and broadcasts Ably event settlement:request to both users' personal channels.
+// 3. Receiver can accept or decline via POST /api/settlements/respond { requestId, accept }
+// 4. On accept server sets paid on all bilateral unpaid items using existing batch logic then emits settlement:completed.
+// 5. Both clients refetch items (house channel fetchUpdate already sent) and remove local request.
+// NOTE: We still keep purely client-originated optimistic timer (120s) so a dead server response auto-clears.
 
-export const useSettlement = () => {
-	const context = useContext(SettlementContext);
-	if (!context) {
-		throw new Error("useSettlement must be used within a SettlementProvider");
-	}
-	return context;
-};
-
-export const SettlementProvider = ({ children }) => {
-	const { user } = useUser();
-	const [settlementRequests, setSettlementRequests] = useState({});
-	const [isProcessing, setIsProcessing] = useState({});
-
-	// Keep track of Ably connection to prevent multiple instances
-	const ablyConnectionRef = useRef(null);
+export const SettlementProvider = ({ user, children }) => {
+	const [requests, setRequests] = useState({}); // key otherUserId -> request object
+	const timersRef = useRef({});
 	const channelRef = useRef(null);
 
-	// Load settlement requests from localStorage on component mount
+	// Subscribe to personal settlement channel
 	useEffect(() => {
 		if (!user?._id) return;
+		channelRef.current = ably.channels.get(`user:settlement:${user._id}`);
 
-		const savedRequests = localStorage.getItem(`settlementRequests_${user._id}`);
-		if (savedRequests) {
+		const onRequest = ({ data }) => {
+			setRequests((prev) => ({
+				...prev,
+				[data.fromUserId === user._id ? data.toUserId : data.fromUserId]: {
+					...data,
+					type: data.fromUserId === user._id ? "outgoing" : "incoming",
+					expiresAt: Date.now() + 120_000,
+				},
+			}));
+		};
+		const onCompleted = ({ data }) => {
+			setRequests((prev) => {
+				const copy = { ...prev };
+				delete copy[data.otherUserId];
+				return copy;
+			});
+		};
+		const onCancelled = ({ data }) => {
+			setRequests((prev) => {
+				const copy = { ...prev };
+				delete copy[data.otherUserId];
+				return copy;
+			});
+		};
+
+		channelRef.current.subscribe("settlement:request", onRequest);
+		channelRef.current.subscribe("settlement:completed", onCompleted);
+		channelRef.current.subscribe("settlement:cancelled", onCancelled);
+		return () => {
 			try {
-				const parsed = JSON.parse(savedRequests);
-				// Filter out expired requests
-				const now = Date.now();
-				const validRequests = Object.keys(parsed).reduce((acc, memberId) => {
-					const request = parsed[memberId];
-					if (request.expiresAt && request.expiresAt > now) {
-						acc[memberId] = request;
-					}
-					return acc;
-				}, {});
-
-				setSettlementRequests(validRequests);
-
-				// Update localStorage if we filtered out any expired requests
-				if (Object.keys(validRequests).length !== Object.keys(parsed).length) {
-					localStorage.setItem(`settlementRequests_${user._id}`, JSON.stringify(validRequests));
-				}
-			} catch (error) {
-				console.error("Error loading settlement requests:", error);
+				channelRef.current.unsubscribe("settlement:request", onRequest);
+				channelRef.current.unsubscribe("settlement:completed", onCompleted);
+				channelRef.current.unsubscribe("settlement:cancelled", onCancelled);
+			} catch {
+				/* ignore */
 			}
-		}
+			Object.values(timersRef.current).forEach((t) => clearTimeout(t));
+			timersRef.current = {};
+		};
 	}, [user?._id]);
 
-	// Save settlement requests to localStorage whenever they change
-	useEffect(() => {
-		if (!user?._id) return;
-
-		localStorage.setItem(`settlementRequests_${user._id}`, JSON.stringify(settlementRequests));
-	}, [settlementRequests, user?._id]);
-
-	// Force re-render every second to update countdown timers
-	useEffect(() => {
-		const timer = setInterval(() => {
-			// This will force a re-render to update the countdown display
-			const hasActiveRequests = Object.values(settlementRequests).some((req) => req.expiresAt);
-			if (hasActiveRequests) {
-				// Force update by creating a new object
-				setSettlementRequests((prev) => ({ ...prev }));
+	const removeExpired = useCallback((otherId) => {
+		setRequests((prev) => {
+			const req = prev[otherId];
+			if (!req) return prev;
+			if (req.expiresAt < Date.now()) {
+				const copy = { ...prev };
+				delete copy[otherId];
+				return copy;
 			}
-		}, 1000);
-
-		return () => clearInterval(timer);
-	}, [settlementRequests]);
-
-	// Set up Ably for real-time settlement requests with proper connection management
-	useEffect(() => {
-		if (!user?._id || !user?.houseCode) return;
-
-		let cleanupInterval = null;
-		let isComponentMounted = true;
-
-		const initializeAbly = async () => {
-			try {
-				// Only create a new connection if we don't have one or it's closed
-				if (!ablyConnectionRef.current || ablyConnectionRef.current.connection.state === "closed") {
-					ablyConnectionRef.current = new Realtime({
-						key: import.meta.env.VITE_ABLY_API_KEY,
-						clientId: user._id,
-					});
-				}
-
-				channelRef.current = ablyConnectionRef.current.channels.get(`house-${user.houseCode}`);
-
-				// Listen for incoming settlement requests
-				const handleSettlementRequest = (message) => {
-					if (!isComponentMounted) return;
-
-					const { recipientId, senderId, senderName, amount, requestId } = message.data;
-
-					// Only show if this request is for the current user
-					if (recipientId === user._id) {
-						const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes from now
-
-						setSettlementRequests((prev) => ({
-							...prev,
-							[senderId]: {
-								type: "incoming",
-								senderId,
-								senderName,
-								amount,
-								requestId,
-								expiresAt,
-							},
-						}));
-					}
-				};
-
-				// Listen for settlement request responses
-				const handleSettlementResponse = async (message) => {
-					if (!isComponentMounted) return;
-
-					const { requestId, accepted, senderId } = message.data;
-
-					console.log("Settlement response received:", { requestId, accepted, senderId });
-
-					// Clear pending request if this is our request
-					setSettlementRequests((prev) => {
-						const updated = { ...prev };
-						// Find and remove the request
-						Object.keys(updated).forEach((memberId) => {
-							if (updated[memberId]?.requestId === requestId) {
-								delete updated[memberId];
-							}
-						});
-						return updated;
-					});
-
-					// Note: The actual settlement processing will be handled by the NetBalance component
-					// when the user navigates back to the dashboard
-				};
-
-				// Listen for settlement cancellations
-				const handleSettlementCancelled = (message) => {
-					if (!isComponentMounted) return;
-
-					const { requestId } = message.data;
-
-					// Clear request
-					setSettlementRequests((prev) => {
-						const updated = { ...prev };
-						Object.keys(updated).forEach((memberId) => {
-							if (updated[memberId]?.requestId === requestId) {
-								delete updated[memberId];
-							}
-						});
-						return updated;
-					});
-				};
-
-				// Set up periodic cleanup of expired requests
-				cleanupInterval = setInterval(() => {
-					if (!isComponentMounted) return;
-
-					const now = Date.now();
-					setSettlementRequests((prev) => {
-						const updated = { ...prev };
-						let hasChanges = false;
-
-						Object.keys(updated).forEach((memberId) => {
-							if (updated[memberId].expiresAt && updated[memberId].expiresAt <= now) {
-								delete updated[memberId];
-								hasChanges = true;
-							}
-						});
-
-						return hasChanges ? updated : prev;
-					});
-				}, 10000); // Check every 10 seconds
-
-				// Subscribe to events
-				channelRef.current.subscribe("settlement-request", handleSettlementRequest);
-				channelRef.current.subscribe("settlement-response", handleSettlementResponse);
-				channelRef.current.subscribe("settlement-cancelled", handleSettlementCancelled);
-			} catch (error) {
-				console.error("Error setting up Ably connection:", error);
-			}
-		};
-
-		initializeAbly();
-
-		return () => {
-			isComponentMounted = false;
-
-			try {
-				if (cleanupInterval) {
-					clearInterval(cleanupInterval);
-				}
-
-				if (channelRef.current) {
-					channelRef.current.unsubscribe();
-					channelRef.current = null;
-				}
-
-				// Don't close the main connection - let it stay alive for other components
-				if (ablyConnectionRef.current && ablyConnectionRef.current.connection.state !== "closed") {
-					// Keep connection alive for other uses
-				}
-			} catch (error) {
-				console.error("Error cleaning up Ably connection:", error);
-			}
-		};
-	}, [user?._id, user?.houseCode]);
-
-	// Send settlement request using the shared connection
-	const sendSettlementRequest = useCallback(
-		async (memberId, memberName, amount) => {
-			// Guard against user not being available
-			if (!user?._id || !user?.houseCode) {
-				console.error("User not available for sending settlement request");
-				return false;
-			}
-
-			if (isProcessing[memberId]) return false;
-
-			const requestId = `${user._id}-${memberId}-${Date.now()}`;
-
-			try {
-				// Use the shared connection if available, otherwise create a temporary one
-				let ably = ablyConnectionRef.current;
-				let shouldCloseConnection = false;
-
-				if (!ably || ably.connection.state === "closed") {
-					ably = new Realtime({
-						key: import.meta.env.VITE_ABLY_API_KEY,
-						clientId: user._id,
-					});
-					shouldCloseConnection = true;
-				}
-
-				const channel = ably.channels.get(`house-${user.houseCode}`);
-
-				// Send settlement request via Ably
-				await channel.publish("settlement-request", {
-					senderId: user._id,
-					senderName: user.name,
-					recipientId: memberId,
-					amount: amount,
-					requestId,
-				});
-
-				const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes from now
-
-				// Set pending outgoing request for this member
-				setSettlementRequests((prev) => ({
-					...prev,
-					[memberId]: {
-						type: "outgoing",
-						memberId,
-						memberName,
-						requestId,
-						amount: amount,
-						expiresAt,
-					},
-				}));
-
-				// Auto-expire after 2 minutes
-				setTimeout(() => {
-					setSettlementRequests((prev) => {
-						if (prev[memberId]?.requestId === requestId) {
-							// Send cancellation
-							channel
-								.publish("settlement-cancelled", {
-									requestId,
-									recipientId: memberId,
-								})
-								.catch((error) => {
-									console.error("Error sending cancellation:", error);
-								});
-							const updated = { ...prev };
-							delete updated[memberId];
-							return updated;
-						}
-						return prev;
-					});
-
-					// Close temporary connection if we created one
-					if (shouldCloseConnection && ably && ably.connection.state !== "closed") {
-						ably.close();
-					}
-				}, 2 * 60 * 1000);
-
-				// Close temporary connection after a delay if we created one
-				if (shouldCloseConnection) {
-					setTimeout(() => {
-						if (ably && ably.connection.state !== "closed") {
-							ably.close();
-						}
-					}, 5000); // Give it more time to ensure the message was sent
-				}
-
-				return true;
-			} catch (error) {
-				console.error("Error sending settlement request:", error);
-				return false;
-			}
-		},
-		[isProcessing, user?._id, user?.name, user?.houseCode]
-	);
-
-	// Respond to settlement request using shared connection
-	const respondToSettlementRequest = useCallback(
-		async (memberId, accepted) => {
-			// Guard against user not being available
-			if (!user?._id || !user?.houseCode) {
-				console.error("User not available for responding to settlement request");
-				return { success: false, error: "User not available" };
-			}
-
-			const request = settlementRequests[memberId];
-			if (!request || request.type !== "incoming") return false;
-
-			try {
-				// Use the shared connection if available, otherwise create a temporary one
-				let ably = ablyConnectionRef.current;
-				let shouldCloseConnection = false;
-
-				if (!ably || ably.connection.state === "closed") {
-					ably = new Realtime({
-						key: import.meta.env.VITE_ABLY_API_KEY,
-						clientId: user._id,
-					});
-					shouldCloseConnection = true;
-				}
-
-				const channel = ably.channels.get(`house-${user.houseCode}`);
-
-				// Send response via Ably
-				await channel.publish("settlement-response", {
-					requestId: request.requestId,
-					accepted,
-					senderId: request.senderId,
-				});
-
-				// Clear the request
-				setSettlementRequests((prev) => {
-					const updated = { ...prev };
-					delete updated[memberId];
-					return updated;
-				});
-
-				// Close temporary connection if we created one
-				if (shouldCloseConnection) {
-					setTimeout(() => {
-						if (ably && ably.connection.state !== "closed") {
-							ably.close();
-						}
-					}, 1000);
-				}
-
-				return { success: true, accepted, senderId: request.senderId };
-			} catch (error) {
-				console.error("Error responding to settlement request:", error);
-				return { success: false, error: error.message };
-			}
-		},
-		[settlementRequests, user?._id, user?.houseCode]
-	);
-
-	// Clear a specific settlement request
-	const clearSettlementRequest = useCallback((memberId) => {
-		setSettlementRequests((prev) => {
-			const updated = { ...prev };
-			delete updated[memberId];
-			return updated;
+			return prev;
 		});
 	}, []);
 
-	// Get active incoming requests count for notifications
-	const getIncomingRequestsCount = useCallback(() => {
-		return Object.values(settlementRequests).filter((req) => req.type === "incoming").length;
-	}, [settlementRequests]);
+	// Cancel first so settleUp can reference it without missing dep warnings
+	const cancelSettlementRequest = useCallback(
+		async (otherUserId, silent = false) => {
+			const req = requests[otherUserId];
+			if (!req) return;
+			if (timersRef.current[otherUserId]) {
+				clearTimeout(timersRef.current[otherUserId]);
+				delete timersRef.current[otherUserId];
+			}
+			setRequests((prev) => {
+				const copy = { ...prev };
+				delete copy[otherUserId];
+				return copy;
+			});
+			if (silent) return;
+			try {
+				await axios.post("/api/settlements/cancel", { requestId: req.id });
+			} catch (e) {
+				console.error("Cancel failed", e);
+			}
+		},
+		[requests]
+	);
 
-	const value = {
-		settlementRequests,
-		isProcessing,
-		setIsProcessing,
-		sendSettlementRequest,
-		respondToSettlementRequest,
-		clearSettlementRequest,
-		getIncomingRequestsCount,
-	};
+	// Send request
+	const settleUp = useCallback(
+		async (otherUserId, name, amount) => {
+			if (!user?._id || !otherUserId || requests[otherUserId]) return false;
+			try {
+				const { data } = await axios.post("/api/settlements/request", { targetUserId: otherUserId });
+				const expiresAt = Date.now() + 120_000;
+				setRequests((prev) => ({
+					...prev,
+					[otherUserId]: {
+						id: data.requestId,
+						fromUserId: user._id,
+						toUserId: otherUserId,
+						name,
+						amount,
+						type: "outgoing",
+						expiresAt,
+					},
+				}));
+				timersRef.current[otherUserId] = setTimeout(() => cancelSettlementRequest(otherUserId, true), 120_000);
+				return true;
+			} catch (e) {
+				console.error("Failed to create settlement request", e);
+				return false;
+			}
+		},
+		[user?._id, requests, cancelSettlementRequest]
+	);
 
-	return <SettlementContext.Provider value={value}>{children}</SettlementContext.Provider>;
+	const respond = useCallback(
+		async (otherUserId, accept, itemIds = []) => {
+			const req = requests[otherUserId];
+			if (!req) return { success: false, message: "Request not found." };
+			if (req.expiresAt < Date.now()) {
+				removeExpired(otherUserId);
+				return { success: false, message: "Expired" };
+			}
+			try {
+				const { data } = await axios.post("/api/settlements/respond", { requestId: req.id, accept, itemIds });
+				setRequests((prev) => {
+					const copy = { ...prev };
+					delete copy[otherUserId];
+					return copy;
+				});
+				return { success: true, settlementProcessed: data.processed };
+			} catch (e) {
+				console.error("Settlement response failed", e);
+				return { success: false, message: e.response?.data?.message || "An unknown error occurred." };
+			}
+		},
+		[requests, removeExpired]
+	);
+
+	const acceptSettlement = (otherUserId, itemIds) => respond(otherUserId, true, itemIds);
+	const declineSettlement = (otherUserId) => respond(otherUserId, false);
+
+	// (cancelSettlementRequest moved above)
+
+	const getSettlementTimeRemaining = useCallback(
+		(otherUserId) => {
+			const req = requests[otherUserId];
+			if (!req) return 0;
+			if (req.expiresAt < Date.now()) {
+				removeExpired(otherUserId);
+				return 0;
+			}
+			return Math.ceil((req.expiresAt - Date.now()) / 1000);
+		},
+		[requests, removeExpired]
+	);
+
+	return (
+		<SettlementContext.Provider
+			value={{
+				settlementRequests: requests,
+				settleUp,
+				acceptSettlement,
+				declineSettlement,
+				cancelSettlementRequest,
+				getSettlementTimeRemaining,
+			}}
+		>
+			{children}
+		</SettlementContext.Provider>
+	);
 };
+
+export default SettlementProvider;
+// (Old implementation removed during rewrite)

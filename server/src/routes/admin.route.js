@@ -1,6 +1,6 @@
 import express from "express";
 import { impersonateUser, stopImpersonation, getAllUsers } from "../controllers/admin.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
+import authMiddleware from "../middlewares/auth.middleware.js";
 import { jwtAuthMiddleware } from "../middlewares/jwtAuth.middleware.js";
 
 const router = express.Router();
