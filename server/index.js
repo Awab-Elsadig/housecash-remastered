@@ -59,7 +59,8 @@ app.use(
 
 app.use(cookieParser());
 
-await connectDB();
+// Connect to database
+connectDB().catch(console.error);
 
 // Trust first proxy
 app.set("trust proxy", 1);
@@ -93,6 +94,10 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.use("/", (req, res) => {
+	res.json({ message: "HouseCash Server is running!", timestamp: new Date().toISOString() });
+});
+
 app.use("/test", (req, res) => {
 	res.send("Hello World!");
 });
