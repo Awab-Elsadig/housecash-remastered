@@ -30,6 +30,7 @@ app.use(express.json());
 const envOrigins = (process.env.ORIGIN || "").split(",").map((s) => s.trim()).filter(Boolean);
 const allowedOrigins = [
 	...envOrigins,
+	"https://housecash.vercel.app", // Production frontend
 	"http://localhost:3000",
 	"http://localhost:5173",
 	"http://127.0.0.1:3000",
