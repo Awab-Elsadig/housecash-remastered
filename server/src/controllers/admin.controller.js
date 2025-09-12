@@ -1,5 +1,7 @@
 import { User } from "../models/user.model.js";
 import { House } from "../models/house.model.js";
+import { Item } from "../models/item.model.js";
+import PDFDocument from "pdfkit";
 
 const isAdmin = (req) => {
 	// Use req.originalUser if available, otherwise use req.user
@@ -132,4 +134,198 @@ export const stopImpersonation = async (req, res) => {
 		console.error("Error during stop impersonation:", error);
 		return res.status(500).json({ error: error.message || "Error stopping impersonation" });
 	}
+};
+
+// Generate a PDF report of all past expenses (admin only)
+export const generateExpensesReport = async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(403).json({ error: "Access denied" });
+    }
+
+    try {
+        // Fetch all items with author and member info
+        const items = await Item.find({})
+            .populate("author", "name username email")
+            .populate("members.userID", "name username email")
+            .sort({ createdAt: -1 })
+            .lean()
+            .exec();
+
+        // Prepare PDF
+        const doc = new PDFDocument({ margin: 40, size: "A4" });
+        res.status(200);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", 'attachment; filename="expenses-report.pdf"');
+        res.setHeader("Cache-Control", "no-store");
+        doc.on("error", (err) => {
+            console.error("PDF stream error:", err);
+            try { res.end(); } catch (_) {}
+        });
+        doc.pipe(res);
+
+        // Title
+        doc.fontSize(18).text("HouseCash - Expenses Report", { align: "center" });
+        doc.moveDown(0.5);
+        doc.fontSize(10).fillColor("#555").text(`Generated at: ${new Date().toLocaleString()}`, { align: "center" });
+        doc.moveDown();
+        doc.fillColor("#000");
+
+        // Totals
+        const grandTotal = items.reduce((sum, it) => sum + (it.price || 0), 0);
+        doc.fontSize(12).text(`Total Items: ${items.length}`);
+        doc.fontSize(12).text(`Grand Total: $${grandTotal.toFixed(2)}`);
+        doc.moveDown();
+
+        // Table-like headers
+        const drawHr = () => { doc.moveTo(doc.x, doc.y).lineTo(555, doc.y).strokeColor('#ccc').lineWidth(0.5).stroke().moveDown(0.2); };
+        doc.fontSize(11).text("Items", { underline: true });
+        drawHr();
+
+        // Items detail
+        items.forEach((it, idx) => {
+            const authorName = it.author?.name || it.author?.username || "Unknown";
+            doc.fontSize(11).text(`${idx + 1}. ${it.name || "Untitled"}  -  $${(it.price || 0).toFixed(2)}`);
+            doc.fontSize(9).fillColor('#444').text(`Author: ${authorName} • House: ${it.houseCode || "-"} • Created: ${new Date(it.createdAt).toLocaleString()}`);
+            if (it.description) doc.text(`Description: ${it.description}`);
+
+            // Members breakdown with paid/got
+            if (Array.isArray(it.members) && it.members.length > 0) {
+                doc.moveDown(0.2);
+                doc.fontSize(9).fillColor('#000').text("Members:");
+                it.members.forEach((m) => {
+                    const name = m.userID?.name || m.userID?.username || String(m.userID || "");
+                    const status = `paid=${m.paid ? '✔' : '✘'}, got=${m.got ? '✔' : '✘'}`;
+                    doc.fontSize(9).fillColor('#333').text(`- ${name} (${status})`);
+                });
+            }
+            doc.fillColor('#000');
+            doc.moveDown(0.5);
+            drawHr();
+        });
+
+        doc.end();
+    } catch (error) {
+        console.error("Failed generating report:", error);
+        return res.status(500).json({ error: error.message || "Failed to generate report" });
+    }
+};
+
+// Generate CSV of all past expenses (admin only)
+export const generateExpensesCSV = async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(403).json({ error: "Access denied" });
+    }
+    try {
+        const items = await Item.find({})
+            .populate("author", "name username email")
+            .populate("members.userID", "name username email")
+            .sort({ createdAt: -1 })
+            .lean()
+            .exec();
+
+        res.status(200);
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader("Content-Disposition", 'attachment; filename="expenses-report.csv"');
+        res.setHeader("Cache-Control", "no-store");
+        res.write('\uFEFF'); // UTF-8 BOM to help Excel parse UTF-8 correctly
+
+        const escapeCsv = (v) => {
+            if (v === null || v === undefined) return "";
+            const s = String(v);
+            if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+            return s;
+        };
+
+        const header = [
+            "Item ID",
+            "Name",
+            "Price",
+            "Description",
+            "HouseCode",
+            "Author",
+            "Created At",
+            "Member Name",
+            "Member Email",
+            "Paid",
+            "Got",
+        ].join(",") + "\n";
+        res.write(header);
+
+        items.forEach((it) => {
+            const base = [
+                it._id,
+                it.name || "",
+                (it.price || 0).toFixed(2),
+                it.description || "",
+                it.houseCode || "",
+                it.author?.name || it.author?.username || "",
+                new Date(it.createdAt).toISOString(),
+            ];
+            if (Array.isArray(it.members) && it.members.length > 0) {
+                it.members.forEach((m) => {
+                    const row = [
+                        ...base,
+                        m.userID?.name || m.userID?.username || "",
+                        m.userID?.email || "",
+                        m.paid ? "true" : "false",
+                        m.got ? "true" : "false",
+                    ].map(escapeCsv).join(",") + "\n";
+                    res.write(row);
+                });
+            } else {
+                const row = [...base, "", "", "", ""].map(escapeCsv).join(",") + "\n";
+                res.write(row);
+            }
+        });
+
+        res.end();
+    } catch (error) {
+        console.error("Failed generating CSV:", error);
+        return res.status(500).json({ error: error.message || "Failed to generate CSV" });
+    }
+};
+
+// Admin-triggered migration: remove members.got and normalize paid booleans
+export const migrateItemsRemoveGot = async (req, res) => {
+    if (!isAdmin(req)) {
+        return res.status(403).json({ error: "Access denied" });
+    }
+    try {
+        const coll = Item.collection;
+        const unsetResult = await coll.updateMany(
+            { "members.got": { $exists: true } },
+            { $unset: { "members.$[].got": "" } }
+        );
+
+        let coerced = 0;
+        const cursor = coll.find({});
+        // Iterate and coerce paid to boolean if needed
+        // Using raw collection for performance
+        // eslint-disable-next-line no-constant-condition
+        while (await cursor.hasNext()) {
+            const doc = await cursor.next();
+            const members = Array.isArray(doc.members) ? doc.members : [];
+            let changed = false;
+            const normalized = members.map((m) => {
+                if (typeof m?.paid !== "boolean") {
+                    changed = true;
+                    return { ...m, paid: !!m?.paid };
+                }
+                return m;
+            });
+            if (changed) {
+                await coll.updateOne({ _id: doc._id }, { $set: { members: normalized } });
+                coerced += 1;
+            }
+        }
+
+        return res.status(200).json({
+            message: "Migration complete",
+            unsetModified: unsetResult?.modifiedCount || 0,
+            normalizedDocs: coerced,
+        });
+    } catch (error) {
+        console.error("Migration error:", error);
+        return res.status(500).json({ error: error.message || "Migration failed" });
+    }
 };

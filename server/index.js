@@ -17,6 +17,7 @@ import uploadRoutes from "./src/routes/upload.route.js";
 import settlementRoutes from "./src/routes/settlement.route.js";
 import cookieParser from "cookie-parser";
 import paymentRoutes from "./src/routes/payment.route.js";
+import paymentApprovalRoutes from "./src/routes/paymentApproval.route.js";
 
 dotenv.config();
 
@@ -24,12 +25,30 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+
+// CORS: allow multiple known origins incl. local dev
+const envOrigins = (process.env.ORIGIN || "").split(",").map((s) => s.trim()).filter(Boolean);
+const allowedOrigins = [
+	...envOrigins,
+	"http://localhost:3000",
+	"http://localhost:5173",
+	"http://127.0.0.1:3000",
+	"http://127.0.0.1:5173",
+].filter(Boolean);
+
 app.use(
 	cors({
-		origin: process.env.ORIGIN || ["http://localhost:3000", "http://localhost:5173"],
+		origin: (origin, callback) => {
+			// Allow non-browser requests (no origin) and whitelisted origins
+			if (!origin || allowedOrigins.includes(origin)) {
+				return callback(null, true);
+			}
+			return callback(new Error(`Not allowed by CORS: ${origin}`));
+		},
 		credentials: true,
 	})
 );
+
 app.use(cookieParser());
 
 await connectDB();
@@ -81,7 +100,9 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/settlements", settlementRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/payment-approvals", paymentApprovalRoutes);
 
 app.listen(process.env.PORT, () => {
 	console.log(`Server is running on port ${process.env.PORT}`);
+	console.log("CORS allowed origins:", allowedOrigins);
 });

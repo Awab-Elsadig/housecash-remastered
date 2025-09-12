@@ -91,17 +91,26 @@ export const respondSettlement = async (req, res) => {
 						);
 						console.log("Items updated:", updateResult);
 
-						// Calculate the total amount for the settlement
+						// Calculate totals and build snapshot from payer perspective (recipient who accepts)
 						const items = await Item.find({ _id: { $in: ids } }, null, { session });
-						let totalAmount = 0;
-
+						let theyOwe = 0; // what initiator owes payer
+						let youOwe = 0;  // what payer owes initiator
+						const snapshotItems = [];
 						for (const item of items) {
-							// Calculate the share amount for this item
 							const shareAmount = item.price / item.members.length;
-							totalAmount += shareAmount;
+							const payerId = record.toUserId;
+							const otherId = record.fromUserId;
+							if (item.author.toString() === payerId.toString()) {
+								theyOwe += shareAmount; // other owes payer
+								snapshotItems.push({ name: item.name, share: shareAmount, direction: "theyOwe" });
+							} else if (item.author.toString() === otherId.toString()) {
+								youOwe += shareAmount; // payer owes other
+								snapshotItems.push({ name: item.name, share: shareAmount, direction: "youOwe" });
+							}
 						}
-
-						console.log("Settlement total amount:", totalAmount);
+						const net = youOwe - theyOwe;
+						const totalAmount = Math.abs(net);
+						console.log("Settlement totals:", { totalAmount, theyOwe, youOwe, net });
 
 						// Create payment record
 						const payment = new Payment({
@@ -112,6 +121,8 @@ export const respondSettlement = async (req, res) => {
 							amount: totalAmount,
 							settledItemIds: ids,
 							description: `Settlement of ${ids.length} items`,
+							settlementSnapshot: { theyOwe, youOwe, net },
+							settlementItems: snapshotItems,
 						});
 						const savedPayment = await payment.save({ session });
 						console.log("Payment saved:", savedPayment._id);
