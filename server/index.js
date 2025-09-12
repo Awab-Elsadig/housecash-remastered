@@ -37,16 +37,23 @@ const allowedOrigins = [
 	"http://127.0.0.1:5173",
 ].filter(Boolean);
 
+console.log("CORS allowed origins:", allowedOrigins);
+
 app.use(
 	cors({
 		origin: (origin, callback) => {
+			console.log(`CORS request from origin: ${origin}`);
 			// Allow non-browser requests (no origin) and whitelisted origins
 			if (!origin || allowedOrigins.includes(origin)) {
+				console.log(`CORS: Allowing origin ${origin}`);
 				return callback(null, true);
 			}
+			console.log(`CORS: Blocking origin ${origin}`);
 			return callback(new Error(`Not allowed by CORS: ${origin}`));
 		},
 		credentials: true,
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
 	})
 );
 
@@ -88,6 +95,15 @@ app.use((req, res, next) => {
 // Routes
 app.use("/test", (req, res) => {
 	res.send("Hello World!");
+});
+
+// CORS test endpoint
+app.use("/cors-test", (req, res) => {
+	res.json({
+		message: "CORS test successful",
+		origin: req.headers.origin,
+		allowedOrigins: allowedOrigins
+	});
 });
 
 app.use("/api/auth", authRoutes);
