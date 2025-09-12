@@ -8,11 +8,16 @@ import Header from "./components/Header/Header";
 import AddItemButton from "./components/AddItemButton/AddItemButton";
 import { ImpersonationProvider } from "./contexts/ImpersonationContext";
 import { SettlementProvider } from "./contexts/SettlementContext";
+import { PaymentApprovalProvider } from "./contexts/PaymentApprovalContext";
 import { useUser } from "./hooks/useUser";
 
 function SettlementWrapper({ children }) {
 	const { user } = useUser();
-	return <SettlementProvider user={user}>{children}</SettlementProvider>;
+	return (
+		<SettlementProvider user={user}>
+			<PaymentApprovalProvider user={user}>{children}</PaymentApprovalProvider>
+		</SettlementProvider>
+	);
 }
 
 function App() {
@@ -36,6 +41,13 @@ function App() {
 							element={
 								<div className="app">
 									<Sidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+									{isMobileMenuOpen && (
+										<div
+											className="mobile-backdrop"
+											onClick={() => setIsMobileMenuOpen(false)}
+											aria-hidden="true"
+										/>
+									)}
 									<div className="right">
 										<Header toggleMobileMenu={toggleMobileMenu} />
 										<AppRoutes />

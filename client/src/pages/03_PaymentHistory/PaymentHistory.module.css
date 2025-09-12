@@ -1,11 +1,76 @@
 /* PaymentHistory.module.css */
 .historyPage {
-	display: grid;
-	grid-template-columns: 1fr 300px;
-	gap: 2rem;
-	align-items: start;
-	padding: 2rem;
+	display: flex;
+	flex-direction: column;
+	gap: var(--page-gap);
+	flex: 1;
+	padding: var(--page-padding);
 	overflow-y: auto;
+	padding-bottom: calc(var(--page-padding) + 4rem);
+}
+
+/* Stats Grid */
+.statsGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 1rem;
+}
+
+.statCard {
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	border-radius: var(--border-radius-sm);
+	padding: 1.1rem;
+	text-align: center;
+	backdrop-filter: blur(10px);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Hover removed */
+
+.statIcon {
+	font-size: 1.1rem;
+	color: var(--mainColor);
+	margin-bottom: 0.35rem;
+}
+
+.statNumber {
+	font-size: 1.35rem;
+	font-weight: 700;
+	color: var(--textColor);
+	margin-bottom: 0.2rem;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	hyphens: auto;
+	max-width: 100%;
+}
+
+.statLabel {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--textSecondary);
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	text-align: center;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	line-height: 1.25;
+}
+
+/* Main Content */
+.mainContent {
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: blur(10px);
+	border-radius: var(--border-radius);
+	padding: var(--card-padding);
+	display: flex;
+	flex-direction: column;
+	gap: var(--card-gap);
 }
 
 /* Loading and Error States */
@@ -17,70 +82,13 @@
 	justify-content: center;
 	padding: 4rem 2rem;
 	text-align: center;
-	grid-column: 1 / -1;
-}
-
-.loadingIcon {
-	font-size: 3rem;
-	color: var(--mainColor);
-	margin-bottom: 1rem;
-	animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-	from {
-		transform: rotate(0deg);
-	}
-	to {
-		transform: rotate(360deg);
-	}
-}
-
-.loadingState p,
-.errorState p {
-	font-size: 1.1rem;
-	color: var(--textSecondary);
-	margin: 0;
-}
-
-/* Sidebar */
-.sidebar {
-	display: flex;
-	flex-direction: column;
-	gap: 1.5rem;
-}
-
-.sidebarTitle {
-	font-size: 1.5rem;
-	font-weight: 600;
-	height: 3rem;
-	color: var(--textColor);
-}
-
-.statsGrid {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
-.statCard {
-	background: var(--glassBackground);
-	border: 1px solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
-	border-radius: 1rem;
-	padding: 1.5rem;
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-	transition: all 0.3s ease;
-	animation: fadeInUp 0.3s ease-out;
 }
 
 .statCard:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 	border-color: var(--mainColor);
 }
+
 
 .statIcon {
 	display: flex;
@@ -89,7 +97,7 @@
 	width: 3rem;
 	height: 3rem;
 	border-radius: 50%;
-	background: linear-gradient(135deg, var(--mainColor), #8b5cf6);
+	background: linear-gradient(135deg, var(--mainColor), var(--mainColorDark));
 	color: white;
 	font-size: 1.25rem;
 	flex-shrink: 0;
@@ -139,34 +147,6 @@
 	gap: 0.75rem;
 }
 
-.filterSelect {
-	padding: 0.5rem 0.75rem;
-	background: var(--glassBackground);
-	border: 1px solid var(--glassStroke);
-	border-radius: 0.5rem;
-	color: var(--textColor);
-	font-size: 0.9rem;
-	min-width: 120px;
-	cursor: pointer;
-	transition: all 0.2s ease;
-}
-
-.filterSelect:focus {
-	outline: none;
-	border-color: var(--mainColor);
-	box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-}
-
-.filterSelect:hover {
-	border-color: var(--mainColor);
-}
-
-.filterSelect option {
-	background: var(--glassBackground);
-	color: var(--textColor);
-	padding: 0.5rem;
-}
-
 /* Transaction List */
 .transactionsList {
 	display: flex;
@@ -175,19 +155,17 @@
 }
 
 .transactionCard {
-	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
 	backdrop-filter: var(--glassBlur);
 	border-radius: 1rem;
 	overflow: hidden;
-	transition: all 0.3s ease;
+	transition: transform 0.2s ease, border-color 0.2s ease;
 	animation: fadeInUp 0.3s ease-out;
 }
 
 .transactionCard:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-	border-color: rgba(124, 58, 237, 0.3);
+	border-color: var(--mainColor);
 }
 
 .transactionHeader {
@@ -217,11 +195,11 @@
 }
 
 .transactionIcon.singleIcon {
-	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+	background: linear-gradient(135deg, var(--mainColor), var(--mainColorDark));
 }
 
 .transactionIcon.bulkIcon {
-	background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+	background: linear-gradient(135deg, var(--mainColor), var(--mainColorDark));
 }
 
 .transactionIcon.settlementIcon {
@@ -261,7 +239,7 @@
 }
 
 .transactionBadge {
-	background: rgba(124, 58, 237, 0.1);
+	background: rgba(var(--mainColor-rgb), 0.1);
 	color: var(--mainColor);
 	padding: 0.25rem 0.5rem;
 	border-radius: 0.375rem;
@@ -278,6 +256,26 @@
 	flex-direction: column;
 	align-items: flex-end;
 	gap: 0.5rem;
+}
+
+.deleteBtn {
+	background: rgba(var(--badColor-rgb), 0.12);
+	color: var(--badColor);
+	border: 1px solid rgba(var(--badColor-rgb), 0.25);
+	border-radius: 0.5rem;
+	padding: 0.45rem 0.7rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.deleteBtn:hover {
+	transform: translateY(-1px);
+	border-color: var(--badColor);
 }
 
 .transactionAmount {
@@ -306,19 +304,20 @@
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.5rem 0.75rem;
-	background: linear-gradient(135deg, var(--mainColor), #8b5cf6);
+	background: linear-gradient(135deg, var(--mainColor), var(--mainColorDark));
 	border: none;
 	border-radius: 0.5rem;
 	color: white;
 	font-size: 0.8rem;
 	font-weight: 500;
 	cursor: pointer;
-	transition: all 0.3s ease;
+	transition: transform 0.2s ease, filter 0.2s ease;
 }
+.actionButtons { display: flex; gap: 0.6rem; align-items: center; justify-content: flex-end; }
+
 
 .viewDetailsBtn:hover {
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 /* No Transactions State */
@@ -359,7 +358,7 @@
 	line-height: 1.5;
 }
 
-/* Settlement Details Modal */
+/* Settlement Details Modal - Matching Dashboard Style */
 .modalOverlay {
 	position: fixed;
 	top: 0;
@@ -367,97 +366,141 @@
 	right: 0;
 	bottom: 0;
 	background: rgba(0, 0, 0, 0.5);
-	backdrop-filter: blur(4px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: 1000;
-	padding: 2rem;
+	padding: 1rem;
+	animation: fadeIn 0.2s ease;
 }
 
-.modalContent {
-	background: var(--glassBackground);
+.modal {
+	background: linear-gradient(160deg, rgba(7, 54, 80, 0.65) 0%, rgba(25, 36, 50, 0.45) 100%), var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
-	border-radius: 1rem;
-	max-width: 600px;
-	width: 100%;
-	max-height: 80vh;
-	overflow-y: auto;
-	animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-	from {
-		opacity: 0;
-		transform: scale(0.9) translateY(20px);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1) translateY(0);
-	}
+	backdrop-filter: blur(10px);
+	border-radius: var(--border-radius-lg);
+	width: min(500px, 100%);
+	max-height: 90vh;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .modalHeader {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 1.5rem;
+	padding: 1rem 1.25rem;
 	border-bottom: 1px solid var(--glassStroke);
 }
 
-.modalTitleSection {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-}
-
-.modalIcon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 3rem;
-	height: 3rem;
-	border-radius: 0.75rem;
-	background: linear-gradient(135deg, #f59e0b, #d97706);
-	color: white;
-	font-size: 1.25rem;
-}
-
 .modalTitle {
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: #fff;
+}
+
+.modalClose {
+	background: none;
+	border: none;
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 1.5rem;
+	cursor: pointer;
+}
+
+.modalSummary {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1rem;
+	padding: 1rem 1.25rem;
+	background: rgba(0, 0, 0, 0.1);
+	text-align: center;
+}
+
+.modalStat {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+.modalStat span {
+	font-size: 0.8rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+.modalStat strong {
 	font-size: 1.25rem;
 	font-weight: 600;
-	color: var(--textColor);
-	margin: 0 0 0.25rem 0;
 }
 
-.modalSubtitle {
-	font-size: 0.9rem;
-	color: var(--textSecondary);
+.modalSummary .modalStat strong.positive { color: var(--goodColor); }
+.modalSummary .modalStat strong.negative { color: var(--badColor); }
+
+.modalStat strong.positive {
+	color: var(--goodColor);
+}
+.modalStat strong.negative {
+	color: var(--badColor);
+}
+
+.modalItemList {
+	list-style: none;
 	margin: 0;
+	padding: 1rem 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	overflow-y: auto;
+	flex: 1;
+    -webkit-overflow-scrolling: touch;
 }
 
-.closeBtn {
+.modalItem {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem;
+	border-radius: 0.5rem;
+	background: rgba(255, 255, 255, 0.03);
+}
+
+.modalItemDetails {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	width: 2.5rem;
-	height: 2.5rem;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	color: var(--textSecondary);
-	cursor: pointer;
-	transition: all 0.2s ease;
+	gap: 0.75rem;
 }
 
-.closeBtn:hover {
-	background: rgba(255, 255, 255, 0.2);
-	color: var(--textColor);
+.modalItem .itemShare[data-direction="theyOwe"] {
+	color: var(--goodColor);
+}
+.modalItem .itemShare[data-direction="youOwe"] {
+	color: var(--badColor);
 }
 
-.modalBody {
-	padding: 1.5rem;
+.itemDirection {
+	font-size: 0.8rem;
+	font-weight: 600;
+}
+.modalItem[data-direction="theyOwe"] .itemDirection {
+	color: var(--goodColor);
+}
+.modalItem[data-direction="youOwe"] .itemDirection {
+	color: var(--badColor);
+}
+
+.empty {
+	color: rgba(255, 255, 255, 0.6);
+	font-style: italic;
+	text-align: center;
+	padding: 1rem;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
 }
 
 /* Settlement Breakdown */
@@ -700,34 +743,28 @@
 		font-size: 1.25rem;
 	}
 
-	.modalOverlay {
-		padding: 1rem;
+	/* Modal adjustments */
+	.modalOverlay { 
+		padding: 0.6rem; 
 	}
-
-	.modalContent {
-		max-height: 90vh;
+	.modal { 
+		width: 100%; 
+		max-height: 100vh; 
+		border-radius: var(--border-radius); 
 	}
-
-	.modalHeader {
-		padding: 1rem;
+	.modalHeader { 
+		padding: 0.85rem 1rem; 
 	}
-
-	.modalTitleSection {
-		gap: 0.75rem;
+	.modalSummary { 
+		grid-template-columns: repeat(3, minmax(0,1fr)); 
+		gap: var(--card-gap); 
+		padding: var(--card-padding) 1rem; 
 	}
-
-	.modalIcon {
-		width: 2.5rem;
-		height: 2.5rem;
-		font-size: 1rem;
+	.modalItemList { 
+		padding: 0.7rem 0.95rem 1rem; 
 	}
-
-	.modalTitle {
-		font-size: 1.1rem;
-	}
-
-	.modalBody {
-		padding: 1rem;
+	.modalStat strong { 
+		font-size: 1.15rem; 
 	}
 
 	.settlementCategory {
@@ -759,5 +796,30 @@
 		gap: 0.25rem;
 		align-items: center;
 		text-align: center;
+	}
+
+	/* Stats Grid Responsive */
+	.statsGrid {
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+		gap: 1rem;
+	}
+
+	.statCard {
+		padding: 1rem;
+	}
+
+	.statNumber {
+		font-size: 1.5rem;
+	}
+
+	.statLabel {
+		font-size: 0.75rem;
+	}
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+	.modalSummary { 
+		grid-template-columns: repeat(2, 1fr); 
 	}
 }

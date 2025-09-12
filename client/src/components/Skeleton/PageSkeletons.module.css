@@ -1,8 +1,8 @@
 /* Responsive skeleton layouts */
 .dashboardSkeleton {
 	display: flex;
-	padding: 2rem;
-	gap: 1rem;
+	padding: var(--page-padding);
+	gap: var(--page-gap);
 	flex-direction: row;
 	flex-wrap: wrap;
 	width: 100%;
@@ -11,7 +11,7 @@
 .dashboardSkeleton > div {
 	display: flex;
 	flex-direction: column;
-	gap: 1rem;
+	gap: var(--card-gap);
 }
 
 .dashboardSkeleton .leftColumn {
@@ -32,10 +32,10 @@
 .expensesSkeleton {
 	display: grid;
 	grid-template-columns: 1fr 20rem;
-	gap: 2rem;
+	gap: var(--page-gap);
 	align-items: start;
 	flex: 1;
-	padding: 2rem;
+	padding: var(--page-padding);
 	overflow-y: auto;
 	width: 100%;
 }
@@ -43,30 +43,30 @@
 .paymentHistorySkeleton {
 	display: grid;
 	grid-template-columns: 1fr 300px;
-	gap: 2rem;
+	gap: var(--page-gap);
 	align-items: start;
 	flex: 1;
-	padding: 2rem;
+	padding: var(--page-padding);
 	overflow-y: auto;
 	width: 100%;
 }
 
 .settingsSkeleton {
-	padding: 2rem;
+	padding: var(--page-padding);
 	width: 100%;
 }
 
 .settingsSkeleton .settingsGrid {
 	display: grid;
 	grid-template-columns: 250px 1fr;
-	gap: 2rem;
+	gap: var(--page-gap);
 }
 
 /* Mobile responsive styles */
 @media (max-width: 768px) {
 	.dashboardSkeleton {
 		flex-direction: column !important;
-		padding: 1rem !important;
+		padding: var(--space-sm) !important;
 	}
 
 	.dashboardSkeleton .leftColumn,
@@ -77,23 +77,23 @@
 
 	.expensesSkeleton {
 		grid-template-columns: 1fr !important;
-		padding: 1rem !important;
-		gap: 1rem !important;
+		padding: var(--space-sm) !important;
+		gap: var(--card-gap) !important;
 	}
 
 	.paymentHistorySkeleton {
 		grid-template-columns: 1fr !important;
-		padding: 1rem !important;
-		gap: 1rem !important;
+		padding: var(--space-sm) !important;
+		gap: var(--card-gap) !important;
 	}
 
 	.settingsSkeleton {
-		padding: 1rem !important;
+		padding: var(--space-sm) !important;
 	}
 
 	.settingsSkeleton .settingsGrid {
 		grid-template-columns: 1fr !important;
-		gap: 1rem !important;
+		gap: var(--card-gap) !important;
 	}
 }
 
@@ -118,6 +118,6 @@
 	.expensesSkeleton,
 	.paymentHistorySkeleton,
 	.settingsSkeleton {
-		padding: 0.5rem !important;
+		padding: var(--space-xs) !important;
 	}
 }

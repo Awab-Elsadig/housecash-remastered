@@ -34,18 +34,29 @@ export const getAvatarData = (user) => {
 		};
 	}
 
-	if (user.profilePictureUrl && user.profilePictureUrl.trim()) {
+	// Respect explicit avatar mode if set
+	if (user.avatarMode === "none") {
+		return {
+			type: "none",
+			source: "",
+			fallback: defaultImage,
+			initials: getUserInitials(user.name),
+			letters: user.initialsCount || 2,
+		};
+	}
+
+	if (user.profilePictureUrl && user.profilePictureUrl.trim() && user.avatarMode !== "initials") {
 		return {
 			type: "image",
 			source: user.profilePictureUrl,
 			fallback: defaultImage,
-			initials: getUserInitials(user.name),
+			initials: getUserInitials(user.name).slice(0, user.initialsCount || 2),
 		};
 	}
 
 	return {
 		type: "initials",
-		source: getUserInitials(user.name),
+		source: getUserInitials(user.name).slice(0, user.initialsCount || 2),
 		fallback: defaultImage,
 	};
 };
@@ -56,7 +67,7 @@ export const getAvatarData = (user) => {
  * @returns {string} - CSS gradient or color
  */
 export const getAvatarColor = (name) => {
-	if (!name) return "linear-gradient(135deg, #6366f1, #8b5cf6)";
+	if (!name) return "linear-gradient(135deg, #3b82f6, #1d4ed8)";
 
 	// Generate a hash from the name
 	let hash = 0;
@@ -67,12 +78,12 @@ export const getAvatarColor = (name) => {
 	// Convert to colors
 	const colors = [
 		"linear-gradient(135deg, #ef4444, #f97316)", // red-orange
-		"linear-gradient(135deg, #3b82f6, #6366f1)", // blue-indigo
+		"linear-gradient(135deg, #3b82f6, #1d4ed8)", // blue
 		"linear-gradient(135deg, #10b981, #059669)", // green
-		"linear-gradient(135deg, #8b5cf6, #a855f7)", // purple
+		"linear-gradient(135deg, #2563eb, #1d4ed8)", // alt blue
 		"linear-gradient(135deg, #f59e0b, #d97706)", // yellow-orange
 		"linear-gradient(135deg, #06b6d4, #0891b2)", // cyan
-		"linear-gradient(135deg, #ec4899, #be185d)", // pink
+		"linear-gradient(135deg, #0ea5e9, #0284c7)", // sky blue
 	];
 
 	return colors[Math.abs(hash) % colors.length];

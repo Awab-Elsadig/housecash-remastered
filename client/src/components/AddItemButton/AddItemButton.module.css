@@ -10,7 +10,6 @@
 	color: white;
 	font-weight: 600;
 	cursor: pointer;
-	transition: all 0.3s ease;
 	backdrop-filter: var(--glassBlur);
 }
 
@@ -24,20 +23,32 @@
 	height: 2rem;
 	background: var(--mainColor);
 	border-radius: 50%;
-	transition: transform 0.2s ease;
-	transform-origin: center;
 }
 
-.addItemButton:hover {
-	opacity: 0.8;
-}
+/* Mobile: icon-only FAB, no animations */
+@media (max-width: 768px) {
+	.addItemButton {
+		width: 56px;
+		height: 56px;
+		padding: 0;
+		border-radius: 50%;
+		background: var(--mainColor);
+		border: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
 
-.addItemButton:hover .addIcon {
-	line-height: 1;
-	transform-origin: center;
-	transform: rotate(90deg);
-}
+	.addItemButton > span:first-child {
+		display: none;
+	}
 
-.addItemButton:active {
-	transform: translateY(0px);
+	.addIcon {
+		background: none;
+		width: auto;
+		height: auto;
+		color: #fff;
+		font-size: 1.75rem;
+		font-weight: 600;
+	}
 }

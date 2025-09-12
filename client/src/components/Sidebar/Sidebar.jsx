@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IoClose } from "react-icons/io5";
+import { motion, AnimatePresence } from "framer-motion";
 import classes from "./Sidebar.module.css";
 import { navItems } from "./navigationConfig";
 import NavigationItem from "./NavigationItem";
@@ -8,55 +9,109 @@ import { useUser } from "../../hooks/useUser";
 
 const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
 	const { user } = useUser();
+	const panelRef = useRef(null);
+	const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 768px)").matches);
 
-	const handleMobileMenuClose = () => {
-		if (setIsMobileMenuOpen) {
-			setIsMobileMenuOpen(false);
-		}
-	};
+	useEffect(() => {
+		const mql = window.matchMedia("(max-width: 768px)");
+		const handler = (e) => setIsMobile(e.matches);
+		mql.addEventListener ? mql.addEventListener("change", handler) : mql.addListener(handler);
+		return () => {
+			mql.removeEventListener ? mql.removeEventListener("change", handler) : mql.removeListener(handler);
+		};
+	}, []);
 
-	const handleNavClick = () => {
-		// Close mobile menu after navigation
-		handleMobileMenuClose();
-	};
+	const handleMobileMenuClose = useCallback(() => {
+		if (setIsMobileMenuOpen) setIsMobileMenuOpen(false);
+	}, [setIsMobileMenuOpen]);
 
-	// Filter navigation items based on user role
-	const getFilteredNavItems = () => {
+	const handleKeyDown = useCallback(
+		(e) => {
+			if (!isMobile) return;
+			if (e.key === "Escape") handleMobileMenuClose();
+		},
+		[isMobile, handleMobileMenuClose]
+	);
+
+	useEffect(() => {
+		if (!isMobile) return;
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [isMobile, handleKeyDown]);
+
+	const filteredNavItems = useMemo(() => {
 		return navItems.filter((item) => {
-			// If item is admin-only, only show it to admin users
-			if (item.adminOnly) {
-				return user?.role === "admin";
-			}
+			if (item.adminOnly) return user?.role === "admin";
 			return true;
 		});
+	}, [user?.role]);
+
+	const handleNavClick = useCallback(() => {
+		// Close menu on mobile after navigation
+		if (isMobile) handleMobileMenuClose();
+	}, [isMobile, handleMobileMenuClose]);
+
+	// Framer variants (use % so it slides fully off-screen)
+	const variants = {
+		closed: { x: "-100%", transition: { duration: 0.25, ease: "easeOut", type: "tween" } },
+		open: { x: 0, transition: { duration: 0.25, ease: "easeOut", type: "tween" } },
 	};
 
-	const filteredNavItems = getFilteredNavItems();
+	// Desktop: render static sidebar
+	if (!isMobile) {
+		return (
+			<div ref={panelRef} className={`${classes.sidebar}`}>
+				<button className={classes.mobileCloseButton} onClick={handleMobileMenuClose} aria-label="Close mobile menu">
+					<IoClose />
+				</button>
+				<div className={classes.logoSection}>
+					<img className={classes.nameLogo} src="/Logo Full - White.png" alt="Housecash Logo" />
+				</div>
+				<nav className={classes.navLinks} aria-label="Sidebar navigation">
+					{filteredNavItems.map((item) => (
+						<NavigationItem key={item.id} item={item} onClick={handleNavClick} />
+					))}
+				</nav>
+				<div className={classes.addItemButtonContainer}>
+					<AddItemButton />
+				</div>
+			</div>
+		);
+	}
 
+	// Mobile: off-canvas with framer-motion
 	return (
-		<div className={`${classes.sidebar} ${isMobileMenuOpen ? classes.mobileOpen : ""}`}>
-			{/* Mobile Close Button */}
-			<button className={classes.mobileCloseButton} onClick={handleMobileMenuClose} aria-label="Close mobile menu">
-				<IoClose />
-			</button>
-
-			{/* Logo Section */}
-			<div className={classes.logoSection}>
-				<img className={classes.nameLogo} src="/Logo Full - White.png" alt="Housecash Logo" />
-			</div>
-
-			{/* Navigation Links */}
-			<nav className={classes.navLinks}>
-				{filteredNavItems.map((item) => (
-					<NavigationItem key={item.id} item={item} onClick={handleNavClick} />
-				))}
-			</nav>
-
-			{/* Add Item Button - Hidden on mobile */}
-			<div className={classes.addItemButtonContainer}>
-				<AddItemButton />
-			</div>
-		</div>
+		<AnimatePresence mode="wait">
+			{isMobileMenuOpen && (
+				<motion.div
+					key="sidebar-mobile"
+					ref={panelRef}
+					className={`${classes.sidebar}`}
+					initial="closed"
+					animate="open"
+					exit="closed"
+					variants={variants}
+					role="dialog"
+					aria-modal="true"
+					aria-label="Mobile menu"
+				>
+					<button className={classes.mobileCloseButton} onClick={handleMobileMenuClose} aria-label="Close mobile menu">
+						<IoClose />
+					</button>
+					<div className={classes.logoSection}>
+						<img className={classes.nameLogo} src="/Logo Full - White.png" alt="Housecash Logo" />
+					</div>
+					<nav className={classes.navLinks} aria-label="Sidebar navigation">
+						{filteredNavItems.map((item) => (
+							<NavigationItem key={item.id} item={item} onClick={handleNavClick} />
+						))}
+					</nav>
+					<div className={classes.addItemButtonContainer}>
+						<AddItemButton />
+					</div>
+				</motion.div>
+			)}
+		</AnimatePresence>
 	);
 };
 

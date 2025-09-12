@@ -5,7 +5,7 @@ import { RiPencilFill } from "react-icons/ri";
 import { RiSearchLine } from "react-icons/ri";
 import { FaDollarSign, FaHistory, FaArrowUp, FaArrowDown, FaUser } from "react-icons/fa";
 import { useUser } from "../../hooks/useUser";
-import { useInitialLoading } from "../../hooks/useLoading";
+import { useDataLoading } from "../../hooks/useLoading";
 import { ExpensesSkeleton } from "../../components/Skeleton";
 import formatDateTime from "../../utils/formatDateTime";
 import AddItem from "../../components/AddItem/AddItem";
@@ -14,8 +14,11 @@ import axios from "axios";
 import ably from "../../ablyConfig";
 
 const Expenses = () => {
+	useEffect(() => {
+		document.title = "Expenses - HouseCash";
+	}, []);
+
 	const { user, houseMembers, items, fetchItems, deleteItem } = useUser();
-	const isLoading = useInitialLoading(1000);
 	const memberFiltersRef = useRef(null); // Ref to control the details element
 	// derived in applyFilters and directly rendered
 	const [selectedFilter, setSelectedFilter] = useState("all");
@@ -24,9 +27,20 @@ const Expenses = () => {
 	const [itemToEdit, setItemToEdit] = useState(null);
 	const [deleteConfirmation, setDeleteConfirmation] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState(null);
-	const [expandedItem, setExpandedItem] = useState(null);
+	const [selectedItem, setSelectedItem] = useState(null);
+
+	// Close modal handler
+	const closeModal = () => {
+		setSelectedItem(null);
+	}; // Changed from expandedItem to selectedItem for modal
 	// Displayed list state (show all by default)
 	const [displayedItems, setDisplayedItems] = useState([]);
+
+	// Comprehensive loading check - wait for all data to be processed
+	const dataReady =
+		user && houseMembers && houseMembers.length > 0 && items !== null && items !== undefined && displayedItems !== null;
+
+	const isLoading = useDataLoading(dataReady);
 
 	useEffect(() => {
 		// Items will be automatically fetched by useUser hook when user data is available
@@ -96,31 +110,34 @@ const Expenses = () => {
 			return;
 		}
 
-		let filtered = items;
+		// First, filter to only show items where user is involved (either as author or member)
+		let filtered = items.filter(
+			(item) => item.author === user._id || item.members.some((member) => member.userID === user._id)
+		);
 
-		// Apply primary filter
+		// Apply primary filter to the already filtered set
 		switch (selectedFilter) {
 			case "all":
-				filtered = items;
+				// Already filtered to user's items above - show all items user is involved in
 				break;
 			case "my-expenses":
-				filtered = items.filter((item) => item.author === user._id);
+				filtered = filtered.filter((item) => item.author === user._id);
 				break;
 			case "i-owe":
-				filtered = items.filter((item) => {
+				filtered = filtered.filter((item) => {
 					const userMember = item.members.find((member) => member.userID === user._id);
 					return userMember && !userMember.paid && item.author !== user._id;
 				});
 				break;
 			case "owed-to-me":
-				filtered = items.filter((item) => {
+				filtered = filtered.filter((item) => {
 					if (item.author !== user._id) return false;
 					return item.members.some((member) => member.userID !== user._id && !member.paid);
 				});
 				break;
 			default:
 				// Individual member filter - filter by payer only
-				filtered = items.filter((item) => item.author === selectedFilter);
+				filtered = filtered.filter((item) => item.author === selectedFilter);
 		}
 
 		// Apply search filter
@@ -153,19 +170,24 @@ const Expenses = () => {
 
 	// Count functions for filter badges
 	const getFilterCounts = () => {
-		if (!user?._id) return { myExpenses: 0, iOwe: 0, owedToMe: 0 };
+		if (!user?._id) return { myExpenses: 0, iOwe: 0, owedToMe: 0, allUserItems: 0 };
 
-		const myExpenses = items.filter((item) => item.author === user._id).length;
-		const iOwe = items.filter((item) => {
+		// Only count items where user is involved (either as author or member)
+		const userItems = items.filter(
+			(item) => item.author === user._id || item.members.some((member) => member.userID === user._id)
+		);
+
+		const myExpenses = userItems.filter((item) => item.author === user._id).length;
+		const iOwe = userItems.filter((item) => {
 			const userMember = item.members.find((member) => member.userID === user._id);
 			return userMember && !userMember.paid && item.author !== user._id;
 		}).length;
-		const owedToMe = items.filter((item) => {
+		const owedToMe = userItems.filter((item) => {
 			if (item.author !== user._id) return false;
 			return item.members.some((member) => member.userID !== user._id && !member.paid);
 		}).length;
 
-		return { myExpenses, iOwe, owedToMe };
+		return { myExpenses, iOwe, owedToMe, allUserItems: userItems.length };
 	};
 
 	const handleEdit = (item) => {
@@ -317,6 +339,46 @@ const Expenses = () => {
 				<ExpensesSkeleton />
 			) : (
 				<>
+					{/* Stats Grid */}
+					<div className={classes.statsGrid}>
+						<div className={classes.statCard}>
+							<div className={classes.statIcon}>
+								<FaDollarSign />
+							</div>
+							<div className={classes.statNumber}>${getPaymentOverviewStats().totalMonthlySpending.toFixed(2)}</div>
+							<div className={classes.statLabel}>Total Monthly Spending</div>
+						</div>
+						<div className={classes.statCard}>
+							<div className={classes.statIcon}>
+								<FaArrowDown />
+							</div>
+							<div className={classes.statNumber}>${getPaymentOverviewStats().totalMonthlyShare.toFixed(2)}</div>
+							<div className={classes.statLabel}>Total Monthly Share</div>
+						</div>
+						<div className={classes.statCard}>
+							<div className={classes.statIcon}>
+								<FaHistory />
+							</div>
+							<div className={classes.statNumber}>${getPaymentOverviewStats().averageExpense.toFixed(2)}</div>
+							<div className={classes.statLabel}>Average Expense</div>
+						</div>
+						<div className={classes.statCard}>
+							<div className={classes.statIcon}>
+								<FaArrowUp />
+							</div>
+							<div className={classes.statNumber}>${getPaymentOverviewStats().mostExpensiveAmount.toFixed(2)}</div>
+							<div className={classes.statLabel}>Most Expensive Item</div>
+						</div>
+						<div className={classes.statCard}>
+							<div className={classes.statIcon}>
+								<FaUser />
+							</div>
+							<div className={classes.statNumber}>{getPaymentOverviewStats().mostActivePayer}</div>
+							<div className={classes.statLabel}>Most Active Payer</div>
+						</div>
+					</div>
+
+					{/* Main Expenses Section */}
 					<div className={classes.mainExpenses}>
 						<div className={classes.mainExpensesTop}>
 							<div className={classes.filtersContainer}>
@@ -336,7 +398,7 @@ const Expenses = () => {
 											onClick={() => setSelectedFilter("all")}
 											className={`${classes.filterButton} ${selectedFilter === "all" ? classes.active : ""}`}
 										>
-											All ({items.length})
+											All ({getFilterCounts().allUserItems})
 										</button>
 										<button
 											onClick={() => setSelectedFilter("my-expenses")}
@@ -356,23 +418,19 @@ const Expenses = () => {
 										>
 											Owed to Me ({getFilterCounts().owedToMe})
 										</button>
+										<select
+											className={classes.memberDropdown}
+											value={["all", "my-expenses", "i-owe", "owed-to-me"].includes(selectedFilter) ? "" : selectedFilter}
+											onChange={(e) => setSelectedFilter(e.target.value || "all")}
+										>
+											<option value="">Filter by member</option>
+											{houseMembers?.map((member) => (
+												<option key={member._id} value={member._id}>
+													{member.name.split(" ")[0]}
+												</option>
+											))}
+										</select>
 									</div>
-									<details className={classes.secondaryFilters} ref={memberFiltersRef}>
-										<summary>Filter by Member</summary>
-										<div className={classes.memberFilters}>
-											{houseMembers
-												.filter((member) => member._id !== user._id) // Exclude current user
-												.map((member) => (
-													<button
-														key={member._id}
-														onClick={() => handleMemberFilterSelect(member._id)}
-														className={`${classes.memberFilter} ${selectedFilter === member._id ? classes.active : ""}`}
-													>
-														{member.name.split(" ")[0]}
-													</button>
-												))}
-										</div>
-									</details>
 								</div>
 							</div>
 						</div>
@@ -389,11 +447,18 @@ const Expenses = () => {
 								{displayedItems.length > 0 ? (
 									<>
 										{displayedItems.map((item) => (
-											<div key={item._id} className={classes.expenseItem}>
+											<div
+												key={item._id}
+												className={`${classes.expenseItem} ${
+													item.author !== user._id
+														? (item.members.find((m) => m.userID === user._id)?.paid ? classes.paid : classes.unpaid)
+														: ""
+												}`}
+											>
 												{/* Desktop Version */}
 												<div
-													className={`${classes.expenseRow} ${classes.desktopOnly}`}
-													onClick={() => setExpandedItem(expandedItem === item._id ? null : item._id)}
+													className={`${classes.expenseRow} ${classes.desktopOnly} ${item.author !== user._id ? classes.notAuthor : ""}`}
+													onClick={() => setSelectedItem(item)}
 												>
 													<span className={classes.expensePayer}>
 														<div className={classes.payerAvatar} title={getPayerName(item.author)}>
@@ -407,48 +472,57 @@ const Expenses = () => {
 														}`}
 													>
 														${calculateUserShare(item).toFixed(2)}
-														<sub>/${item.price.toFixed(2)}</sub>
+														<sub>/{item.price.toFixed(2)}</sub>
 													</span>
 													<span className={classes.expenseDate}>{formatDateTime(item.createdAt)}</span>
 													<span className={classes.expenseActions}>
-														<button
-															className={classes.edit}
-															onClick={(e) => {
-																e.stopPropagation();
-																handleEdit(item);
-															}}
-															disabled={item.author !== user._id}
-															style={{
-																opacity: item.author !== user._id ? 0.5 : 1,
-																cursor: item.author !== user._id ? "not-allowed" : "pointer",
-															}}
-														>
-															<RiPencilFill className={classes.icon} />
-														</button>
-														<button
-															className={classes.delete}
-															onClick={(e) => {
-																e.stopPropagation();
-																handleDelete(item);
-															}}
-															disabled={item.author !== user._id}
-															style={{
-																opacity: item.author !== user._id ? 0.5 : 1,
-																cursor: item.author !== user._id ? "not-allowed" : "pointer",
-															}}
-														>
-															<RiDeleteBin6Line className={classes.icon} />
-														</button>
+														{item.author === user._id && (() => {
+															const anyApproved = Array.isArray(item.members) && item.members.some((m) => m.paid && m.got);
+															const disabled = !!anyApproved;
+															const style = { opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer" };
+															return (
+																<>
+																	<button
+																		className={classes.edit}
+																		onClick={(e) => {
+																			e.stopPropagation();
+																			if (disabled) return;
+																			handleEdit(item);
+																		}}
+																		disabled={disabled}
+																		style={style}
+																		title="Edit this expense"
+																	>
+																		<RiPencilFill className={classes.icon} />
+																	</button>
+																	<button
+																		className={classes.delete}
+																		onClick={(e) => {
+																			e.stopPropagation();
+																			if (disabled) return;
+																			handleDelete(item);
+																		}}
+																		disabled={disabled}
+																		style={style}
+																		title="Delete this expense"
+																	>
+																		<RiDeleteBin6Line className={classes.icon} />
+																	</button>
+																</>
+															);
+														})()}
 													</span>
 													<span className={classes.expenseExpand}>
-														<span className={classes.expandIndicator}>{expandedItem === item._id ? "-" : "+"}</span>
+														<span className={classes.memberCount}>
+															{item.members.length} {item.members.length === 1 ? "member" : "members"}
+														</span>
 													</span>
 												</div>
 
 												{/* Mobile Card Version */}
 												<div
 													className={`${classes.mobileCard} ${classes.mobileOnly}`}
-													onClick={() => setExpandedItem(expandedItem === item._id ? null : item._id)}
+													onClick={() => setSelectedItem(item)}
 												>
 													<div className={classes.cardHeader}>
 														<div className={classes.cardPayer}>
@@ -461,34 +535,41 @@ const Expenses = () => {
 															</div>
 														</div>
 														<div className={classes.cardActions}>
-															<button
-																className={classes.mobileEdit}
-																onClick={(e) => {
-																	e.stopPropagation();
-																	handleEdit(item);
-																}}
-																disabled={item.author !== user._id}
-																style={{
-																	opacity: item.author !== user._id ? 0.5 : 1,
-																	cursor: item.author !== user._id ? "not-allowed" : "pointer",
-																}}
-															>
-																<RiPencilFill />
-															</button>
-															<button
-																className={classes.mobileDelete}
-																onClick={(e) => {
-																	e.stopPropagation();
-																	handleDelete(item);
-																}}
-																disabled={item.author !== user._id}
-																style={{
-																	opacity: item.author !== user._id ? 0.5 : 1,
-																	cursor: item.author !== user._id ? "not-allowed" : "pointer",
-																}}
-															>
-																<RiDeleteBin6Line />
-															</button>
+															{item.author === user._id && (() => {
+																const anyApproved = Array.isArray(item.members) && item.members.some((m) => m.paid && m.got);
+																const disabled = !!anyApproved;
+																const style = { opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer" };
+																return (
+																	<>
+																		<button
+																			className={classes.mobileEdit}
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				if (disabled) return;
+																				handleEdit(item);
+																			}}
+																			disabled={disabled}
+																			style={style}
+																			title="Edit this expense"
+																		>
+																			<RiPencilFill />
+																		</button>
+																		<button
+																			className={classes.mobileDelete}
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				if (disabled) return;
+																				handleDelete(item);
+																			}}
+																			disabled={disabled}
+																			style={style}
+																			title="Delete this expense"
+																		>
+																			<RiDeleteBin6Line />
+																		</button>
+																	</>
+																);
+															})()}
 														</div>
 													</div>
 
@@ -496,7 +577,13 @@ const Expenses = () => {
 														<h3 className={classes.cardTitle}>{item.name}</h3>
 														<div className={classes.cardAmountSection}>
 															<div className={classes.cardAmountInfo}>
-																<span className={classes.cardAmountLabel}>Your share</span>
+																<span className={classes.cardAmountLabel}>
+																	{isUserOwedMoney(item) && item.members.length > 1
+																		? "You receive (per person)"
+																		: isUserOwedMoney(item)
+																		? "You receive"
+																		: "Your share"}
+																</span>
 																<span
 																	className={`${classes.cardAmount} ${
 																		isUserOwedMoney(item) ? classes.owedAmount : classes.oweAmount
@@ -529,125 +616,13 @@ const Expenses = () => {
 																<div className={classes.cardMemberCount}>+{item.members.length - 3}</div>
 															)}
 														</div>
-														<div className={classes.cardExpandButton}>
-															<span className={classes.mobileExpandIndicator}>
-																{expandedItem === item._id ? "−" : "+"}
+														<div className={classes.cardMemberInfo}>
+															<span className={classes.mobileMemberCount}>
+																{item.members.length} {item.members.length === 1 ? "member" : "members"}
 															</span>
 														</div>
 													</div>
 												</div>
-												{expandedItem === item._id && (
-													<div className={classes.expandedContent}>
-														<div className={classes.memberAvatars}>
-															{item.members.map((member, index) => (
-																<div
-																	key={index}
-																	className={`${classes.memberAvatar} ${
-																		// Only show payment status colors if user is the author
-																		item.author === user._id
-																			? member.paid
-																				? classes.paidMember
-																				: classes.unpaidMember
-																			: ""
-																	} ${member.userID === user._id ? classes.currentUser : ""}`}
-																	title={
-																		item.author === user._id
-																			? `${getMemberName(member.userID)} - ${member.paid ? "Paid" : "Unpaid"}`
-																			: getMemberName(member.userID)
-																	}
-																>
-																	{getMemberUsername(member.userID)}
-																</div>
-															))}
-														</div>
-
-														{/* Show detailed member info and progress only if user is the author */}
-														{item.author === user._id && (
-															<>
-																<div className={classes.paymentProgressSection}>
-																	<div className={classes.progressInfo}>
-																		<span>
-																			Payment Progress: {getPaymentProgress(item).paid}/{getPaymentProgress(item).total}
-																		</span>
-																		<div className={classes.paymentProgress}>
-																			<div
-																				className={classes.progressBar}
-																				style={{
-																					width: `${getPaymentProgress(item).percentage}%`,
-																					backgroundColor:
-																						getPaymentProgress(item).percentage === 100
-																							? "var(--goodColor)"
-																							: "var(--mainColor)",
-																				}}
-																			></div>
-																		</div>
-																	</div>
-																</div>
-																<div className={classes.detailedMemberList}>
-																	{item.members.map((member, index) => (
-																		<div key={index} className={classes.memberDetail}>
-																			<div className={classes.memberInfo}>
-																				<div
-																					className={`${classes.memberAvatar} ${classes.small} ${
-																						member.paid ? classes.paidMember : classes.unpaidMember
-																					} ${member.userID === user._id ? classes.currentUser : ""}`}
-																				>
-																					{getMemberUsername(member.userID)}
-																				</div>
-																				<span className={classes.memberName}>
-																					{getMemberName(member.userID)}
-																					{member.userID === user._id && " (You)"}
-																					{member.userID === item.author && " (Payer)"}
-																				</span>
-																			</div>
-																			<div className={classes.memberStatus}>
-																				{member.userID === item.author ? (
-																					<span className={classes.payerBadge}>Payer</span>
-																				) : member.paid ? (
-																					<span className={classes.paidBadge}>✓ Paid</span>
-																				) : (
-																					<span className={classes.unpaidBadge}>Pending</span>
-																				)}
-																			</div>
-																		</div>
-																	))}
-																</div>
-															</>
-														)}
-
-														{/* Show pay section only if user is a member (not author) */}
-														{item.author !== user._id && (
-															<div className={classes.memberPaySection}>
-																<div className={classes.paymentInfo}>
-																	<div
-																		className={`${classes.paymentDetail} ${
-																			item.members.find((m) => m.userID === user._id)?.paid ? "paid" : ""
-																		}`}
-																	>
-																		<span className={classes.paymentLabel}>Your share:</span>
-																		<span className={classes.paymentAmount}>
-																			${(item.price / item.members.length).toFixed(2)}
-																		</span>
-																	</div>
-																	<div
-																		className={`${classes.paymentStatus} ${
-																			item.members.find((m) => m.userID === user._id)?.paid ? "paid" : "unpaid"
-																		}`}
-																	>
-																		{item.members.find((m) => m.userID === user._id)?.paid ? "Paid" : "Unpaid"}
-																	</div>
-																</div>
-																<button
-																	className={classes.payButton}
-																	onClick={() => handlePayment(item._id)}
-																	disabled={item.members.find((m) => m.userID === user._id)?.paid}
-																>
-																	{item.members.find((m) => m.userID === user._id)?.paid ? "✓ Paid" : "Mark as Paid"}
-																</button>
-															</div>
-														)}
-													</div>
-												)}
 											</div>
 										))}
 										{/* No pagination; showing all items */}
@@ -658,68 +633,63 @@ const Expenses = () => {
 							</div>
 						</div>
 					</div>
-					<div className={classes.mainStatistics}>
-						<div className={classes.statisticsHeader}>
-							<h2>Payment Overview</h2>
-						</div>
-						<div className={classes.statisticsContent}>
-							<div style={{ padding: "0" }}>
-								<div className={classes.paymentStats}>
-									<div className={classes.statItem}>
-										<div className={classes.statIcon}>
-											<FaDollarSign />
+				</>
+			)}
+
+			{/* Expense Details Modal */}
+			{selectedItem && (
+				<div className={classes.modalOverlay} onClick={closeModal}>
+					{(() => {
+						const me = selectedItem.members.find((m) => m.userID === user._id);
+						const paid = me?.paid;
+						const notAuthor = selectedItem.author !== user._id;
+						const modalClass = `${classes.modal} ${notAuthor ? classes.notAuthor : ""} ${paid ? classes.paid : classes.unpaid}`;
+						return (
+							<div className={modalClass} onClick={(e) => e.stopPropagation()}>
+								<div className={classes.modalHeader}>
+									<h3>{selectedItem.name}</h3>
+									<button className={classes.modalClose} onClick={closeModal}>&times;</button>
+								</div>
+								<div className={classes.modalContent}>
+									<div className={classes.expenseDetails}>
+										<div className={classes.expenseInfo}>
+											<p>
+												<strong>Total:</strong> ${selectedItem.price.toFixed(2)}
+											</p>
+											<p>
+												<strong>Share per person:</strong> ${(selectedItem.price / selectedItem.members.length).toFixed(2)}
+											</p>
+											<p>
+												<strong>Date:</strong> {formatDateTime(selectedItem.createdAt)}
+											</p>
 										</div>
-										<div className={classes.statContent}>
-											<div className={classes.statLabel}>Total Monthly Spending</div>
-											<div className={classes.statPrice}>
-												${getPaymentOverviewStats().totalMonthlySpending.toFixed(2)}
-											</div>
-										</div>
-									</div>
-									<div className={classes.statItem}>
-										<div className={classes.statIcon}>
-											<FaArrowDown />
-										</div>
-										<div className={classes.statContent}>
-											<div className={classes.statLabel}>Total Monthly Share</div>
-											<div className={classes.statPrice}>${getPaymentOverviewStats().totalMonthlyShare.toFixed(2)}</div>
-										</div>
-									</div>
-									<div className={classes.statItem}>
-										<div className={classes.statIcon}>
-											<FaHistory />
-										</div>
-										<div className={classes.statContent}>
-											<div className={classes.statLabel}>Average Expense</div>
-											<div className={classes.statPrice}>${getPaymentOverviewStats().averageExpense.toFixed(2)}</div>
-										</div>
-									</div>
-									<div className={classes.statItem}>
-										<div className={classes.statIcon}>
-											<FaArrowUp />
-										</div>
-										<div className={classes.statContent}>
-											<div className={classes.statLabel}>Most Expensive Item</div>
-											<div className={classes.statPrice}>
-												${getPaymentOverviewStats().mostExpensiveAmount.toFixed(2)}
-											</div>
-										</div>
-									</div>
-									<div className={classes.statItem}>
-										<div className={classes.statIcon}>
-											<FaUser />
-										</div>
-										<div className={classes.statContent}>
-											<div className={classes.statLabel}>Most Active Payer</div>
-											<div className={classes.statPrice}>{getPaymentOverviewStats().mostActivePayer}</div>
+
+										<div className={classes.memberAvatars}>
+											{selectedItem.members.map((member, index) => {
+												const isAuthorView = selectedItem.author === user._id;
+												const isPayer = member.userID === selectedItem.author;
+												const payerIsMember = selectedItem.members.some((m) => m.userID === selectedItem.author);
+												const baseClass = isAuthorView ? (member.paid ? classes.paidMember : classes.unpaidMember) : "";
+												const payerClass = isAuthorView && isPayer && payerIsMember ? classes.currentUser : "";
+												return (
+													<div
+														key={index}
+														className={`${classes.memberAvatar} ${baseClass} ${payerClass}`}
+														title={`${getMemberName(member.userID)}${isPayer ? " (Payer)" : ""}`}
+													>
+														{getMemberUsername(member.userID)}
+													</div>
+												);
+											})}
 										</div>
 									</div>
 								</div>
 							</div>
-						</div>
-					</div>
-				</>
+						);
+					})()}
+				</div>
 			)}
+
 			{showAddItem && <AddItem setAddItem={setShowAddItem} itemToEdit={itemToEdit} />}
 			{deleteConfirmation && (
 				<DeleteConfirmation

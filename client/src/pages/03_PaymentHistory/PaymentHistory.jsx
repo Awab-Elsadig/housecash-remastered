@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useUser } from "../../hooks/useUser";
+import { useDataLoading } from "../../hooks/useLoading";
+import { PaymentHistorySkeleton } from "../../components/Skeleton";
 import formatCurrency from "../../utils/formatCurrency";
 import { format, parseISO } from "date-fns";
+import { RiDeleteBin6Line } from "react-icons/ri";
 import classes from "./PaymentHistory.module.css";
 import {
 	FaAngleDown,
@@ -26,18 +29,112 @@ const SettlementDetailsModal = ({ payment, isOpen, onClose, currentUserId }) => 
 
 	// Calculate settlement breakdown
 	const renderSettlementBreakdown = () => {
+		// Prefer server snapshot if available
+		const snap = payment.settlementSnapshot;
+		const snapItems = Array.isArray(payment.settlementItems) ? payment.settlementItems : [];
+		if (snap && snapItems.length > 0) {
+			// From payer perspective net = youOwe - theyOwe; if viewer is not payer, invert
+			const payerView = isPayer ? snap : { theyOwe: snap.youOwe, youOwe: snap.theyOwe, net: -snap.net };
+			// Compute net from visible perspective to avoid sign confusion
+			const netDisplay = (Number(payerView.theyOwe) || 0) - (Number(payerView.youOwe) || 0);
+			const itemsView = snapItems.map((it) => ({
+				name: it.name,
+				share: it.share,
+				direction: isPayer ? it.direction : it.direction === "theyOwe" ? "youOwe" : "theyOwe",
+			}));
+
+			return (
+				<>
+					<div className={classes.modalSummary}>
+						<div className={classes.modalStat}>
+							<span>Net Balance</span>
+							<strong className={netDisplay < 0 ? classes.negative : classes.positive}>{formatCurrency(netDisplay)}</strong>
+						</div>
+						<div className={classes.modalStat}>
+							<span>They Owed You</span>
+							<strong className={classes.positive}>{formatCurrency(payerView.theyOwe)}</strong>
+						</div>
+						<div className={classes.modalStat}>
+							<span>You Owed Them</span>
+							<strong className={classes.negative}>{formatCurrency(payerView.youOwe)}</strong>
+						</div>
+					</div>
+					<ul className={classes.modalItemList}>
+						{itemsView.length === 0 ? (
+							<li className={classes.empty}>No direct items found for this settlement.</li>
+						) : (
+							itemsView.map((item, idx) => (
+								<li key={idx} className={classes.modalItem} data-direction={item.direction}>
+									<span className={classes.itemName}>{item.name}</span>
+									<div className={classes.modalItemDetails}>
+										<span className={classes.itemShare} data-direction={item.direction}>{formatCurrency(item.share)}</span>
+										<span className={classes.itemDirection}>{item.direction === "theyOwe" ? "Owed to you" : "You owed"}</span>
+									</div>
+								</li>
+							))
+						)}
+					</ul>
+				</>
+			);
+		}
 		if (!payment.settledItemIds || payment.settledItemIds.length === 0) {
-			return <p className={classes.noItems}>No items found for this settlement.</p>;
+			return (
+				<div className={classes.netSummary}>
+					<div className={classes.netRow}>
+						<span className={classes.netLabel}>Net Settlement:</span>
+						<span className={`${classes.netValue} ${isPayer ? classes.negative : classes.positive}`}>
+							{isPayer ? "-" : "+"}
+							{formatCurrency(Math.abs(payment.amount))}
+						</span>
+					</div>
+					<div className={classes.netDescription}>
+						{isPayer
+							? `You paid ${otherUser?.name || "member"} ${formatCurrency(Math.abs(payment.amount))}`
+							: `${otherUser?.name || "member"} paid you ${formatCurrency(Math.abs(payment.amount))}`}
+					</div>
+				</div>
+			);
 		}
 
+		// If settledItemIds are IDs only, show compact summary
+		const first = payment.settledItemIds[0];
+		const itemsAppearAsObjects = typeof first === "object" && first !== null;
+		if (!itemsAppearAsObjects) {
+			return (
+				<div className={classes.netSummary}>
+					<div className={classes.netRow}>
+						<span className={classes.netLabel}>Items Settled:</span>
+						<span className={classes.netValue}>{payment.settledItemIds.length}</span>
+					</div>
+					<div className={classes.netRow}>
+						<span className={classes.netLabel}>Net Settlement:</span>
+						<span className={`${classes.netValue} ${isPayer ? classes.negative : classes.positive}`}>
+							{isPayer ? "-" : "+"}
+							{formatCurrency(Math.abs(payment.amount))}
+						</span>
+					</div>
+					<div className={classes.netDescription}>
+						{isPayer
+							? `You paid ${otherUser?.name || "member"} ${formatCurrency(Math.abs(payment.amount))}`
+							: `${otherUser?.name || "member"} paid you ${formatCurrency(Math.abs(payment.amount))}`}
+					</div>
+				</div>
+			);
+		}
+
+		// Build snapshot like Net Balance details
 		const owedItems = [];
 		const owingItems = [];
 
 		payment.settledItemIds.forEach((item) => {
 			const shareAmount = item.price / (item.members?.length || 1);
-			if (item.author === currentUserId) {
+
+			// If current user is the author and other user is a member, other user owes current user
+			if (item.author === currentUserId && item.members?.some((member) => member.userID === otherUser._id)) {
 				owedItems.push({ ...item, shareAmount });
-			} else {
+			}
+			// If other user is the author and current user is a member, current user owes other user
+			else if (item.author === otherUser._id && item.members?.some((member) => member.userID === currentUserId)) {
 				owingItems.push({ ...item, shareAmount });
 			}
 		});
@@ -107,30 +204,26 @@ const SettlementDetailsModal = ({ payment, isOpen, onClose, currentUserId }) => 
 	};
 
 	return (
-		<div className={classes.modalOverlay} onClick={onClose}>
-			<div className={classes.modalContent} onClick={(e) => e.stopPropagation()}>
-				<div className={classes.modalHeader}>
-					<div className={classes.modalTitleSection}>
-						<FaExchangeAlt className={classes.modalIcon} />
-						<div>
-							<h3 className={classes.modalTitle}>Settlement Details</h3>
-							<p className={classes.modalSubtitle}>
-								Settlement with {otherUser.name} • {format(parseISO(payment.createdAt), "MMM d, yyyy")}
-							</p>
-						</div>
-					</div>
-					<button className={classes.closeBtn} onClick={onClose}>
+		<div className={classes.modalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+			<div className={classes.modal} onClick={(e) => e.stopPropagation()}>
+				<header className={classes.modalHeader}>
+					<h3 className={classes.modalTitle}>Settlement Details with {otherUser.name}</h3>
+					<button className={classes.modalClose} onClick={onClose} aria-label="Close modal">
 						<FaTimes />
 					</button>
-				</div>
-
-				<div className={classes.modalBody}>{renderSettlementBreakdown()}</div>
+				</header>
+				{renderSettlementBreakdown()}
 			</div>
 		</div>
 	);
 };
 
+
 const PaymentHistory = () => {
+	useEffect(() => {
+		document.title = "Payment History - HouseCash";
+	}, []);
+
 	const { user } = useUser();
 	const [payments, setPayments] = useState([]);
 	const [filteredPayments, setFilteredPayments] = useState([]);
@@ -141,6 +234,16 @@ const PaymentHistory = () => {
 	const [selectedPayment, setSelectedPayment] = useState(null);
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
+	// Comprehensive loading check - wait for all data to be processed
+	const dataReady =
+		!loading &&
+		user &&
+		payments !== null &&
+		payments !== undefined &&
+		filteredPayments !== null &&
+		filteredPayments !== undefined;
+
+	const isLoading = useDataLoading(dataReady);
 	useEffect(() => {
 		const fetchPayments = async () => {
 			try {
@@ -181,14 +284,24 @@ const PaymentHistory = () => {
 	}, [payments, typeFilter, directionFilter, user?._id]);
 
 	const getPaymentStats = () => {
-		if (!user?._id) return { totalTransactions: 0, totalSent: 0, totalReceived: 0, settlements: 0 };
+		if (!user?._id)
+			return {
+				totalTransactions: 0,
+				totalSent: 0,
+				totalReceived: 0,
+				settlements: 0,
+				singlePayments: 0,
+				bulkPayments: 0,
+			};
 
 		const totalTransactions = payments.length;
 		const totalSent = payments.filter((p) => p.fromUser?._id === user._id).reduce((sum, p) => sum + p.amount, 0);
 		const totalReceived = payments.filter((p) => p.toUser?._id === user._id).reduce((sum, p) => sum + p.amount, 0);
 		const settlements = payments.filter((p) => p.type === "settlement").length;
+		const singlePayments = payments.filter((p) => p.type === "single").length;
+		const bulkPayments = payments.filter((p) => p.type === "bulk").length;
 
-		return { totalTransactions, totalSent, totalReceived, settlements };
+		return { totalTransactions, totalSent, totalReceived, settlements, singlePayments, bulkPayments };
 	};
 
 	const getPaymentTitle = (p) => {
@@ -221,24 +334,46 @@ const PaymentHistory = () => {
 		}
 	};
 
-	const handleViewDetails = (payment) => {
-		if (payment.type === "settlement") {
+	const openSettlementDetails = async (payment) => {
+		try {
+			const hasArray = Array.isArray(payment?.settledItemIds);
+			const hasObjects = hasArray && payment.settledItemIds.length > 0 && typeof payment.settledItemIds[0] === "object";
+			if (!hasArray || !hasObjects) {
+				const { data } = await axios.get(`/api/payments/${payment._id}`);
+				setSelectedPayment(data || payment);
+			} else {
+				setSelectedPayment(payment);
+			}
+			setIsModalOpen(true);
+		} catch (e) {
+			// Fallback to given payment
 			setSelectedPayment(payment);
 			setIsModalOpen(true);
 		}
 	};
 
+	const handleViewDetails = (payment) => {
+		if (payment.type === "settlement") {
+			openSettlementDetails(payment);
+		}
+	};
+
 	const stats = getPaymentStats();
 
-	if (loading || !user) {
-		return (
-			<div className={classes.historyPage}>
-				<div className={classes.loadingState}>
-					<FaHistory className={classes.loadingIcon} />
-					<p>Loading payment history...</p>
-				</div>
-			</div>
-		);
+	const handleDelete = async (paymentId) => {
+		if (!window.confirm("Delete this transaction? This cannot be undone.")) return;
+		try {
+			await axios.delete(`/api/payments/${paymentId}`);
+			setPayments((prev) => prev.filter((p) => p._id !== paymentId));
+			setFilteredPayments((prev) => prev.filter((p) => p._id !== paymentId));
+		} catch (err) {
+			console.error("Failed to delete payment", err);
+			alert("Failed to delete payment");
+		}
+	};
+
+	if (isLoading) {
+		return <PaymentHistorySkeleton />;
 	}
 
 	if (error) {
@@ -253,6 +388,53 @@ const PaymentHistory = () => {
 
 	return (
 		<div className={classes.historyPage}>
+			{/* Stats Grid */}
+			<div className={classes.statsGrid}>
+				<div className={classes.statCard}>
+					<div className={classes.statIcon}>
+						<FaHistory />
+					</div>
+					<div className={classes.statNumber}>{stats.totalTransactions}</div>
+					<div className={classes.statLabel}>Total Transactions</div>
+				</div>
+				<div className={classes.statCard}>
+					<div className={classes.statIcon}>
+						<FaArrowUp />
+					</div>
+					<div className={classes.statNumber}>{formatCurrency(stats.totalSent)}</div>
+					<div className={classes.statLabel}>Total Sent</div>
+				</div>
+				<div className={classes.statCard}>
+					<div className={classes.statIcon}>
+						<FaArrowDown />
+					</div>
+					<div className={classes.statNumber}>{formatCurrency(stats.totalReceived)}</div>
+					<div className={classes.statLabel}>Total Received</div>
+				</div>
+				<div className={classes.statCard}>
+					<div className={classes.statIcon}>
+						<FaExchangeAlt />
+					</div>
+					<div className={classes.statNumber}>{stats.settlements}</div>
+					<div className={classes.statLabel}>Settlements</div>
+				</div>
+				<div className={classes.statCard}>
+					<div className={classes.statIcon}>
+						<FaUser />
+					</div>
+					<div className={classes.statNumber}>{stats.singlePayments}</div>
+					<div className={classes.statLabel}>Single Payments</div>
+				</div>
+				<div className={classes.statCard}>
+					<div className={classes.statIcon}>
+						<FaUsers />
+					</div>
+					<div className={classes.statNumber}>{stats.bulkPayments}</div>
+					<div className={classes.statLabel}>Bulk Payments</div>
+				</div>
+			</div>
+
+			{/* Main Content Section */}
 			<div className={classes.mainContent}>
 				<div className={classes.filtersHeader}>
 					<div className={classes.transactionsFilters}>
@@ -318,12 +500,18 @@ const PaymentHistory = () => {
 													{p.settledItemIds.length} item{p.settledItemIds.length !== 1 ? "s" : ""}
 												</div>
 											)}
-											{p.type === "settlement" && (
-												<button className={classes.viewDetailsBtn} onClick={() => handleViewDetails(p)}>
-													<FaEye />
-													View Details
+											<div className={classes.actionButtons}>
+												{p.type === "settlement" && (
+													<button className={classes.viewDetailsBtn} onClick={() => handleViewDetails(p)}>
+														<FaEye />
+														View Details
+													</button>
+												)}
+												<button className={classes.deleteBtn} onClick={() => handleDelete(p._id)}>
+													<RiDeleteBin6Line />
+													Delete
 												</button>
-											)}
+											</div>
 										</div>
 									</div>
 								</div>
@@ -331,48 +519,6 @@ const PaymentHistory = () => {
 						})}
 					</div>
 				)}
-			</div>
-
-			<div className={classes.sidebar}>
-				<h2 className={classes.sidebarTitle}>Overview</h2>
-				<div className={classes.statsGrid}>
-					<div className={classes.statCard}>
-						<div className={classes.statIcon}>
-							<FaHistory />
-						</div>
-						<div className={classes.statContent}>
-							<div className={classes.statValue}>{stats.totalTransactions}</div>
-							<div className={classes.statLabel}>Total Transactions</div>
-						</div>
-					</div>
-					<div className={classes.statCard}>
-						<div className={classes.statIcon}>
-							<FaArrowUp />
-						</div>
-						<div className={classes.statContent}>
-							<div className={classes.statValue}>{formatCurrency(stats.totalSent)}</div>
-							<div className={classes.statLabel}>Total Sent</div>
-						</div>
-					</div>
-					<div className={classes.statCard}>
-						<div className={classes.statIcon}>
-							<FaArrowDown />
-						</div>
-						<div className={classes.statContent}>
-							<div className={classes.statValue}>{formatCurrency(stats.totalReceived)}</div>
-							<div className={classes.statLabel}>Total Received</div>
-						</div>
-					</div>
-					<div className={classes.statCard}>
-						<div className={classes.statIcon}>
-							<FaExchangeAlt />
-						</div>
-						<div className={classes.statContent}>
-							<div className={classes.statValue}>{stats.settlements}</div>
-							<div className={classes.statLabel}>Settlements</div>
-						</div>
-					</div>
-				</div>
 			</div>
 
 			<SettlementDetailsModal
@@ -389,3 +535,4 @@ const PaymentHistory = () => {
 };
 
 export default PaymentHistory;
+

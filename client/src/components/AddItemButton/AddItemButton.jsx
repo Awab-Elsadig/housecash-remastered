@@ -11,7 +11,7 @@ const AddItemButton = () => {
 
 	return (
 		<>
-			<button className={classes.addItemButton} onClick={addItemHandler}>
+			<button className={classes.addItemButton} onClick={addItemHandler} aria-label="Add new item">
 				<span>Add New Item</span>
 				<span className={classes.addIcon}>+</span>
 			</button>

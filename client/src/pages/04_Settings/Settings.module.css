@@ -13,8 +13,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 1rem 1.5rem;
-	gap: 1rem;
+	padding: var(--card-padding) var(--page-padding);
+	gap: var(--card-gap);
 }
 
 .backBtn,
@@ -26,9 +26,9 @@
 	height: 44px;
 	background: rgba(255, 255, 255, 0.1);
 	border: 1px solid rgba(255, 255, 255, 0.2);
-	border-radius: 12px;
+	border-radius: var(--border-radius-sm);
 	cursor: pointer;
-	transition: all 0.2s ease;
+	transition: var(--transition-base);
 	backdrop-filter: blur(10px);
 	color: white;
 }
@@ -43,6 +43,10 @@
 .backBtn svg,
 .logout svg {
 	font-size: 1.25rem;
+}
+
+.logout svg {
+	color: var(--badColor);
 }
 
 .profileSection {
@@ -77,10 +81,10 @@
 /* ========== CONTENT SECTION ========== */
 .content {
 	flex: 1;
-	padding: 0 1.5rem;
+	padding: 0 var(--page-padding);
 	display: flex;
 	flex-direction: column;
-	gap: 1.5rem;
+	gap: var(--page-gap);
 }
 
 .settingsCard {

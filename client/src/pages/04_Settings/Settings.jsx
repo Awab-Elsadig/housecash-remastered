@@ -7,8 +7,11 @@ import { TbLogout } from "react-icons/tb";
 import { FaCopy } from "react-icons/fa6";
 import axios from "axios";
 import { useUser } from "../../hooks/useUser";
+import { useDataLoading } from "../../hooks/useLoading";
+import { SettingsSkeleton } from "../../components/Skeleton";
 import ably from "../../ablyConfig";
 import ProfilePictureUpload from "../../components/ProfilePictureUpload/ProfilePictureUpload";
+import ProfileAvatarModal from "../../components/ProfileAvatarModal/ProfileAvatarModal";
 
 const Settings = () => {
 	useEffect(() => {
@@ -19,15 +22,15 @@ const Settings = () => {
 	const { user, updateUser, houseMembers, updateHouseMembers } = useUser();
 	const editingInput = useRef();
 
-	// For the modal popup editing functionality
+	// Comprehensive loading check - wait for all data to be processed
+	const dataReady =
+		user && houseMembers && user.name !== undefined && user.username !== undefined && user.houseCode !== undefined;
+
+	const isLoading = useDataLoading(dataReady); // For the modal popup editing functionality
 	const [editingField, setEditingField] = useState(null); // 'name' or 'username'
 	const [editingValue, setEditingValue] = useState("");
-	// For copy feedback
 	const [copySuccess, setCopySuccess] = useState(false);
-	// For the change password modal
-	const [showPasswordModal, setShowPasswordModal] = useState(false);
-	const [currentPassword, setCurrentPassword] = useState("");
-	const [passwordError, setPasswordError] = useState("");
+	const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
 	const logout = async () => {
 		axios.post("/api/auth/logout", {}, { withCredentials: true }).then((res) => {
@@ -51,15 +54,11 @@ const Settings = () => {
 		}
 	};
 
-	// Handle input change with username-specific formatting
 	const handleInputChange = (e) => {
 		let value = e.target.value;
-
 		if (editingField === "username") {
-			// Convert to uppercase and limit to 3 characters
 			value = value.toUpperCase().slice(0, 3);
 		}
-
 		setEditingValue(value);
 	};
 
@@ -67,7 +66,6 @@ const Settings = () => {
 		if (editingField) editingInput.current.focus();
 	}, [editingField]);
 
-	// Save the new value (calls an API and closes the popup)
 	const handleSave = (e) => {
 		e.preventDefault();
 		if (!user) return;
@@ -109,10 +107,8 @@ const Settings = () => {
 		setEditingField(null);
 	};
 
-	// Copy house code to clipboard and show feedback
 	const handleCopy = () => {
 		if (!user?.houseCode) return;
-
 		navigator.clipboard
 			.writeText(user.houseCode)
 			.then(() => {
@@ -122,42 +118,9 @@ const Settings = () => {
 			.catch((err) => console.error("Failed to copy", err));
 	};
 
-	// Handle Change Password: show modal
-	const handleChangePasswordClick = () => {
-		setShowPasswordModal(true);
-		setCurrentPassword("");
-		setPasswordError("");
-	};
-
-	// Verify the current password; if valid, navigate to the change password route
-	const handlePasswordSubmit = async (e) => {
-		e.preventDefault();
-		if (!user) return;
-
-		try {
-			const res = await axios.post(
-				`/api/auth/verify-password/${user._id}`,
-				{ currentPassword },
-				{ withCredentials: true }
-			);
-			if (res.data.valid) {
-				// Optionally, set a re-authentication flag in context/sessionStorage
-				navigate("/change-password");
-			} else {
-				setPasswordError("Incorrect password. Please try again.");
-			}
-		} catch (error) {
-			setPasswordError(error.response?.data?.error || "An error occurred");
-			console.error("Password verification error", error);
-		}
-	};
-
 	// Handle profile picture update
 	const handleImageUpdate = (newImageUrl, updatedUser) => {
 		if (!user) return;
-
-		// The ProfilePictureUpload component now handles the API call
-		// and passes the updated user data, so we just need to update our state
 		if (updatedUser) {
 			updateUser({
 				...user,
@@ -169,7 +132,6 @@ const Settings = () => {
 
 	const handleImageDelete = () => {
 		if (!user) return;
-
 		axios
 			.put(`/api/users/update-user/${user._id}`, { profilePictureUrl: null }, { withCredentials: true })
 			.then(() => {
@@ -181,31 +143,18 @@ const Settings = () => {
 			.catch((err) => console.error("Error deleting profile picture", err));
 	};
 
-	// Don't render if user data isn't loaded yet
-	if (!user) {
-		return (
-			<div className={classes.settingsPage}>
-				<header className={classes.header}>
-					<button className={classes.backBtn} onClick={() => navigate(-1)}>
-						<IoMdArrowRoundBack />
-					</button>
-					<div className={classes.profileSection}>
-						<div className={classes.loadingProfile}>
-							<img src={"https://thumbs.dreamstime.com/b/web-269268516.jpg"} alt="Profile" />
-						</div>
-						<h1 className={classes.userName}>Loading...</h1>
-					</div>
-					<button className={classes.logout} onClick={logout}>
-						<TbLogout />
-					</button>
-				</header>
-				<main className={classes.content}>
-					<div className={classes.settingsCard}>
-						<div className={classes.loadingText}>Loading user information...</div>
-					</div>
-				</main>
-			</div>
-		);
+	const updateAvatarPrefs = async (prefs) => {
+		if (!user) return;
+		try {
+			await axios.put(`/api/users/update-user/${user._id}`, prefs, { withCredentials: true });
+			updateUser({ ...user, ...prefs });
+		} catch (e) {
+			console.error("Failed to update avatar preferences", e);
+		}
+	};
+
+	if (isLoading) {
+		return <SettingsSkeleton />;
 	}
 
 	return (
@@ -222,11 +171,15 @@ const Settings = () => {
 						onImageUpdate={handleImageUpdate}
 						onImageDelete={handleImageDelete}
 						size="large"
+						name={user?.name}
+						avatarMode={user?.avatarMode || (user?.profilePictureUrl ? "image" : "initials")}
+						initialsCount={user?.initialsCount || 2}
+						onEditClick={() => setAvatarModalOpen(true)}
 					/>
 					<h1 className={classes.userName}>{user?.name || "User"}</h1>
 				</div>
 
-				<button className={classes.logout} onClick={logout}>
+				<button className={classes.logout} onClick={logout} title="Log out of your account">
 					<TbLogout />
 				</button>
 			</header>
@@ -238,7 +191,7 @@ const Settings = () => {
 						<label>Name</label>
 						<div className={classes.valueContainer}>
 							<span>{user?.name || "Not set"}</span>
-							<button className={classes.editBtn} onClick={() => openEditPopup("name")}>
+							<button className={classes.editBtn} onClick={() => openEditPopup("name")} title="Edit your name">
 								<MdEdit />
 							</button>
 						</div>
@@ -248,7 +201,7 @@ const Settings = () => {
 						<label>Username</label>
 						<div className={classes.valueContainer}>
 							<span>{user?.username || "Not set"}</span>
-							<button className={classes.editBtn} onClick={() => openEditPopup("username")}>
+							<button className={classes.editBtn} onClick={() => openEditPopup("username")} title="Edit your username (3 letters)">
 								<MdEdit />
 							</button>
 						</div>
@@ -260,17 +213,13 @@ const Settings = () => {
 							<span>{user?.houseCode || "Not set"}</span>
 							<div className={classes.copyContainer}>
 								{copySuccess && <div className={classes.copySuccess}>Copied!</div>}
-								<button className={classes.copyBtn} onClick={handleCopy}>
+								<button className={classes.copyBtn} onClick={handleCopy} title="Copy house code to clipboard">
 									<FaCopy />
 								</button>
 							</div>
 						</div>
 					</div>
 				</div>
-
-				<button onClick={handleChangePasswordClick} className={classes.changePasswordBtn}>
-					Change Password
-				</button>
 			</main>
 
 			{/* Modal Popup for Editing Name/Username */}
@@ -298,29 +247,14 @@ const Settings = () => {
 				</div>
 			)}
 
-			{/* Modal Popup for Verifying Current Password */}
-			{showPasswordModal && (
-				<div className={classes.modalOverlay} onClick={() => setShowPasswordModal(false)}>
-					<form onSubmit={handlePasswordSubmit} className={classes.modal} onClick={(e) => e.stopPropagation()}>
-						<h2>Verify Current Password</h2>
-						<input
-							type="password"
-							placeholder="Enter current password"
-							value={currentPassword}
-							onChange={(e) => setCurrentPassword(e.target.value)}
-						/>
-						{passwordError && <div className={classes.error}>{passwordError}</div>}
-						<div className={classes.modalButtons}>
-							<button type="submit" className={classes.saveBtn}>
-								Submit
-							</button>
-							<button type="button" className={classes.cancelBtn} onClick={() => setShowPasswordModal(false)}>
-								Cancel
-							</button>
-						</div>
-					</form>
-				</div>
-			)}
+			<ProfileAvatarModal
+				isOpen={avatarModalOpen}
+				onClose={() => setAvatarModalOpen(false)}
+				user={user}
+				onUpdateMode={(p) => updateAvatarPrefs(p)}
+				onUpdateImage={handleImageUpdate}
+				onDeleteImage={handleImageDelete}
+			/>
 		</div>
 	);
 };
