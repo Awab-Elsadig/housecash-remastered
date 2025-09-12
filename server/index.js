@@ -60,7 +60,11 @@ app.use(
 app.use(cookieParser());
 
 // Connect to database
-connectDB().catch(console.error);
+connectDB().catch((error) => {
+	console.error("Database connection failed:", error.message);
+	// Don't crash the server, just log the error
+	// The server can still handle requests, but database operations will fail
+});
 
 // Trust first proxy
 app.set("trust proxy", 1);
@@ -109,6 +113,34 @@ app.use("/cors-test", (req, res) => {
 		origin: req.headers.origin,
 		allowedOrigins: allowedOrigins
 	});
+});
+
+// Database health check
+app.use("/health", async (req, res) => {
+	try {
+		const dbState = mongoose.connection.readyState;
+		const dbStates = {
+			0: "disconnected",
+			1: "connected", 
+			2: "connecting",
+			3: "disconnecting"
+		};
+		
+		res.json({
+			status: "ok",
+			database: {
+				state: dbStates[dbState] || "unknown",
+				readyState: dbState
+			},
+			timestamp: new Date().toISOString()
+		});
+	} catch (error) {
+		res.status(500).json({
+			status: "error",
+			error: error.message,
+			timestamp: new Date().toISOString()
+		});
+	}
 });
 
 app.use("/api/auth", authRoutes);

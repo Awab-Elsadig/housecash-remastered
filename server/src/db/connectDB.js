@@ -6,7 +6,7 @@ export const connectDB = async () => {
 
 	if (!primaryUri) {
 		console.error("MONGO_URI is not set. Please add it to your .env file.");
-		process.exit(1);
+		throw new Error("MONGO_URI is not set");
 	}
 
 	try {
@@ -27,10 +27,11 @@ export const connectDB = async () => {
 				return;
 			} catch (fallbackError) {
 				console.error("Fallback MongoDB connection failed:", fallbackError?.message || fallbackError);
+				throw fallbackError;
 			}
 		}
 
-		// If we got here, fail hard
-		process.exit(1);
+		// If we got here, throw the error instead of exiting
+		throw error;
 	}
 };
