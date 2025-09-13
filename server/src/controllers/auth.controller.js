@@ -1,5 +1,6 @@
 import { User } from "../models/user.model.js";
 import { House } from "../models/house.model.js";
+import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import generateTokenAndSetCookie from "../utils/generateTokenAndSetCookie.js";
 import sendVerificationEmail from "../utils/sendVerificationEmail.js";
@@ -57,24 +58,35 @@ export const signup = async (req, res) => {
 			houseMembers,
 		});
 	} catch (error) {
-		res.status(500).json({ error: error });
+		console.error("Login error:", error);
+		res.status(500).json({ error: error.message || "Login failed" });
 	}
 };
 
 export const login = async (req, res) => {
 	const { houseCode, email, password } = req.body || {};
 
+	console.log("Login attempt:", { email, houseCode });
+
 	try {
+		// Check database connection
+		if (mongoose.connection.readyState !== 1) {
+			console.error("Database not connected. State:", mongoose.connection.readyState);
+			return res.status(500).json({ error: "Database connection failed" });
+		}
+
 		// Get the user
 		const user = await User.findOne({ email, houseCode });
 
 		if (!user) {
+			console.log("User not found:", { email, houseCode });
 			return res.status(400).json({ error: "Invalid credentials" });
 		}
 
 		const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
 		if (!isPasswordCorrect) {
+			console.log("Invalid password for user:", email);
 			return res.status(400).json({ error: "Invalid credentials" });
 		}
 
@@ -90,6 +102,7 @@ export const login = async (req, res) => {
 		// JWT
 		generateTokenAndSetCookie(res, user.id);
 
+		console.log("Login successful for user:", email);
 		res.status(200).json({
 			success: true,
 			message: "User logged in successfully",
@@ -97,7 +110,8 @@ export const login = async (req, res) => {
 			houseMembers,
 		});
 	} catch (error) {
-		res.status(500).json({ error: error });
+		console.error("Login error:", error);
+		res.status(500).json({ error: error.message || "Login failed" });
 	}
 };
 
@@ -126,7 +140,8 @@ export const logout = async (req, res) => {
 			});
 		});
 	} catch (error) {
-		res.status(500).json({ error });
+		console.error("Logout error:", error);
+		res.status(500).json({ error: error.message || "Logout failed" });
 	}
 };
 
@@ -180,6 +195,7 @@ export const verifyPassword = async (req, res) => {
 
 		res.status(200).json({ valid: true });
 	} catch (error) {
-		res.status(500).json({ error: error });
+		console.error("Login error:", error);
+		res.status(500).json({ error: error.message || "Login failed" });
 	}
 };
