@@ -1,15 +1,19 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import classes from "./Expenses.module.css";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { RiPencilFill } from "react-icons/ri";
 import { RiSearchLine } from "react-icons/ri";
-import { FaDollarSign, FaHistory, FaArrowUp, FaArrowDown, FaUser } from "react-icons/fa";
+import { FaDollarSign, FaHistory, FaArrowUp, FaArrowDown, FaUser, FaExternalLinkAlt } from "react-icons/fa";
 import { useUser } from "../../hooks/useUser";
 import { useDataLoading } from "../../hooks/useLoading";
 import { ExpensesSkeleton } from "../../components/Skeleton";
 import formatDateTime from "../../utils/formatDateTime";
 import AddItem from "../../components/AddItem/AddItem";
 import DeleteConfirmation from "../../pages/Expenses/components/DeleteConfirmation/DeleteConfirmation";
+import RefreshButton from "../../components/RefreshButton";
+import AddItemButton from "../../components/AddItemButton/AddItemButton";
+import Tooltip from "../../components/Tooltip";
 import axios from "axios";
 import ably from "../../ablyConfig";
 
@@ -18,7 +22,8 @@ const Expenses = () => {
 		document.title = "Expenses - HouseCash";
 	}, []);
 
-	const { user, houseMembers, items, fetchItems, deleteItem } = useUser();
+	const navigate = useNavigate();
+	const { user, houseMembers, items, fetchItems, deleteItem, fetchCurrentUser } = useUser();
 	const memberFiltersRef = useRef(null); // Ref to control the details element
 	// derived in applyFilters and directly rendered
 	const [selectedFilter, setSelectedFilter] = useState("all");
@@ -28,11 +33,27 @@ const Expenses = () => {
 	const [deleteConfirmation, setDeleteConfirmation] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState(null);
 	const [selectedItem, setSelectedItem] = useState(null);
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	// Close modal handler
 	const closeModal = () => {
 		setSelectedItem(null);
 	}; // Changed from expandedItem to selectedItem for modal
+
+	// Refresh function
+	const handleRefresh = useCallback(async () => {
+		setIsRefreshing(true);
+		try {
+			// Refresh user data and house members
+			await fetchCurrentUser();
+			// Refresh items
+			await fetchItems();
+		} catch (error) {
+			console.error("Error refreshing expenses data:", error);
+		} finally {
+			setIsRefreshing(false);
+		}
+	}, [fetchCurrentUser, fetchItems]);
 	// Displayed list state (show all by default)
 	const [displayedItems, setDisplayedItems] = useState([]);
 
@@ -418,18 +439,20 @@ const Expenses = () => {
 										>
 											Owed to Me ({getFilterCounts().owedToMe})
 										</button>
-										<select
-											className={classes.memberDropdown}
-											value={["all", "my-expenses", "i-owe", "owed-to-me"].includes(selectedFilter) ? "" : selectedFilter}
-											onChange={(e) => setSelectedFilter(e.target.value || "all")}
-										>
-											<option value="">Filter by member</option>
-											{houseMembers?.map((member) => (
-												<option key={member._id} value={member._id}>
-													{member.name.split(" ")[0]}
-												</option>
-											))}
-										</select>
+										<div className={classes.memberFilterContainer}>
+											<select
+												className={classes.memberDropdown}
+												value={["all", "my-expenses", "i-owe", "owed-to-me"].includes(selectedFilter) ? "" : selectedFilter}
+												onChange={(e) => setSelectedFilter(e.target.value || "all")}
+											>
+												<option value="">Filter by member</option>
+												{houseMembers?.map((member) => (
+													<option key={member._id} value={member._id}>
+														{member.name.split(" ")[0]}
+													</option>
+												))}
+											</select>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -440,8 +463,9 @@ const Expenses = () => {
 								<span className={classes.expenseName}>Expense Name</span>
 								<span className={classes.expenseAmount}>Amount</span>
 								<span className={classes.expenseDate}>Date</span>
+								<span className={classes.expenseMembers}>Members</span>
 								<span className={classes.expenseActions}>Actions</span>
-								<span className={classes.expenseExpand}></span>
+								<span className={classes.expenseStatus}>Status</span>
 							</div>
 							<div className={classes.list}>
 								{displayedItems.length > 0 ? (
@@ -461,9 +485,11 @@ const Expenses = () => {
 													onClick={() => setSelectedItem(item)}
 												>
 													<span className={classes.expensePayer}>
-														<div className={classes.payerAvatar} title={getPayerName(item.author)}>
-															{getPayerNickname(item.author)}
-														</div>
+														<Tooltip content={getPayerName(item.author)} position="top">
+															<div className={classes.payerAvatar}>
+																{getPayerNickname(item.author)}
+															</div>
+														</Tooltip>
 													</span>
 													<span className={classes.expenseName}>{item.name}</span>
 													<span
@@ -475,10 +501,16 @@ const Expenses = () => {
 														<sub>/{item.price.toFixed(2)}</sub>
 													</span>
 													<span className={classes.expenseDate}>{formatDateTime(item.createdAt)}</span>
+													<span className={classes.expenseMembers}>
+														<div className={classes.memberCount}>
+															{item.members.length} {item.members.length === 1 ? "member" : "members"}
+														</div>
+													</span>
 													<span className={classes.expenseActions}>
 														{item.author === user._id && (() => {
-															const anyApproved = Array.isArray(item.members) && item.members.some((m) => m.paid && m.got);
-															const disabled = !!anyApproved;
+															// Check if any member (excluding the author) has paid
+															const otherMembersPaid = Array.isArray(item.members) && item.members.some((m) => m.paid && m.userID !== user._id);
+															const disabled = !!otherMembersPaid;
 															const style = { opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer" };
 															return (
 																<>
@@ -491,7 +523,6 @@ const Expenses = () => {
 																		}}
 																		disabled={disabled}
 																		style={style}
-																		title="Edit this expense"
 																	>
 																		<RiPencilFill className={classes.icon} />
 																	</button>
@@ -504,7 +535,6 @@ const Expenses = () => {
 																		}}
 																		disabled={disabled}
 																		style={style}
-																		title="Delete this expense"
 																	>
 																		<RiDeleteBin6Line className={classes.icon} />
 																	</button>
@@ -512,64 +542,88 @@ const Expenses = () => {
 															);
 														})()}
 													</span>
-													<span className={classes.expenseExpand}>
-														<span className={classes.memberCount}>
-															{item.members.length} {item.members.length === 1 ? "member" : "members"}
-														</span>
+													<span className={classes.expenseStatus}>
+														{item.author === user._id && (() => {
+															const allPaid = item.members.every(member => member.paid);
+															return allPaid ? (
+																<div className={`${classes.statusText} ${classes.paid}`}>
+																	All Paid
+																</div>
+															) : (
+																<div className={`${classes.statusText} ${classes.pending}`}>
+																	Pending
+																</div>
+															);
+														})()}
 													</span>
 												</div>
 
 												{/* Mobile Card Version */}
 												<div
-													className={`${classes.mobileCard} ${classes.mobileOnly}`}
+													className={`${classes.mobileCard} ${classes.mobileOnly} ${
+														item.author !== user._id
+															? (item.members.find((m) => m.userID === user._id)?.paid ? classes.paid : classes.unpaid)
+															: ""
+													}`}
 													onClick={() => setSelectedItem(item)}
 												>
 													<div className={classes.cardHeader}>
 														<div className={classes.cardPayer}>
-															<div className={classes.mobilePayerAvatar} title={getPayerName(item.author)}>
-																{getPayerNickname(item.author)}
-															</div>
+															<Tooltip content={getPayerName(item.author)} position="top">
+																<div className={classes.mobilePayerAvatar}>
+																	{getPayerNickname(item.author)}
+																</div>
+															</Tooltip>
 															<div className={classes.payerInfo}>
 																<span className={classes.payerName}>{getPayerName(item.author)}</span>
 																<span className={classes.cardDate}>{formatDateTime(item.createdAt)}</span>
 															</div>
 														</div>
-														<div className={classes.cardActions}>
+														<div className={classes.cardHeaderRight}>
 															{item.author === user._id && (() => {
-																const anyApproved = Array.isArray(item.members) && item.members.some((m) => m.paid && m.got);
-																const disabled = !!anyApproved;
-																const style = { opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer" };
+																const allPaid = item.members.every(member => member.paid);
 																return (
-																	<>
-																		<button
-																			className={classes.mobileEdit}
-																			onClick={(e) => {
-																				e.stopPropagation();
-																				if (disabled) return;
-																				handleEdit(item);
-																			}}
-																			disabled={disabled}
-																			style={style}
-																			title="Edit this expense"
-																		>
-																			<RiPencilFill />
-																		</button>
-																		<button
-																			className={classes.mobileDelete}
-																			onClick={(e) => {
-																				e.stopPropagation();
-																				if (disabled) return;
-																				handleDelete(item);
-																			}}
-																			disabled={disabled}
-																			style={style}
-																			title="Delete this expense"
-																		>
-																			<RiDeleteBin6Line />
-																		</button>
-																	</>
+																	<div className={`${classes.mobileStatusText} ${allPaid ? classes.paid : classes.pending}`}>
+																		{allPaid ? "All Paid" : "Pending"}
+																	</div>
 																);
 															})()}
+															<div className={classes.cardActions}>
+															{item.author === user._id && (() => {
+																// Check if any member (excluding the author) has paid
+																const otherMembersPaid = Array.isArray(item.members) && item.members.some((m) => m.paid && m.userID !== user._id);
+																const disabled = !!otherMembersPaid;
+																const style = { opacity: disabled ? 0.5 : 1, cursor: disabled ? "not-allowed" : "pointer" };
+																return (
+																<>
+																	<button
+																		className={classes.mobileEdit}
+																		onClick={(e) => {
+																			e.stopPropagation();
+																			if (disabled) return;
+																			handleEdit(item);
+																		}}
+																		disabled={disabled}
+																		style={style}
+																	>
+																		<RiPencilFill />
+																	</button>
+																	<button
+																		className={classes.mobileDelete}
+																		onClick={(e) => {
+																			e.stopPropagation();
+																			if (disabled) return;
+																			handleDelete(item);
+																		}}
+																		disabled={disabled}
+																		style={style}
+																	>
+																		<RiDeleteBin6Line />
+																	</button>
+																</>
+																);
+															})()}
+															</div>
 														</div>
 													</div>
 
@@ -602,15 +656,15 @@ const Expenses = () => {
 													<div className={classes.cardFooter}>
 														<div className={classes.cardMembers}>
 															{item.members.slice(0, 3).map((member, index) => (
-																<div
-																	key={index}
-																	className={`${classes.cardMemberAvatar} ${
-																		member.userID === user._id ? classes.currentUser : ""
-																	}`}
-																	title={getMemberName(member.userID)}
-																>
-																	{getMemberUsername(member.userID)}
-																</div>
+																<Tooltip content={getMemberName(member.userID)} position="top" key={index}>
+																	<div
+																		className={`${classes.cardMemberAvatar} ${
+																			member.userID === user._id ? classes.currentUser : ""
+																		}`}
+																	>
+																		{getMemberUsername(member.userID)}
+																	</div>
+																</Tooltip>
 															))}
 															{item.members.length > 3 && (
 																<div className={classes.cardMemberCount}>+{item.members.length - 3}</div>
@@ -642,8 +696,19 @@ const Expenses = () => {
 					{(() => {
 						const me = selectedItem.members.find((m) => m.userID === user._id);
 						const paid = me?.paid;
-						const notAuthor = selectedItem.author !== user._id;
-						const modalClass = `${classes.modal} ${notAuthor ? classes.notAuthor : ""} ${paid ? classes.paid : classes.unpaid}`;
+						const isAuthor = selectedItem.author === user._id;
+						const notAuthor = !isAuthor;
+						
+						// Color logic: Author = primary color, Paid = green, Unpaid = red
+						let modalClass = classes.modal;
+						if (isAuthor) {
+							modalClass += ` ${classes.authorModal}`;
+						} else if (paid) {
+							modalClass += ` ${classes.paid}`;
+						} else {
+							modalClass += ` ${classes.unpaid}`;
+						}
+						
 						return (
 							<div className={modalClass} onClick={(e) => e.stopPropagation()}>
 								<div className={classes.modalHeader}>
@@ -666,22 +731,65 @@ const Expenses = () => {
 
 										<div className={classes.memberAvatars}>
 											{selectedItem.members.map((member, index) => {
-												const isAuthorView = selectedItem.author === user._id;
+												const isMe = member.userID === user._id;
+												const isAuthor = selectedItem.author === user._id;
 												const isPayer = member.userID === selectedItem.author;
-												const payerIsMember = selectedItem.members.some((m) => m.userID === selectedItem.author);
-												const baseClass = isAuthorView ? (member.paid ? classes.paidMember : classes.unpaidMember) : "";
-												const payerClass = isAuthorView && isPayer && payerIsMember ? classes.currentUser : "";
+												
+												// Always show all members in the modal
+												
+												let avatarClass = classes.memberAvatar;
+												
+												if (isAuthor) {
+													// I'm the author - show all members with their payment status
+													if (isMe) {
+														// I'm the author - show me in primary color
+														avatarClass += ` ${classes.authorMember}`;
+													} else {
+														// Other members - show their payment status
+														avatarClass += member.paid ? ` ${classes.paidMember}` : ` ${classes.unpaidMember}`;
+													}
+												} else {
+													// I'm just a member - show privacy-respecting view
+													if (isMe) {
+														// Show my payment status
+														avatarClass += member.paid ? ` ${classes.paidMember}` : ` ${classes.unpaidMember}`;
+													} else {
+														// Other members - neutral color (privacy)
+														avatarClass += ` ${classes.neutralMember}`;
+													}
+												}
+												
 												return (
-													<div
-														key={index}
-														className={`${classes.memberAvatar} ${baseClass} ${payerClass}`}
-														title={`${getMemberName(member.userID)}${isPayer ? " (Payer)" : ""}`}
-													>
-														{getMemberUsername(member.userID)}
-													</div>
+													<Tooltip content={`${getMemberName(member.userID)}${isPayer ? " (Payer)" : ""}`} position="top" key={index}>
+														<div className={avatarClass}>
+															{getMemberUsername(member.userID)}
+														</div>
+													</Tooltip>
 												);
 											})}
 										</div>
+										
+										{/* Payment Note - Show below avatars if user didn't pay */}
+										{selectedItem.author !== user._id && (() => {
+											const me = selectedItem.members.find(m => m.userID === user._id);
+											return me && !me.paid ? (
+												<div 
+													className={classes.paymentNote}
+													onClick={() => navigate('/dashboard')}
+													role="button"
+													tabIndex={0}
+													onKeyDown={(e) => {
+														if (e.key === 'Enter' || e.key === ' ') {
+															e.preventDefault();
+															navigate('/dashboard');
+														}
+													}}
+												>
+													Go pay in Dashboard
+													<FaExternalLinkAlt className={classes.paymentNoteIcon} />
+												</div>
+											) : null;
+										})()}
 									</div>
 								</div>
 							</div>
@@ -699,6 +807,18 @@ const Expenses = () => {
 					deleteItem={deleteItem} // Pass the deleteItem function from useUser hook
 				/>
 			)}
+			
+			{/* Floating Action Buttons */}
+			<div className={classes.floatingActionButtons}>
+				<div className={classes.mobileOnly}>
+					<AddItemButton />
+				</div>
+				<RefreshButton 
+					onRefresh={handleRefresh} 
+					loading={isRefreshing}
+					size="small"
+				/>
+			</div>
 		</div>
 	);
 };

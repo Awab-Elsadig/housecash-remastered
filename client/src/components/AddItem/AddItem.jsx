@@ -194,12 +194,13 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 			setItemName(itemToEdit.name || "");
 			setItemPrice(itemToEdit.price || "");
 			setItemDescription(itemToEdit.description || "");
+			setSelectedPayer(itemToEdit.author || user?._id || "");
 			if (houseMembers && houseMembers.length > 0) {
 				const preSelected = houseMembers.filter((member) => itemToEdit.members.some((m) => m.userID === member._id));
 				setSelectedMembers(preSelected);
 			}
 		}
-	}, [itemToEdit, houseMembers]);
+	}, [itemToEdit, houseMembers, user]);
 
 	// Toggle member selection for individual buttons
 	const toggleMember = (member) => {
@@ -240,7 +241,6 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 		const members = selectedMembers.map((member) => ({
 			userID: member._id,
 			paid: member._id === selectedPayer,
-			got: false,
 		}));
 
 		if (itemToEdit) {

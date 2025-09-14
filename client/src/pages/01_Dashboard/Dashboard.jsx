@@ -11,14 +11,17 @@ import NetBalances from "./components/NetBalances";
 import PendingPayments from "./components/PendingPayments";
 import DetailModal from "./components/DetailModal";
 import PeopleOweMe from "./components/PeopleOweMe";
+import RefreshButton from "../../components/RefreshButton";
+import AddItemButton from "../../components/AddItemButton/AddItemButton";
 
 const Dashboard = () => {
 	useEffect(() => {
 		document.title = "Dashboard - HouseCash";
 	}, []);
 
-	const { user, houseMembers, items, fetchItems, updateItems } = useUser();
+	const { user, houseMembers, items, fetchItems, updateItems, fetchCurrentUser } = useUser();
 	const settlementContext = useSettlement();
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	const { paymentsByMember, netPerMember, bilateral, totals } = useDashboardData(
 		user?._id?.toString(),
@@ -50,6 +53,21 @@ const Dashboard = () => {
 
 	const [detailMemberId, setDetailMemberId] = useState(null);
 	const closeDetail = useCallback(() => setDetailMemberId(null), []);
+
+	// Refresh function
+	const handleRefresh = useCallback(async () => {
+		setIsRefreshing(true);
+		try {
+			// Refresh user data and house members
+			await fetchCurrentUser();
+			// Refresh items
+			await fetchItems();
+		} catch (error) {
+			console.error("Error refreshing dashboard data:", error);
+		} finally {
+			setIsRefreshing(false);
+		}
+	}, [fetchCurrentUser, fetchItems]);
 
 	const detailItems = useMemo(
 		() => buildDetailItems(user?._id?.toString(), detailMemberId, items),
@@ -93,6 +111,19 @@ const Dashboard = () => {
 					</section>
 				</div>
 			</main>
+			
+			{/* Floating Action Buttons */}
+			<div className={classes.floatingActionButtons}>
+				<div className={classes.mobileOnly}>
+					<AddItemButton />
+				</div>
+				<RefreshButton 
+					onRefresh={handleRefresh} 
+					loading={isRefreshing}
+					size="small"
+				/>
+			</div>
+			
 			{detailMemberId && (
 				<DetailModal
 					isOpen={!!detailMemberId}

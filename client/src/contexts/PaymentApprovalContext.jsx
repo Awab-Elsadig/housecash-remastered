@@ -9,6 +9,41 @@ export const PaymentApprovalProvider = ({ user, children }) => {
   const timersRef = useRef({});
   const channelRef = useRef(null);
 
+  // Fetch pending requests when user data is available
+  useEffect(() => {
+    if (!user?._id || !user?.houseCode) return;
+    
+    // Add a small delay to ensure user data is fully loaded
+    const fetchPendingRequests = async () => {
+      try {
+        const { data } = await axios.get("/api/payment-approvals/pending");
+        if (data.requests && data.requests.length > 0) {
+          const formattedRequests = {};
+          data.requests.forEach(req => {
+            const otherId = req.direction === "outgoing" ? req.toUserId : req.fromUserId;
+            const remaining = Math.ceil((req.expiresAt - Date.now()) / 1000);
+            console.log(`Payment request ${req.id}: expiresAt=${req.expiresAt}, remaining=${remaining}s`);
+            formattedRequests[otherId] = {
+              ...req,
+              expiresAt: req.expiresAt,
+            };
+            // Set up timer for expiration
+            if (req.expiresAt > Date.now()) {
+              timersRef.current[otherId] = setTimeout(() => cancel(otherId, true), req.expiresAt - Date.now());
+            }
+          });
+          setRequests(formattedRequests);
+        }
+      } catch (error) {
+        console.error("Failed to fetch pending requests:", error);
+      }
+    };
+
+    // Add a small delay to ensure user data is fully loaded
+    const timeoutId = setTimeout(fetchPendingRequests, 100);
+    return () => clearTimeout(timeoutId);
+  }, [user?._id, user?.houseCode]);
+
   useEffect(() => {
     if (!user?._id) return;
     channelRef.current = ably.channels.get(`user:payment:${user._id}`);
@@ -20,11 +55,11 @@ export const PaymentApprovalProvider = ({ user, children }) => {
         [otherId]: {
           ...data,
           direction: data.fromUserId === user._id ? "outgoing" : "incoming",
-          expiresAt: Date.now() + 120_000,
+          expiresAt: Date.now() + 60_000,
         },
       }));
       if (data.fromUserId === user._id) {
-        timersRef.current[otherId] = setTimeout(() => cancel(otherId, true), 120_000);
+        timersRef.current[otherId] = setTimeout(() => cancel(otherId, true), 60_000);
       }
     };
     const onClear = ({ data }) => {
@@ -70,7 +105,7 @@ export const PaymentApprovalProvider = ({ user, children }) => {
       if (requests[toUserId]) return false;
       try {
         const { data } = await axios.post("/api/payment-approvals/request", { toUserId, itemIds });
-        const expiresAt = Date.now() + 120_000;
+        const expiresAt = Date.now() + 60_000;
         setRequests((prev) => ({
           ...prev,
           [toUserId]: {
@@ -82,7 +117,7 @@ export const PaymentApprovalProvider = ({ user, children }) => {
             expiresAt,
           },
         }));
-        timersRef.current[toUserId] = setTimeout(() => cancel(toUserId, true), 120_000);
+        timersRef.current[toUserId] = setTimeout(() => cancel(toUserId, true), 60_000);
         return true;
       } catch (e) {
         console.error("Payment approval request failed", e);
@@ -147,7 +182,9 @@ export const PaymentApprovalProvider = ({ user, children }) => {
         removeExpired(otherUserId);
         return 0;
       }
-      return Math.ceil((req.expiresAt - Date.now()) / 1000);
+      const remaining = Math.ceil((req.expiresAt - Date.now()) / 1000);
+      console.log(`Payment timer for ${otherUserId}: expiresAt=${req.expiresAt}, now=${Date.now()}, remaining=${remaining}s`);
+      return Math.max(0, remaining);
     },
     [requests, removeExpired]
   );

@@ -4,6 +4,7 @@ import { FaSpinner } from "react-icons/fa";
 import { useImageUpload } from "../../hooks/useImageUpload";
 import { getProfilePictureUrl, preloadImage } from "../../utils/imagekitUtils";
 import classes from "./ProfilePictureUpload.module.css";
+import Tooltip from "../Tooltip";
 
 const ProfilePictureUpload = ({ currentImageUrl, onImageUpdate, onImageDelete, size = "large", onEditClick }) => {
 	const { uploadImage, updateProfilePicture, isUploading, uploadError } = useImageUpload();
@@ -68,14 +69,17 @@ const ProfilePictureUpload = ({ currentImageUrl, onImageUpdate, onImageDelete, s
 						<span>Uploading...</span>
 					</div>
 				)}
-				<button
-					type="button"
-					className={classes.centerEditBtn}
-					onClick={() => (onEditClick ? onEditClick() : triggerFileSelect())}
-					title="Edit profile picture"
-				>
-					<MdEdit />
-				</button>
+				<div className={classes.actionOverlay}>
+					<Tooltip content="Edit profile picture" position="top">
+						<button
+							type="button"
+							className={classes.actionButton}
+							onClick={() => (onEditClick ? onEditClick() : triggerFileSelect())}
+						>
+							<MdEdit />
+						</button>
+					</Tooltip>
+				</div>
 			</div>
 			<input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: "none" }} />
 			{uploadError && <div className={classes.errorMessage}>{uploadError}</div>}

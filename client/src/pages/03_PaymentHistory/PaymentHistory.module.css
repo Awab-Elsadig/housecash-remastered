@@ -7,6 +7,78 @@
 	padding: var(--page-padding);
 	overflow-y: auto;
 	padding-bottom: calc(var(--page-padding) + 4rem);
+	/* Enable pull-to-refresh on mobile */
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior-y: auto;
+}
+
+/* Floating Action Buttons */
+.floatingActionButtons {
+	position: fixed;
+	bottom: 2rem;
+	right: 2rem;
+	z-index: 15;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	align-items: flex-end;
+}
+
+.floatingActionButtons > button {
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	background: var(--mainColor);
+	border: none;
+	color: #fff;
+	box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	cursor: pointer;
+}
+
+/* Don't override RefreshButton styling */
+.floatingActionButtons .refreshButton {
+	background: var(--glassBackground, rgba(255, 255, 255, 0.1)) !important;
+	border: 1px solid var(--glassStroke, rgba(255, 255, 255, 0.2)) !important;
+	backdrop-filter: blur(10px);
+}
+
+.floatingActionButtons > button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.floatingActionButtons .refreshIcon {
+	font-size: 1.4rem;
+	font-weight: 600;
+}
+
+.floatingActionButtons .spinning {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+/* Hide text on refresh button - icon only */
+.floatingActionButtons > button > span:not(.refreshIcon) {
+	display: none;
+}
+
+/* Mobile responsive */
+.mobileOnly {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.mobileOnly {
+		display: block;
+	}
 }
 
 /* Stats Grid */
@@ -166,6 +238,16 @@
 	border-color: var(--mainColor);
 }
 
+.transactionCard.clickable {
+	cursor: pointer;
+	transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.transactionCard.clickable:hover {
+	border-color: var(--mainColor);
+	background: rgba(255, 255, 255, 0.02);
+}
+
 .transactionHeader {
 	display: flex;
 	justify-content: space-between;
@@ -201,7 +283,15 @@
 }
 
 .transactionIcon.settlementIcon {
-	background: linear-gradient(135deg, #f59e0b, #d97706);
+	background: linear-gradient(135deg, var(--mainColor), var(--mainColorDark));
+}
+
+.clickableHint {
+	font-size: 0.75rem;
+	color: var(--mainColor);
+	font-weight: 500;
+	opacity: 0.8;
+	margin-left: 0.5rem;
 }
 
 .transactionInfo {
@@ -271,10 +361,6 @@
 	transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.deleteBtn:hover {
-	transform: translateY(-1px);
-	border-color: var(--badColor);
-}
 
 .transactionAmount {
 	font-size: 1.5rem;
@@ -283,11 +369,11 @@
 }
 
 .transactionAmount.positive {
-	color: #10b981;
+	color: var(--goodColor);
 }
 
 .transactionAmount.negative {
-	color: #ef4444;
+	color: var(--badColor);
 }
 
 .transactionItemCount {
@@ -297,26 +383,7 @@
 	opacity: 0.8;
 }
 
-.viewDetailsBtn {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.5rem 0.75rem;
-	background: linear-gradient(135deg, var(--mainColor), var(--mainColorDark));
-	border: none;
-	border-radius: 0.5rem;
-	color: white;
-	font-size: 0.8rem;
-	font-weight: 500;
-	cursor: pointer;
-	transition: transform 0.2s ease, filter 0.2s ease;
-}
 .actionButtons { display: flex; gap: 0.6rem; align-items: center; justify-content: flex-end; }
-
-
-.viewDetailsBtn:hover {
-	transform: translateY(-1px);
-}
 
 /* No Transactions State */
 .noTransactions {
@@ -710,35 +777,104 @@
 		min-width: auto;
 	}
 
+	.transactionCard {
+		margin-bottom: 1rem;
+		border-radius: 1.25rem;
+		background: linear-gradient(160deg, rgba(7, 54, 80, 0.4) 0%, rgba(25, 36, 50, 0.3) 100%), var(--glassBackground);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+	}
+
 	.transactionHeader {
-		flex-direction: column;
+		flex-direction: row;
 		gap: 1rem;
-		align-items: stretch;
-		padding: 1rem;
+		align-items: center;
+		padding: 1.25rem;
 	}
 
 	.transactionLeft {
-		justify-content: flex-start;
-		text-align: left;
+		flex-direction: row;
+		align-items: center;
+		gap: 1rem;
+		flex: 1;
+		min-width: 0;
 	}
 
 	.transactionRight {
-		text-align: center;
-		align-self: center;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.5rem;
+		flex-shrink: 0;
 	}
 
 	.transactionIcon {
-		width: 2.5rem;
-		height: 2.5rem;
-		font-size: 1rem;
+		width: 3rem;
+		height: 3rem;
+		font-size: 1.1rem;
+		flex-shrink: 0;
+	}
+
+	.transactionInfo {
+		flex: 1;
+		min-width: 0;
 	}
 
 	.transactionTitle {
-		font-size: 1rem;
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin-bottom: 0.25rem;
+		line-height: 1.3;
+	}
+
+	.transactionSubtitle {
+		font-size: 0.85rem;
+		opacity: 0.8;
+		margin-bottom: 0.5rem;
+		line-height: 1.4;
+	}
+
+	.transactionMeta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.transactionDate {
+		font-size: 0.75rem;
+		opacity: 0.7;
+	}
+
+	.transactionBadge {
+		font-size: 0.7rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.5rem;
+		background: rgba(var(--mainColor-rgb), 0.15);
+		color: var(--mainColor);
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
 	}
 
 	.transactionAmount {
-		font-size: 1.25rem;
+		font-size: 1.4rem;
+		font-weight: 700;
+		margin-bottom: 0.25rem;
+	}
+
+	.transactionItemCount {
+		font-size: 0.75rem;
+		opacity: 0.7;
+	}
+
+	.actionButtons {
+		margin-top: 0.5rem;
+	}
+
+	.deleteBtn {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.8rem;
+		border-radius: 0.75rem;
 	}
 
 	/* Modal adjustments */

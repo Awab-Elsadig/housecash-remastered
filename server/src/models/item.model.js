@@ -34,11 +34,6 @@ const itemSchema = new mongoose.Schema(
 					default: false,
 					required: true,
 				},
-				got: {
-					type: Boolean,
-					default: false,
-					required: true,
-				},
 			},
 		],
 		author: {

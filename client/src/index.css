@@ -22,8 +22,8 @@
 	--darkColor: #233e63;
 	--goodColor-rgb: 65, 231, 65;
 	--goodColor: #41e741;
-	--badColor-rgb: 232, 48, 48;
-	--badColor: #e83030;
+	--badColor-rgb: 239, 68, 68;
+	--badColor: #ef4444;
 
 	--glassBackground: linear-gradient(160deg, rgba(255, 255, 255, 0.15) 11.2%, rgba(255, 255, 255, 0.05) 83.25%);
 	--glassStroke: rgba(255, 255, 255, 0.2);
@@ -100,22 +100,24 @@ body {
 	background-repeat: no-repeat;
 	color: #fff;
 	overflow-x: hidden;
-	overflow-y: hidden;
+	overflow-y: hidden; /* Keep body non-scrollable */
 	font-family: Alexandria;
 }
 
 .app {
 	display: flex;
 	height: 100vh;
+	height: 100dvh;
 }
 
 .app > .right {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
+	height: 100vh;
 	height: 100dvh;
 	overflow-x: auto;
-	overflow-y: hidden;
+	overflow-y: hidden; /* Keep main container non-scrollable */
 }
 
 /* Mobile sidebar backdrop */

@@ -7,6 +7,67 @@
 	padding: var(--page-padding);
 	overflow-y: auto;
 	padding-bottom: calc(var(--page-padding) + 4rem);
+	/* Enable pull-to-refresh on mobile */
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior-y: auto;
+}
+
+/* Floating Action Buttons */
+.floatingActionButtons {
+	position: fixed;
+	bottom: 2rem;
+	right: 2rem;
+	z-index: 15;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+}
+
+.floatingActionButtons > button {
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	background: var(--mainColor);
+	border: none;
+	color: #fff;
+	box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	cursor: pointer;
+}
+
+/* Don't override RefreshButton styling */
+.floatingActionButtons .refreshButton {
+	background: var(--glassBackground, rgba(255, 255, 255, 0.1)) !important;
+	border: 1px solid var(--glassStroke, rgba(255, 255, 255, 0.2)) !important;
+	backdrop-filter: blur(10px);
+}
+
+.floatingActionButtons > button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.floatingActionButtons .refreshIcon {
+	font-size: 1.4rem;
+	font-weight: 600;
+}
+
+.floatingActionButtons .spinning {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+/* Hide text on refresh button - icon only */
+.floatingActionButtons > button > span:not(.refreshIcon) {
+	display: none;
 }
 
 /* Stats Grid */
@@ -232,29 +293,54 @@
 	padding: 0.5rem 0.75rem;
 	font-weight: 600;
 	color: #fff;
-	border-bottom: 1px solid var(--glassStroke);
 	margin-bottom: 0.5rem;
-	padding-right: 0.5rem;
+	padding-right: 1rem;
 	position: sticky;
 	top: 0;
-	background: rgba(0, 0, 0, 0.15);
-	backdrop-filter: blur(6px);
 	z-index: 1;
 }
 
-.expenseHeader .expenseDate,
-.expenseHeader .expenseAmount,
-.expenseHeader .expenseActions {
-	flex: 1;
-}
-
-.expenseHeader .expensePayer,
-.expenseHeader .expenseExpand {
-	flex: 0.5;
+.expenseHeader .expensePayer {
+	flex: 0.8;
 }
 
 .expenseHeader .expenseName {
-	flex: 1.5;
+	flex: 1.2;
+}
+
+.expenseHeader .expenseAmount {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseHeader .expenseDate {
+	flex: 1.2;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseHeader .expenseMembers {
+	flex: 0.8;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseHeader .expenseActions {
+	flex: 1.2;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseHeader .expenseStatus {
+	flex: 0.6;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 /* ===== EXPENSE ITEMS LIST ===== */
@@ -263,8 +349,6 @@
 	flex-direction: column;
 	gap: 0.5rem;
 	overflow-y: auto;
-	scrollbar-gutter: stable;
-	padding-right: 0.25rem;
 	height: 100%;
 }
 
@@ -299,24 +383,55 @@
 .expenseRow:hover { background: rgba(255, 255, 255, 0.05); border-color: var(--mainColor); }
 
 /* ===== EXPENSE ITEM COLUMNS ===== */
-.expenseDate,
-.expenseAmount,
-.expenseActions {
-	flex: 1;
-}
-
-.expensePayer,
-.expenseExpand {
+.expensePayer {
 	flex: 0.8;
 }
 
-.expenseExpand {
-	display: grid;
-	place-items: center;
+.expenseName {
+	flex: 1.2;
 }
 
-.expenseName {
-	flex: 1.5;
+.expenseAmount {
+	flex: 1;
+	font-weight: 600;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseDate {
+	flex: 1.2;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseMembers {
+	flex: 0.8;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseActions {
+	flex: 1.2;
+	display: flex;
+	gap: 0.5rem;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseStatus {
+	flex: 0.6;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.expenseExpand {
+	flex: 0.8;
+	display: grid;
+	place-items: center;
 }
 
 /* ===== EXPENSE COMPONENTS ===== */
@@ -338,10 +453,6 @@
 	margin-left: 0.25rem;
 	width: 1.8rem;
 	height: 1.8rem;
-}
-
-.expenseAmount {
-	font-weight: 600;
 }
 
 .expenseAmount sub {
@@ -382,33 +493,29 @@
 }
 
 /* ===== EXPENSE ACTIONS ===== */
-.expenseActions {
-	display: flex;
-	gap: 0.5rem;
-}
 
 .expenseActions .edit {
 	display: grid;
 	place-items: center;
-	flex: 1;
 	padding-block: 0.5rem;
 	background: var(--glassBackground);
 	border: 0.1rem solid var(--glassStroke);
 	backdrop-filter: var(--glasBlur);
 	color: white;
 	border-radius: 0.25rem;
+	padding-inline: 0.5rem;
 }
 
 .expenseActions .delete {
 	display: grid;
 	place-items: center;
-	flex: 1;
 	padding-block: 0.5rem;
 	background: var(--glassBackground);
 	border: 0.1rem solid var(--glassStroke);
 	backdrop-filter: var(--glasBlur);
 	color: var(--badColor);
 	border-radius: 0.25rem;
+	padding-inline: 0.5rem;
 }
 
 .icon {
@@ -470,6 +577,146 @@
 	background: linear-gradient(135deg, rgba(var(--badColor-rgb), 0.6) 0%, rgba(var(--badColor-rgb), 0.4) 100%);
 	border-color: var(--badColor);
 	color: white;
+}
+
+.memberAvatar.authorMember {
+	background: linear-gradient(135deg, rgba(var(--mainColor-rgb), 0.6) 0%, rgba(var(--mainColor-rgb), 0.4) 100%);
+	border-color: var(--mainColor);
+	color: white;
+}
+
+.memberAvatar.neutralMember {
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+	border-color: rgba(255, 255, 255, 0.3);
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.memberContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.paymentNote {
+	font-size: 0.75rem;
+	color: var(--badColor);
+	font-weight: 500;
+	text-align: center;
+	opacity: 0.9;
+	margin-top: 0.75rem;
+	padding: 0.5rem 1rem;
+	background: rgba(var(--badColor-rgb), 0.1);
+	border: 1px solid rgba(var(--badColor-rgb), 0.3);
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+}
+
+.paymentNote:hover {
+	background: rgba(var(--badColor-rgb), 0.15);
+	border-color: rgba(var(--badColor-rgb), 0.5);
+	transform: translateY(-1px);
+	opacity: 1;
+}
+
+.paymentNote:active {
+	transform: translateY(0);
+}
+
+.paymentNoteIcon {
+	font-size: 0.7rem;
+	opacity: 0.8;
+}
+
+/* Status Text */
+.statusText {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.25rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.statusText.paid {
+	background: var(--goodColor);
+	color: white;
+}
+
+.statusText.pending {
+	background: rgba(255, 255, 255, 0.2);
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.mobileStatusText {
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.25rem;
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: blur(10px);
+}
+
+.mobileStatusText.paid {
+	background: var(--goodColor);
+	color: white;
+	border-color: var(--goodColor);
+}
+
+.mobileStatusText.pending {
+	background: rgba(255, 255, 255, 0.2);
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.mobileStatusIcon {
+	position: absolute;
+	top: 0.75rem;
+	right: 0.75rem;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.875rem;
+	font-weight: 600;
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	backdrop-filter: blur(10px);
+}
+
+.memberCount {
+	font-size: 0.8rem;
+	color: var(--textLight);
+	font-weight: 500;
+}
+
+.memberFilterContainer {
+	position: relative;
+}
+
+.memberFilterContainer::before {
+	content: "";
+	position: absolute;
+	left: -1px;
+	top: -1px;
+	right: -1px;
+	bottom: -1px;
+	background: linear-gradient(135deg, var(--mainColor), var(--mainColor-light));
+	border-radius: 0.5rem;
+	z-index: -1;
+	opacity: 0.1;
 }
 
 .memberAvatar.currentUser {
@@ -709,7 +956,7 @@
 }
 
 .showMoreButton:hover {
-	background: #5b21b6;
+	background: var(--mainColorDark);
 	transform: translateY(-1px);
 }
 
@@ -817,7 +1064,7 @@
 }
 
 .addItemButton:hover {
-	background: #5b21b6;
+	background: var(--mainColorDark);
 	transform: translateY(-1px);
 }
 
@@ -835,13 +1082,24 @@
 	display: none;
 }
 
+/* Mobile responsive utilities */
+@media (max-width: 768px) {
+	.mobileOnly {
+		display: block !important;
+	}
+	
+	.desktopOnly {
+		display: none !important;
+	}
+}
+
 /* ===== MOBILE CARD DESIGN ===== */
 .mobileCard {
+	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
 	border-radius: 0.6rem;
 	padding: 0.9rem;
 	margin-bottom: 0.75rem;
-	backdrop-filter: var(--glassBlur);
 	cursor: pointer;
 	transition: border-color 0.2s ease, background-color 0.2s ease;
 	position: relative;
@@ -866,6 +1124,13 @@
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 0.6rem;
+}
+
+.cardHeaderRight {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.5rem;
 }
 
 .cardPayer {
@@ -1298,7 +1563,7 @@
 }
 
 .list::-webkit-scrollbar-thumb:hover {
-	background: #5b21b6;
+	background: var(--mainColorDark);
 }
 
 /* Animation for expanding items */
@@ -1503,18 +1768,8 @@
 
 .modal.paid { border-color: var(--goodColor); box-shadow: inset 0 0 0 1px rgba(var(--goodColor-rgb), 0.25); }
 .modal.unpaid { border-color: var(--badColor); box-shadow: inset 0 0 0 1px rgba(var(--badColor-rgb), 0.25); }
-.modal.paid::before,
-.modal.unpaid::before {
-	content: "";
-	position: absolute;
-	height: 60%;
-	width: 4px;
-	left: 0;
-	top: 20%;
-	border-radius: 4px;
-}
-.modal.paid::before { background: var(--goodColor); }
-.modal.unpaid::before { background: var(--badColor); }
+.modal.authorModal { border-color: var(--mainColor); box-shadow: inset 0 0 0 1px rgba(var(--mainColor-rgb), 0.25); }
+/* Removed left accent from modal - keeping only border accent */
 
 .expenseRow { position: relative; }
 
@@ -1532,6 +1787,21 @@
 }
 .expenseItem.paid .expenseRow::before { background: var(--goodColor); }
 .expenseItem.unpaid .expenseRow::before { background: var(--badColor); }
+
+/* Mobile card left accent */
+.mobileCard.paid::before,
+.mobileCard.unpaid::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	width: 4px;
+	height: 70%;
+	top: 15%;
+	border-radius: 4px;
+	z-index: 1;
+}
+.mobileCard.paid::before { background: var(--goodColor); }
+.mobileCard.unpaid::before { background: var(--badColor); }
 
 /* Modal bottom accent when not author */
 .modal.notAuthor { position: relative; }

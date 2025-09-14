@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useUser } from "../../hooks/useUser";
 import { useDataLoading } from "../../hooks/useLoading";
@@ -6,6 +6,8 @@ import { PaymentHistorySkeleton } from "../../components/Skeleton";
 import formatCurrency from "../../utils/formatCurrency";
 import { format, parseISO } from "date-fns";
 import { RiDeleteBin6Line } from "react-icons/ri";
+import RefreshButton from "../../components/RefreshButton";
+import AddItemButton from "../../components/AddItemButton/AddItemButton";
 import classes from "./PaymentHistory.module.css";
 import {
 	FaAngleDown,
@@ -19,6 +21,10 @@ import {
 	FaArrowDown,
 	FaEye,
 	FaTimes,
+	FaHandshake,
+	FaShoppingCart,
+	FaReceipt,
+	FaMousePointer,
 } from "react-icons/fa";
 
 const SettlementDetailsModal = ({ payment, isOpen, onClose, currentUserId }) => {
@@ -233,6 +239,7 @@ const PaymentHistory = () => {
 	const [directionFilter, setDirectionFilter] = useState("all");
 	const [selectedPayment, setSelectedPayment] = useState(null);
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	// Comprehensive loading check - wait for all data to be processed
 	const dataReady =
@@ -244,6 +251,21 @@ const PaymentHistory = () => {
 		filteredPayments !== undefined;
 
 	const isLoading = useDataLoading(dataReady);
+
+	// Refresh function
+	const handleRefresh = useCallback(async () => {
+		setIsRefreshing(true);
+		try {
+			const { data } = await axios.get("/api/payments");
+			setPayments(data);
+		} catch (error) {
+			console.error("Error refreshing payment history:", error);
+			setError("Failed to refresh payment history");
+		} finally {
+			setIsRefreshing(false);
+		}
+	}, []);
+
 	useEffect(() => {
 		const fetchPayments = async () => {
 			try {
@@ -271,13 +293,34 @@ const PaymentHistory = () => {
 			filtered = filtered.filter((p) => p.type === typeFilter);
 		}
 
-		// Filter by direction
+		// Filter by direction - based on actual financial impact
 		if (directionFilter !== "all") {
-			if (directionFilter === "sent") {
-				filtered = filtered.filter((p) => p.fromUser?._id === user._id);
-			} else if (directionFilter === "received") {
-				filtered = filtered.filter((p) => p.toUser?._id === user._id);
-			}
+			filtered = filtered.filter((p) => {
+				if (p.type === "settlement" && p.settlementSnapshot) {
+					// For settlements, calculate net effect
+					const snap = p.settlementSnapshot;
+					const isPayer = p.fromUser?._id === user._id;
+					const payerView = isPayer ? snap : { theyOwe: snap.youOwe, youOwe: snap.theyOwe, net: -snap.net };
+					const netAmount = (Number(payerView.theyOwe) || 0) - (Number(payerView.youOwe) || 0);
+					
+					// Positive net = receiving money, Negative net = sending money
+					if (directionFilter === "received") {
+						return netAmount > 0;
+					} else if (directionFilter === "sent") {
+						return netAmount < 0;
+					}
+				} else {
+					// For regular payments (single/bulk)
+					const isPayer = p.fromUser?._id === user._id;
+					
+					if (directionFilter === "sent") {
+						return isPayer; // You paid for the item - money sent
+					} else if (directionFilter === "received") {
+						return !isPayer; // You received payment - money received
+					}
+				}
+				return true;
+			});
 		}
 
 		setFilteredPayments(filtered);
@@ -294,12 +337,47 @@ const PaymentHistory = () => {
 				bulkPayments: 0,
 			};
 
-		const totalTransactions = payments.length;
-		const totalSent = payments.filter((p) => p.fromUser?._id === user._id).reduce((sum, p) => sum + p.amount, 0);
-		const totalReceived = payments.filter((p) => p.toUser?._id === user._id).reduce((sum, p) => sum + p.amount, 0);
-		const settlements = payments.filter((p) => p.type === "settlement").length;
-		const singlePayments = payments.filter((p) => p.type === "single").length;
-		const bulkPayments = payments.filter((p) => p.type === "bulk").length;
+		// Use filtered payments for stats when direction filter is active
+		const paymentsToUse = directionFilter !== "all" ? filteredPayments : payments;
+		
+		const totalTransactions = paymentsToUse.length;
+		
+		// Calculate net balance for each transaction and categorize by positive/negative
+		let totalSent = 0;
+		let totalReceived = 0;
+		
+		paymentsToUse.forEach((p) => {
+			if (p.type === "settlement" && p.settlementSnapshot) {
+				// For settlements, calculate net effect like in the display
+				const snap = p.settlementSnapshot;
+				const isPayer = p.fromUser?._id === user._id;
+				const payerView = isPayer ? snap : { theyOwe: snap.youOwe, youOwe: snap.theyOwe, net: -snap.net };
+				const netAmount = (Number(payerView.theyOwe) || 0) - (Number(payerView.youOwe) || 0);
+				
+				// If net is positive, you're receiving money (received)
+				// If net is negative, you're paying money (sent)
+				if (netAmount > 0) {
+					totalReceived += netAmount;
+				} else if (netAmount < 0) {
+					totalSent += Math.abs(netAmount);
+				}
+			} else {
+				// For regular payments (single/bulk)
+				const isPayer = p.fromUser?._id === user._id;
+				
+				if (isPayer) {
+					// You paid for the item - this is money sent
+					totalSent += p.amount;
+				} else {
+					// You received payment for the item - this is money received
+					totalReceived += p.amount;
+				}
+			}
+		});
+		
+		const settlements = paymentsToUse.filter((p) => p.type === "settlement").length;
+		const singlePayments = paymentsToUse.filter((p) => p.type === "single").length;
+		const bulkPayments = paymentsToUse.filter((p) => p.type === "bulk").length;
 
 		return { totalTransactions, totalSent, totalReceived, settlements, singlePayments, bulkPayments };
 	};
@@ -324,11 +402,11 @@ const PaymentHistory = () => {
 	const getPaymentIcon = (type) => {
 		switch (type) {
 			case "settlement":
-				return <FaExchangeAlt />;
+				return <FaHandshake />;
 			case "bulk":
-				return <FaUsers />;
+				return <FaShoppingCart />;
 			case "single":
-				return <FaUser />;
+				return <FaReceipt />;
 			default:
 				return <FaDollarSign />;
 		}
@@ -401,14 +479,18 @@ const PaymentHistory = () => {
 					<div className={classes.statIcon}>
 						<FaArrowUp />
 					</div>
-					<div className={classes.statNumber}>{formatCurrency(stats.totalSent)}</div>
+					<div className={`${classes.statNumber} ${classes.negative}`}>
+						-{formatCurrency(stats.totalSent)}
+					</div>
 					<div className={classes.statLabel}>Total Sent</div>
 				</div>
 				<div className={classes.statCard}>
 					<div className={classes.statIcon}>
 						<FaArrowDown />
 					</div>
-					<div className={classes.statNumber}>{formatCurrency(stats.totalReceived)}</div>
+					<div className={`${classes.statNumber} ${classes.positive}`}>
+						+{formatCurrency(stats.totalReceived)}
+					</div>
 					<div className={classes.statLabel}>Total Received</div>
 				</div>
 				<div className={classes.statCard}>
@@ -469,7 +551,11 @@ const PaymentHistory = () => {
 						{filteredPayments.map((p) => {
 							const isPayer = p.fromUser?._id === user?._id;
 							return (
-								<div key={p._id} className={classes.transactionCard}>
+								<div 
+									key={p._id} 
+									className={`${classes.transactionCard} ${p.type === "settlement" ? classes.clickable : ""}`}
+									onClick={p.type === "settlement" ? () => handleViewDetails(p) : undefined}
+								>
 									<div className={classes.transactionHeader}>
 										<div className={classes.transactionLeft}>
 											<div className={`${classes.transactionIcon} ${classes[`${p.type}Icon`]}`}>
@@ -487,27 +573,48 @@ const PaymentHistory = () => {
 														{format(parseISO(p.createdAt), "MMM d, yyyy 'at' h:mm a")}
 													</span>
 													<span className={classes.transactionBadge}>{p.type}</span>
+													{p.type === "settlement" && (
+														<span className={classes.clickableHint}>Tap to view details</span>
+													)}
 												</div>
 											</div>
 										</div>
 										<div className={classes.transactionRight}>
-											<div className={`${classes.transactionAmount} ${isPayer ? classes.negative : classes.positive}`}>
-												{isPayer ? "-" : "+"}
-												{formatCurrency(p.amount)}
-											</div>
+											{(() => {
+												// For settlements, calculate net effect like in the modal
+												if (p.type === "settlement" && p.settlementSnapshot) {
+													const snap = p.settlementSnapshot;
+													const payerView = isPayer ? snap : { theyOwe: snap.youOwe, youOwe: snap.theyOwe, net: -snap.net };
+													const netDisplay = (Number(payerView.theyOwe) || 0) - (Number(payerView.youOwe) || 0);
+													return (
+														<div className={`${classes.transactionAmount} ${netDisplay < 0 ? classes.negative : classes.positive}`}>
+															{netDisplay < 0 ? "-" : "+"}
+															{formatCurrency(Math.abs(netDisplay))}
+														</div>
+													);
+												} else {
+													// For regular payments, use simple payer logic
+													return (
+														<div className={`${classes.transactionAmount} ${isPayer ? classes.negative : classes.positive}`}>
+															{isPayer ? "-" : "+"}
+															{formatCurrency(p.amount)}
+														</div>
+													);
+												}
+											})()}
 											{p.settledItemIds?.length > 0 && (
 												<div className={classes.transactionItemCount}>
 													{p.settledItemIds.length} item{p.settledItemIds.length !== 1 ? "s" : ""}
 												</div>
 											)}
 											<div className={classes.actionButtons}>
-												{p.type === "settlement" && (
-													<button className={classes.viewDetailsBtn} onClick={() => handleViewDetails(p)}>
-														<FaEye />
-														View Details
-													</button>
-												)}
-												<button className={classes.deleteBtn} onClick={() => handleDelete(p._id)}>
+												<button 
+													className={classes.deleteBtn} 
+													onClick={(e) => {
+														e.stopPropagation();
+														handleDelete(p._id);
+													}}
+												>
 													<RiDeleteBin6Line />
 													Delete
 												</button>
@@ -530,6 +637,18 @@ const PaymentHistory = () => {
 				}}
 				currentUserId={user?._id}
 			/>
+			
+			{/* Floating Action Buttons */}
+			<div className={classes.floatingActionButtons}>
+				<div className={classes.mobileOnly}>
+					<AddItemButton />
+				</div>
+				<RefreshButton 
+					onRefresh={handleRefresh} 
+					loading={isRefreshing}
+					size="small"
+				/>
+			</div>
 		</div>
 	);
 };

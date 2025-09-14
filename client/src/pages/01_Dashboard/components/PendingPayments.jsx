@@ -4,52 +4,89 @@ import classes from "../Dashboard.module.css";
 import { PiHandDepositFill } from "react-icons/pi";
 import axios from "axios";
 import { PaymentApprovalContext } from "../../../contexts/PaymentApprovalContext";
+import Tooltip from "../../../components/Tooltip";
 
-const PaymentTimer = ({ memberId, getTimeRemaining }) => {
+const PaymentTimer = ({ memberId, getTimeRemaining, request }) => {
 	const [time, setTime] = useState(getTimeRemaining(memberId));
 	useEffect(() => {
 		const timer = setInterval(() => {
 			const t = getTimeRemaining(memberId);
 			setTime(t);
-			if (t <= 0) clearInterval(timer);
+			if (t <= 0) {
+				clearInterval(timer);
+			}
 		}, 1000);
 		return () => clearInterval(timer);
 	}, [memberId, getTimeRemaining]);
+	
 	if (time <= 0) return null;
-	return <span>({time}s)</span>;
+	
+	const isAllItems = request?.items?.length > 1;
+	const itemCount = request?.items?.length || 0;
+	
+	return (
+		<div className={classes.countdownContainer}>
+			<div className={classes.countdownIndicator}>
+				<div className={classes.countdownCircle}>
+					<span className={classes.countdownTime}>{time}</span>
+				</div>
+			</div>
+			<div className={classes.countdownText}>
+				<span className={classes.countdownLabel}>
+					{isAllItems ? `Paying all ${itemCount} items` : `Paying for 1 item`}
+				</span>
+				<span className={classes.countdownSubtext}>Awaiting approval</span>
+			</div>
+		</div>
+	);
 };
 
-const PendingItem = ({ item, onPay }) => (
-	<li className={classes.itemRow}>
+const PendingItem = ({ item, onPay, isSelected = false }) => (
+	<li className={`${classes.itemRow} ${isSelected ? classes.selectedItem : ''}`}>
 		<span className={classes.itemName}>{item.name}</span>
 		<div className={classes.itemDetails}>
 			<span className={classes.itemShare}>{formatCurrency(item.share)}</span>
 			<span className={classes.itemOfTotal}>/ {formatCurrency(item.price)}</span>
 		</div>
 		<div className={classes.itemPay}>
-			<button onClick={() => onPay(item._id)} className={classes.btnIcon} aria-label={`Pay for ${item.name}`} title="Pay only this item">
-				<PiHandDepositFill />
-			</button>
+			{isSelected ? (
+				<div className={classes.selectedIndicator}>
+					<div className={classes.selectedDot}></div>
+					<span className={classes.selectedText}>Selected</span>
+				</div>
+			) : (
+				<Tooltip content="Pay only this item" position="top">
+					<button onClick={() => onPay(item._id)} className={classes.btnIcon} aria-label={`Pay for ${item.name}`}>
+						<PiHandDepositFill />
+					</button>
+				</Tooltip>
+			)}
 		</div>
 	</li>
 );
 
-const PendingPaymentsCard = ({ memberId, data, onPayItem, onPayAll }) => (
+const PendingPaymentsCard = ({ memberId, data, onPayItem, onPayAll, selectedItems = [] }) => (
 	<div className={classes.card}>
 		<header className={classes.cardHeader}>
 			<h3 className={classes.cardTitle}>{data.memberInfo?.name || "Member"}</h3>
-			<button
-				onClick={() => onPayAll(memberId)}
-				className={classes.btnPrimary}
-				aria-label={`Pay all to ${data.memberInfo?.name}`}
-				title="Pay all outstanding items to this member"
-			>
-				Pay All
-			</button>
+			<Tooltip content="Pay all outstanding items to this member" position="top">
+				<button
+					onClick={() => onPayAll(memberId)}
+					className={classes.btnPrimary}
+					aria-label={`Pay all to ${data.memberInfo?.name}`}
+				>
+					Pay All
+				</button>
+			</Tooltip>
 		</header>
 		<ul className={classes.itemList}>
 			{data.items.map((item) => (
-				<PendingItem key={item._id} item={item} onPay={onPayItem} />
+				<PendingItem 
+					key={item._id} 
+					item={item} 
+					onPay={onPayItem} 
+					isSelected={selectedItems.includes(item._id)}
+				/>
 			))}
 		</ul>
 		<footer className={classes.cardFooter}>
@@ -102,6 +139,7 @@ const PendingPayments = ({ paymentsByMember, items, updateItems, fetchItems, use
 				<div className={classes.pendingGrid}>
 					{paymentEntries.map(([memberId, data]) => {
 						const req = paymentRequests?.[memberId];
+						const selectedItems = req?.items || [];
 						return (
 							<div key={memberId}>
 								<PendingPaymentsCard
@@ -109,14 +147,19 @@ const PendingPayments = ({ paymentsByMember, items, updateItems, fetchItems, use
 									data={data}
 									onPayItem={payItem}
 									onPayAll={payAllToMember}
+									selectedItems={selectedItems}
 								/>
 								{req && req.direction === "outgoing" && (
-									<p className={classes.empty}>
-										Awaiting approval <PaymentTimer memberId={memberId} getTimeRemaining={getTimeRemaining} />
-										<button className={classes.btnGhost} onClick={() => cancelPaymentRequest(memberId)} style={{ marginLeft: 8 }}>
+									<div className={classes.awaitingApproval}>
+										<PaymentTimer 
+											memberId={memberId} 
+											getTimeRemaining={getTimeRemaining} 
+											request={req}
+										/>
+										<button className={classes.btnGhost} onClick={() => cancelPaymentRequest(memberId)}>
 											Cancel
 										</button>
-									</p>
+									</div>
 								)}
 							</div>
 						);

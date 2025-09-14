@@ -194,7 +194,7 @@ export const generateExpensesReport = async (req, res) => {
                 doc.fontSize(9).fillColor('#000').text("Members:");
                 it.members.forEach((m) => {
                     const name = m.userID?.name || m.userID?.username || String(m.userID || "");
-                    const status = `paid=${m.paid ? '✔' : '✘'}, got=${m.got ? '✔' : '✘'}`;
+                    const status = `paid=${m.paid ? '✔' : '✘'}`;
                     doc.fontSize(9).fillColor('#333').text(`- ${name} (${status})`);
                 });
             }
@@ -268,7 +268,6 @@ export const generateExpensesCSV = async (req, res) => {
                         m.userID?.name || m.userID?.username || "",
                         m.userID?.email || "",
                         m.paid ? "true" : "false",
-                        m.got ? "true" : "false",
                     ].map(escapeCsv).join(",") + "\n";
                     res.write(row);
                 });

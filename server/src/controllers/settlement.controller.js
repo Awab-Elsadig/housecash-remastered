@@ -2,10 +2,8 @@ import { Item } from "../models/item.model.js";
 import AblyService from "../services/ablyService.js";
 import { v4 as uuid } from "uuid";
 import Payment from "../models/payment.model.js";
+import { PaymentRequest } from "../models/paymentRequest.model.js";
 import mongoose from "mongoose";
-
-// In-memory request store (ephemeral). For production use Redis.
-const requests = new Map(); // requestId -> { fromUserId, toUserId, houseCode, createdAt }
 
 // Helper to compute bilateral unpaid item IDs between two users
 async function getBilateralUnpaidItemIds(houseCode, userA, userB) {
@@ -30,8 +28,15 @@ export const requestSettlement = async (req, res) => {
 		const { targetUserId } = req.body;
 		if (!targetUserId || targetUserId === fromUserId) return res.status(400).json({ error: "Invalid target user" });
 		const requestId = uuid();
-		const record = { id: requestId, fromUserId, toUserId: targetUserId, houseCode, createdAt: Date.now() };
-		requests.set(requestId, record);
+		const record = new PaymentRequest({
+			requestId,
+			type: "settlement",
+			fromUserId,
+			toUserId: targetUserId,
+			houseCode,
+			expiresAt: new Date(Date.now() + 60 * 1000), // 60 seconds from now
+		});
+		await record.save();
 		// Broadcast to both users
 		await Promise.all([
 			AblyService.sendToHouse(houseCode, "fetchUpdate", { ts: Date.now() }),
@@ -44,8 +49,16 @@ export const requestSettlement = async (req, res) => {
 		await AblyService.sendToHouse(houseCode, "_log", { action: "settlementRequest", requestId });
 		// Publish to personal channels (bypass service helper)
 		const ably = (await import("../utils/ablyConfig.js")).default;
-		await ably.channels.get(channelFrom).publish("settlement:request", record);
-		await ably.channels.get(channelTo).publish("settlement:request", record);
+		const recordData = {
+			id: record.requestId,
+			type: record.type,
+			fromUserId: record.fromUserId,
+			toUserId: record.toUserId,
+			houseCode: record.houseCode,
+			createdAt: record.createdAt.getTime(),
+		};
+		await ably.channels.get(channelFrom).publish("settlement:request", recordData);
+		await ably.channels.get(channelTo).publish("settlement:request", recordData);
 		res.json({ success: true, requestId });
 	} catch (e) {
 		console.error("requestSettlement error", e);
@@ -57,7 +70,7 @@ export const respondSettlement = async (req, res) => {
 	try {
 		console.log("Settlement response request:", req.body);
 		const { requestId, accept, itemIds = [] } = req.body;
-		const record = requests.get(requestId);
+		const record = await PaymentRequest.findOne({ requestId, status: "pending" });
 
 		if (!record) {
 			console.log("Request not found for ID:", requestId);
@@ -65,7 +78,7 @@ export const respondSettlement = async (req, res) => {
 		}
 
 		const userId = req.user._id.toString();
-		if (userId !== record.toUserId) {
+		if (userId !== record.toUserId.toString()) {
 			console.log("User not authorized to respond:", userId, "vs", record.toUserId);
 			return res.status(403).json({ error: "Only the recipient can respond to a settlement request." });
 		}
@@ -75,7 +88,7 @@ export const respondSettlement = async (req, res) => {
 			console.log("Processing settlement acceptance...");
 			const ids = itemIds.length
 				? itemIds
-				: await getBilateralUnpaidItemIds(record.houseCode, record.fromUserId, record.toUserId);
+				: await getBilateralUnpaidItemIds(record.houseCode, record.fromUserId.toString(), record.toUserId.toString());
 
 			console.log("Items to settle:", ids);
 
@@ -142,18 +155,20 @@ export const respondSettlement = async (req, res) => {
 			console.log("Settlement declined");
 		}
 
+		// Update request status
+		record.status = accept ? "approved" : "declined";
+		await record.save();
+
 		const ably = (await import("../utils/ablyConfig.js")).default;
 		const channelFrom = ably.channels.get(`user:settlement:${record.fromUserId}`);
 		const channelTo = ably.channels.get(`user:settlement:${record.toUserId}`);
-		const payload = { otherUserId: accept ? record.fromUserId : record.toUserId, processed };
+		const payload = { otherUserId: accept ? record.fromUserId.toString() : record.toUserId.toString(), processed };
 
 		await channelFrom.publish(accept ? "settlement:completed" : "settlement:cancelled", payload);
 		await channelTo.publish(accept ? "settlement:completed" : "settlement:cancelled", {
 			...payload,
-			otherUserId: record.fromUserId,
+			otherUserId: record.fromUserId.toString(),
 		});
-
-		requests.delete(requestId);
 		await AblyService.sendFetchUpdate(record.houseCode);
 		res.json({ success: true, processed });
 	} catch (e) {
@@ -165,17 +180,21 @@ export const respondSettlement = async (req, res) => {
 export const cancelSettlement = async (req, res) => {
 	try {
 		const { requestId } = req.body;
-		const record = requests.get(requestId);
+		const record = await PaymentRequest.findOne({ requestId, status: "pending" });
 		if (!record) return res.status(404).json({ error: "Request not found" });
-		if (record.fromUserId !== req.user._id.toString()) return res.status(403).json({ error: "Only origin can cancel" });
+		if (record.fromUserId.toString() !== req.user._id.toString()) return res.status(403).json({ error: "Only origin can cancel" });
+		
+		// Update request status
+		record.status = "cancelled";
+		await record.save();
+		
 		const ably = (await import("../utils/ablyConfig.js")).default;
 		await ably.channels
 			.get(`user:settlement:${record.toUserId}`)
-			.publish("settlement:cancelled", { otherUserId: record.fromUserId });
+			.publish("settlement:cancelled", { otherUserId: record.fromUserId.toString() });
 		await ably.channels
 			.get(`user:settlement:${record.fromUserId}`)
-			.publish("settlement:cancelled", { otherUserId: record.toUserId });
-		requests.delete(requestId);
+			.publish("settlement:cancelled", { otherUserId: record.toUserId.toString() });
 		res.json({ success: true });
 	} catch (e) {
 		console.error("cancelSettlement error", e);

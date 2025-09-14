@@ -471,12 +471,9 @@ export const getAllItems = async (req, res) => {
 	// Expects { memberId, userId } in the request body
 	const { memberId, userId } = req.body;
 	try {
-		const result = await Item.updateMany(
-			{ author: userId },
-			{ $set: { "members.$[elem].got": true } },
-			{ arrayFilters: [{ "elem.userID": memberId, "elem.paid": true, "elem.got": false }] }
-		).exec();
-		return res.status(200).json({ result });
+		// Since we removed 'got', this endpoint is no longer needed
+		// Items are automatically marked as paid when payment is confirmed
+		return res.status(200).json({ message: "This endpoint is deprecated. Items are automatically marked as paid when payment is confirmed." });
 	} catch (error) {
 		console.error("Error in get-all:", error);
 		return res.status(500).json({ error: error.message });
@@ -487,12 +484,9 @@ export const undoGetAll = async (req, res) => {
 	// Expects { memberId, userId } in the request body
 	const { memberId, userId } = req.body;
 	try {
-		const result = await Item.updateMany(
-			{ author: userId },
-			{ $set: { "members.$[elem].got": false } },
-			{ arrayFilters: [{ "elem.userID": memberId, "elem.got": true }] }
-		).exec();
-		return res.status(200).json({ result });
+		// Since we removed 'got', this endpoint is no longer needed
+		// Items are automatically marked as paid when payment is confirmed
+		return res.status(200).json({ message: "This endpoint is deprecated. Items are automatically marked as paid when payment is confirmed." });
 	} catch (error) {
 		console.error("Error in undo-get-all:", error);
 		return res.status(500).json({ error: error.message });
@@ -813,7 +807,7 @@ export const resolveBalanceBatch = async (req, res) => {
 
 			console.log(`Item ${itemId} details:`, {
 				author: item.author,
-				members: item.members.map((m) => ({ userID: m.userID, paid: m.paid, got: m.got })),
+				members: item.members.map((m) => ({ userID: m.userID, paid: m.paid })),
 			});
 
 			// For settlement, mark unpaid members as paid (this clears the debt)

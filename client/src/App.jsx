@@ -5,7 +5,6 @@ import Login from "./pages/00_Login/Login";
 import "./index.css";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header/Header";
-import AddItemButton from "./components/AddItemButton/AddItemButton";
 import { ImpersonationProvider } from "./contexts/ImpersonationContext";
 import { SettlementProvider } from "./contexts/SettlementContext";
 import { PaymentApprovalProvider } from "./contexts/PaymentApprovalContext";
@@ -61,10 +60,6 @@ function App() {
 									<div className="right">
 										<Header toggleMobileMenu={toggleMobileMenu} />
 										<AppRoutes />
-									</div>
-									{/* Global AddItem Button for Mobile */}
-									<div className="mobile-add-button">
-										<AddItemButton />
 									</div>
 									{/* Global Settlement Notifications */}
 								</div>

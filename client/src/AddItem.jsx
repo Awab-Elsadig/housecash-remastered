@@ -240,7 +240,6 @@ const AddItem = ({ setAddItem, itemToEdit }) => {
 		const members = selectedMembers.map((member) => ({
 			userID: member._id,
 			paid: member._id === selectedPayer,
-			got: false,
 		}));
 
 		if (itemToEdit) {

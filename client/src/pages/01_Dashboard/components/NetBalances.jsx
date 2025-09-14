@@ -3,16 +3,17 @@ import formatCurrency from "../../../utils/formatCurrency";
 import classes from "../Dashboard.module.css";
 import { FaExchangeAlt } from "react-icons/fa";
 import { bilateralItemIds } from "../../../hooks/useDashboardData";
+import Tooltip from "../../../components/Tooltip";
 
 const SettlementTimer = ({ memberId, getSettlementTimeRemaining }) => {
 	const [time, setTime] = useState(getSettlementTimeRemaining(memberId));
 	useEffect(() => {
 		const timer = setInterval(() => {
 			const remaining = getSettlementTimeRemaining(memberId);
+			setTime(remaining);
 			if (remaining <= 0) {
 				clearInterval(timer);
 			}
-			setTime(remaining);
 		}, 1000);
 		return () => clearInterval(timer);
 	}, [memberId, getSettlementTimeRemaining]);
@@ -46,9 +47,11 @@ const SettlementButtons = ({ memberId, amount, user, houseMembers, settlementCon
 						Awaiting response{" "}
 						<SettlementTimer memberId={memberId} getSettlementTimeRemaining={getSettlementTimeRemaining} />
 					</span>
-					<button onClick={() => cancelSettlementRequest(memberId)} className={classes.btnGhost} title="Cancel this settlement request">
-						Cancel
-					</button>
+					<Tooltip content="Cancel this settlement request" position="top">
+						<button onClick={() => cancelSettlementRequest(memberId)} className={classes.btnGhost}>
+							Cancel
+						</button>
+					</Tooltip>
 				</div>
 			);
 		}
@@ -59,35 +62,39 @@ const SettlementButtons = ({ memberId, amount, user, houseMembers, settlementCon
 					<SettlementTimer memberId={memberId} getSettlementTimeRemaining={getSettlementTimeRemaining} />
 				</span>
 				<div>
-					<button
-						onClick={async () => {
-							const ids = getBilateralIds();
-							await acceptSettlement(memberId, ids);
-						}}
-						className={classes.btnPrimary}
-						title="Accept and settle all outstanding items with this member"
-					>
-						Accept
-					</button>
-					<button onClick={() => declineSettlement(memberId)} className={classes.btnGhost} title="Decline this settlement request">
-						Decline
-					</button>
+					<Tooltip content="Accept and settle all outstanding items with this member" position="top">
+						<button
+							onClick={async () => {
+								const ids = getBilateralIds();
+								await acceptSettlement(memberId, ids);
+							}}
+							className={classes.btnPrimary}
+						>
+							Accept
+						</button>
+					</Tooltip>
+					<Tooltip content="Decline this settlement request" position="top">
+						<button onClick={() => declineSettlement(memberId)} className={classes.btnGhost}>
+							Decline
+						</button>
+					</Tooltip>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<button
-			className={classes.btnPrimary}
-			onClick={() => {
-				const targetMember = houseMembers.find((m) => m._id.toString() === memberId);
-				settleUp(memberId, user?.name, Math.abs(amount), targetMember?.name);
-			}}
-			title="Send a settlement request to clear balances"
-		>
-			Settle <FaExchangeAlt />
-		</button>
+		<Tooltip content="Send a settlement request to clear balances" position="top">
+			<button
+				className={classes.btnPrimary}
+				onClick={() => {
+					const targetMember = houseMembers.find((m) => m._id.toString() === memberId);
+					settleUp(memberId, user?.name, Math.abs(amount), targetMember?.name);
+				}}
+			>
+				Settle <FaExchangeAlt />
+			</button>
+		</Tooltip>
 	);
 };
 

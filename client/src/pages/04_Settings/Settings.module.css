@@ -197,7 +197,7 @@
 }
 
 .changePasswordBtn {
-	background: linear-gradient(135deg, var(--mainColor), #8b5cf6);
+	background: linear-gradient(135deg, var(--mainColor), var(--mainColorDark));
 	border: none;
 	border-radius: 12px;
 	padding: 1rem 1.5rem;
@@ -242,9 +242,9 @@
 }
 
 .modal {
-	background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	border-radius: 16px;
+	background: linear-gradient(160deg, rgba(7, 54, 80, 0.65) 0%, rgba(25, 36, 50, 0.45) 100%), var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	border-radius: var(--border-radius);
 	padding: 2rem;
 	width: 100%;
 	max-width: 400px;
@@ -263,9 +263,9 @@
 .modal input {
 	width: 100%;
 	padding: 0.875rem;
-	background: rgba(255, 255, 255, 0.08);
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--glassStroke);
+	border-radius: var(--border-radius-sm);
 	color: white;
 	font-size: 1rem;
 	margin-bottom: 1.5rem;
@@ -294,7 +294,7 @@
 	flex: 1;
 	padding: 0.875rem;
 	border: none;
-	border-radius: 12px;
+	border-radius: var(--border-radius-sm);
 	font-size: 1rem;
 	font-weight: 600;
 	cursor: pointer;
@@ -302,7 +302,7 @@
 }
 
 .saveBtn {
-	background: linear-gradient(135deg, var(--mainColor), #8b5cf6);
+	background: linear-gradient(135deg, var(--mainColor), var(--mainColorDark));
 	color: white;
 }
 

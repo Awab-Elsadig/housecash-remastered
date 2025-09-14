@@ -16,6 +16,43 @@ export const SettlementProvider = ({ user, children }) => {
 	const timersRef = useRef({});
 	const channelRef = useRef(null);
 
+	// Fetch pending settlement requests when user data is available
+	useEffect(() => {
+		if (!user?._id || !user?.houseCode) return;
+		
+		// Fetch any pending settlement requests from the database
+		const fetchPendingRequests = async () => {
+			try {
+				const { data } = await axios.get("/api/payment-approvals/pending");
+				if (data.requests && data.requests.length > 0) {
+					const settlementRequests = {};
+					data.requests.forEach(req => {
+						if (req.type === "settlement") {
+							const otherId = req.direction === "outgoing" ? req.toUserId : req.fromUserId;
+							const remaining = Math.ceil((req.expiresAt - Date.now()) / 1000);
+							console.log(`Settlement request ${req.id}: expiresAt=${req.expiresAt}, remaining=${remaining}s`);
+							settlementRequests[otherId] = {
+								...req,
+								expiresAt: req.expiresAt,
+							};
+							// Set up timer for expiration
+							if (req.expiresAt > Date.now()) {
+								timersRef.current[otherId] = setTimeout(() => cancelSettlementRequest(otherId, true), req.expiresAt - Date.now());
+							}
+						}
+					});
+					setRequests(settlementRequests);
+				}
+			} catch (error) {
+				console.error("Failed to fetch pending settlement requests:", error);
+			}
+		};
+
+		// Add a small delay to ensure user data is fully loaded
+		const timeoutId = setTimeout(fetchPendingRequests, 100);
+		return () => clearTimeout(timeoutId);
+	}, [user?._id, user?.houseCode]);
+
 	// Subscribe to personal settlement channel
 	useEffect(() => {
 		if (!user?._id) return;
@@ -27,7 +64,7 @@ export const SettlementProvider = ({ user, children }) => {
 				[data.fromUserId === user._id ? data.toUserId : data.fromUserId]: {
 					...data,
 					type: data.fromUserId === user._id ? "outgoing" : "incoming",
-					expiresAt: Date.now() + 120_000,
+					expiresAt: Date.now() + 60_000,
 				},
 			}));
 		};
@@ -105,7 +142,7 @@ export const SettlementProvider = ({ user, children }) => {
 			if (!user?._id || !otherUserId || requests[otherUserId]) return false;
 			try {
 				const { data } = await axios.post("/api/settlements/request", { targetUserId: otherUserId });
-				const expiresAt = Date.now() + 120_000;
+				const expiresAt = Date.now() + 60_000;
 				setRequests((prev) => ({
 					...prev,
 					[otherUserId]: {
@@ -118,7 +155,7 @@ export const SettlementProvider = ({ user, children }) => {
 						expiresAt,
 					},
 				}));
-				timersRef.current[otherUserId] = setTimeout(() => cancelSettlementRequest(otherUserId, true), 120_000);
+				timersRef.current[otherUserId] = setTimeout(() => cancelSettlementRequest(otherUserId, true), 60_000);
 				return true;
 			} catch (e) {
 				console.error("Failed to create settlement request", e);
@@ -165,7 +202,9 @@ export const SettlementProvider = ({ user, children }) => {
 				removeExpired(otherUserId);
 				return 0;
 			}
-			return Math.ceil((req.expiresAt - Date.now()) / 1000);
+			const remaining = Math.ceil((req.expiresAt - Date.now()) / 1000);
+			console.log(`Settlement timer for ${otherUserId}: expiresAt=${req.expiresAt}, now=${Date.now()}, remaining=${remaining}s`);
+			return Math.max(0, remaining);
 		},
 		[requests, removeExpired]
 	);

@@ -40,7 +40,7 @@ const NetBalance = () => {
 			if (!authorId) return;
 
 			// Assume every listed member shares the cost equally.
-			const participants = item.members; // ignoring 'got' flag for balance math
+			const participants = item.members;
 			const share = item.price / participants.length;
 
 			participants.forEach((m) => {

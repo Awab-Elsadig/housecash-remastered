@@ -12,6 +12,7 @@ import { SettingsSkeleton } from "../../components/Skeleton";
 import ably from "../../ablyConfig";
 import ProfilePictureUpload from "../../components/ProfilePictureUpload/ProfilePictureUpload";
 import ProfileAvatarModal from "../../components/ProfileAvatarModal/ProfileAvatarModal";
+import Tooltip from "../../components/Tooltip";
 
 const Settings = () => {
 	useEffect(() => {
@@ -179,9 +180,11 @@ const Settings = () => {
 					<h1 className={classes.userName}>{user?.name || "User"}</h1>
 				</div>
 
-				<button className={classes.logout} onClick={logout} title="Log out of your account">
-					<TbLogout />
-				</button>
+				<Tooltip content="Log out of your account" position="left">
+					<button className={classes.logout} onClick={logout}>
+						<TbLogout />
+					</button>
+				</Tooltip>
 			</header>
 
 			{/* Settings Content */}
@@ -191,9 +194,11 @@ const Settings = () => {
 						<label>Name</label>
 						<div className={classes.valueContainer}>
 							<span>{user?.name || "Not set"}</span>
-							<button className={classes.editBtn} onClick={() => openEditPopup("name")} title="Edit your name">
-								<MdEdit />
-							</button>
+							<Tooltip content="Edit your name" position="top">
+								<button className={classes.editBtn} onClick={() => openEditPopup("name")}>
+									<MdEdit />
+								</button>
+							</Tooltip>
 						</div>
 					</div>
 
@@ -201,9 +206,11 @@ const Settings = () => {
 						<label>Username</label>
 						<div className={classes.valueContainer}>
 							<span>{user?.username || "Not set"}</span>
-							<button className={classes.editBtn} onClick={() => openEditPopup("username")} title="Edit your username (3 letters)">
-								<MdEdit />
-							</button>
+							<Tooltip content="Edit your username (3 letters)" position="top">
+								<button className={classes.editBtn} onClick={() => openEditPopup("username")}>
+									<MdEdit />
+								</button>
+							</Tooltip>
 						</div>
 					</div>
 
@@ -213,9 +220,11 @@ const Settings = () => {
 							<span>{user?.houseCode || "Not set"}</span>
 							<div className={classes.copyContainer}>
 								{copySuccess && <div className={classes.copySuccess}>Copied!</div>}
-								<button className={classes.copyBtn} onClick={handleCopy} title="Copy house code to clipboard">
-									<FaCopy />
-								</button>
+								<Tooltip content="Copy house code to clipboard" position="top">
+									<button className={classes.copyBtn} onClick={handleCopy}>
+										<FaCopy />
+									</button>
+								</Tooltip>
 							</div>
 						</div>
 					</div>

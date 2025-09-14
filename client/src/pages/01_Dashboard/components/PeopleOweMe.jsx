@@ -3,25 +3,38 @@ import formatCurrency from "../../../utils/formatCurrency";
 import classes from "../Dashboard.module.css";
 import { PaymentApprovalContext } from "../../../contexts/PaymentApprovalContext";
 
-const OwedItem = ({ item }) => (
-	<li className={classes.itemRow}>
+const OwedItem = ({ item, isSelected = false }) => (
+	<li className={`${classes.itemRow} ${isSelected ? classes.selectedItem : ''}`}>
 		<span className={classes.itemName}>{item.name}</span>
 		<div className={classes.itemDetails}>
 			<span className={classes.itemShare}>{formatCurrency(item.share)}</span>
 			<span className={classes.itemOfTotal}>/ {formatCurrency(item.price)}</span>
 		</div>
-		<div className={classes.itemPay} />
+		<div className={classes.itemPay}>
+			{isSelected ? (
+				<div className={classes.selectedIndicator}>
+					<div className={classes.selectedDot}></div>
+					<span className={classes.selectedText}>Selected</span>
+				</div>
+			) : (
+				<div />
+			)}
+		</div>
 	</li>
 );
 
-const OwedCard = ({ memberId, data, incomingRequest, onApprove, onDecline, timeRemaining }) => (
+const OwedCard = ({ memberId, data, incomingRequest, onApprove, onDecline, timeRemaining, selectedItems = [] }) => (
 	<div className={classes.card}>
 		<header className={classes.cardHeader}>
 			<h3 className={classes.cardTitle}>{data.memberInfo?.name || "Member"}</h3>
 		</header>
 		<ul className={classes.itemList}>
 			{data.items.map((item) => (
-				<OwedItem key={item._id} item={item} />
+				<OwedItem 
+					key={item._id} 
+					item={item} 
+					isSelected={selectedItems.includes(item._id)}
+				/>
 			))}
 		</ul>
 		<footer className={classes.cardFooter}>
@@ -86,6 +99,7 @@ const PeopleOweMe = ({ user, items, houseMembers }) => {
 						const req = paymentRequests?.[memberId];
 						const incoming = req && req.direction === "incoming";
 						const remaining = getTimeRemaining(memberId);
+						const selectedItems = req?.items || [];
 						return (
 							<OwedCard
 								key={memberId}
@@ -95,6 +109,7 @@ const PeopleOweMe = ({ user, items, houseMembers }) => {
 								onApprove={approvePayment}
 								onDecline={declinePayment}
 								timeRemaining={remaining}
+								selectedItems={selectedItems}
 							/>
 						);
 					})}

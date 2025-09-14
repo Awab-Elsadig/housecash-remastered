@@ -1,0 +1,80 @@
+.refreshButton {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--glassBackground, rgba(255, 255, 255, 0.1));
+	border: 1px solid var(--glassStroke, rgba(255, 255, 255, 0.2));
+	border-radius: 50%;
+	color: var(--textColor, #fff);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	backdrop-filter: blur(10px);
+	width: 3rem;
+	height: 3rem;
+}
+
+/* Hover effects removed */
+
+.refreshButton:active {
+	transform: translateY(0);
+}
+
+.refreshButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.refreshIcon {
+	font-size: 1.4rem;
+	transition: transform 0.3s ease;
+}
+
+.spinning {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Size variants */
+.small {
+	width: 2.5rem;
+	height: 2.5rem;
+}
+
+.small .refreshIcon {
+	font-size: 1.4rem;
+}
+
+.medium {
+	width: 3rem;
+	height: 3rem;
+}
+
+.large {
+	width: 3.5rem;
+	height: 3.5rem;
+}
+
+.large .refreshIcon {
+	font-size: 1.125rem;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+	.refreshButton {
+		width: 2.5rem;
+		height: 2.5rem;
+	}
+	
+	.refreshIcon {
+		font-size: 1.4rem;
+	}
+}
