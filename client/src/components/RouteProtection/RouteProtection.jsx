@@ -44,7 +44,7 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 					}
 				};
 				
-				// Add mobile-specific headers
+				// Add mobile-specific headers for iOS Safari
 				if (isMobile) {
 					requestConfig.headers['Cache-Control'] = 'no-cache';
 					requestConfig.headers['Pragma'] = 'no-cache';
@@ -307,12 +307,7 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 	// Show debug info if authentication failed but still render children
 	if (requireAuth && !isAuthenticated) {
 		console.log("RouteProtection: Authentication failed but rendering children for debugging");
-		// Update debug info to show auth failure
-		setDebugInfo(prev => ({
-			...prev,
-			checkResult: "❌ AUTH FAILED - But staying on page for debugging",
-			errorDetails: "Authentication check failed but redirect disabled for debugging"
-		}));
+		// Don't update debug info here to prevent infinite re-renders
 	}
 
 	// Always render children - no redirects

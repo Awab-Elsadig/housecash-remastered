@@ -69,7 +69,7 @@ app.use(cors({
 	},
 	credentials: true,
 	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-	allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+	allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Cache-Control', 'Pragma'],
 	exposedHeaders: ['Set-Cookie']
 }));
 
@@ -80,7 +80,7 @@ app.options('*', (req, res) => {
 	console.log('OPTIONS preflight request from:', req.headers.origin);
 	res.header('Access-Control-Allow-Origin', req.headers.origin);
 	res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-	res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+	res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, Cache-Control, Pragma');
 	res.header('Access-Control-Allow-Credentials', 'true');
 	res.sendStatus(200);
 });
