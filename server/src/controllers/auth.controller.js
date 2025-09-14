@@ -79,7 +79,19 @@ export const login = async (req, res) => {
 		console.log("Database connection state:", mongoose.connection.readyState);
 		if (mongoose.connection.readyState !== 1) {
 			console.error("Database not connected. State:", mongoose.connection.readyState);
-			return res.status(500).json({ error: "Database connection failed" });
+			console.log("Attempting to reconnect to database...");
+			
+			// Try to reconnect
+			try {
+				await mongoose.connect(process.env.MONGO_URI, { 
+					serverSelectionTimeoutMS: 10000,
+					connectTimeoutMS: 10000
+				});
+				console.log("Database reconnected successfully");
+			} catch (reconnectError) {
+				console.error("Database reconnection failed:", reconnectError.message);
+				return res.status(500).json({ error: "Database connection failed" });
+			}
 		}
 
 		// Validate input

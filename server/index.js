@@ -76,7 +76,12 @@ app.options('*', (req, res) => {
 
 // Connect to database
 connectDB().catch((error) => {
-	console.error("Database connection failed:", error.message);
+	console.error("=== DATABASE CONNECTION FAILED ===");
+	console.error("Error:", error.message);
+	console.error("Error code:", error.code);
+	console.error("Error name:", error.name);
+	console.error("Full error:", error);
+	console.error("=== END DATABASE CONNECTION ERROR ===");
 	// Don't crash the server, just log the error
 	// The server can still handle requests, but database operations will fail
 });
