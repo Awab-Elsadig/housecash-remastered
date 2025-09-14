@@ -146,16 +146,16 @@ const Login = () => {
 							updateHouseMembers([]);
 						}
 
-						// Update debug status - DON'T navigate for debugging
+						// Update debug status before navigation
 						setDebugInfo(prev => ({
 							...prev,
-							authStatus: "✅ LOGIN SUCCESSFUL! (Navigation disabled for debugging)",
+							authStatus: "✅ LOGIN SUCCESSFUL! Navigating to dashboard...",
 							errorDetails: `User: ${response.data.user?.email}, House Members: ${response.data.houseMembers?.members?.length || 0}`
 						}));
 
-						console.log("Login successful - staying on page for debugging");
-						// DON'T navigate to dashboard for debugging
-						// navigate("/dashboard");
+						console.log("Login successful - navigating to dashboard");
+						// Navigate to dashboard
+						navigate("/dashboard");
 						return true; // Success
 					} else {
 						console.log("Unexpected response status:", response.status);
