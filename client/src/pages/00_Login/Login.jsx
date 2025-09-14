@@ -146,16 +146,16 @@ const Login = () => {
 							updateHouseMembers([]);
 						}
 
-						// Update debug status before navigation
+						// Update debug status - DON'T navigate for debugging
 						setDebugInfo(prev => ({
 							...prev,
-							authStatus: "Login successful! Ready to navigate to dashboard...",
-							errorDetails: null
+							authStatus: "✅ LOGIN SUCCESSFUL! (Navigation disabled for debugging)",
+							errorDetails: `User: ${response.data.user?.email}, House Members: ${response.data.houseMembers?.members?.length || 0}`
 						}));
 
-						console.log("Navigating to dashboard...");
-						// Then navigate to dashboard
-						navigate("/dashboard");
+						console.log("Login successful - staying on page for debugging");
+						// DON'T navigate to dashboard for debugging
+						// navigate("/dashboard");
 						return true; // Success
 					} else {
 						console.log("Unexpected response status:", response.status);
@@ -359,100 +359,199 @@ const Login = () => {
 					
 					{/* Debug Panel - Temporary for iPhone troubleshooting */}
 					<div style={{
-						marginTop: '20px',
-						padding: '15px',
-						backgroundColor: '#f5f5f5',
-						border: '2px solid #ddd',
-						borderRadius: '8px',
-						fontSize: '14px',
-						fontFamily: 'monospace'
+						marginTop: '30px',
+						padding: '20px',
+						backgroundColor: '#1a1a1a',
+						border: '3px solid #00ff00',
+						borderRadius: '12px',
+						fontSize: '16px',
+						fontFamily: 'Courier New, monospace',
+						color: '#00ff00',
+						boxShadow: '0 4px 20px rgba(0, 255, 0, 0.3)',
+						maxWidth: '100%',
+						overflow: 'auto'
 					}}>
-						<h4 style={{ margin: '0 0 10px 0', color: '#333' }}>🔍 Debug Panel (iPhone Troubleshooting)</h4>
+						<h4 style={{ 
+							margin: '0 0 20px 0', 
+							color: '#00ff00', 
+							fontSize: '18px',
+							textAlign: 'center',
+							borderBottom: '2px solid #00ff00',
+							paddingBottom: '10px'
+						}}>
+							🔍 DEBUG PANEL - iPhone Troubleshooting
+						</h4>
 						
-						<div style={{ marginBottom: '10px' }}>
-							<strong>Status:</strong> {debugInfo.authStatus}
+						<div style={{ 
+							marginBottom: '15px',
+							padding: '10px',
+							backgroundColor: '#000',
+							borderRadius: '6px',
+							border: '1px solid #00ff00'
+						}}>
+							<strong style={{ color: '#ffff00' }}>STATUS:</strong> 
+							<span style={{ color: debugInfo.authStatus.includes('✅') ? '#00ff00' : debugInfo.authStatus.includes('❌') ? '#ff0000' : '#ffff00' }}>
+								{debugInfo.authStatus}
+							</span>
 						</div>
 						
 						{debugInfo.errorDetails && (
-							<div style={{ marginBottom: '10px' }}>
-								<strong>Error Details:</strong> 
+							<div style={{ 
+								marginBottom: '15px',
+								padding: '10px',
+								backgroundColor: '#000',
+								borderRadius: '6px',
+								border: '1px solid #ff0000'
+							}}>
+								<strong style={{ color: '#ff0000' }}>ERROR DETAILS:</strong> 
 								<div style={{ 
-									backgroundColor: '#fff', 
-									padding: '8px', 
+									backgroundColor: '#000', 
+									padding: '10px', 
 									borderRadius: '4px', 
-									marginTop: '5px',
+									marginTop: '8px',
 									wordBreak: 'break-all',
-									fontSize: '12px'
+									fontSize: '14px',
+									color: '#ff6666',
+									border: '1px solid #ff0000',
+									maxHeight: '200px',
+									overflow: 'auto'
 								}}>
 									{debugInfo.errorDetails}
 								</div>
 							</div>
 						)}
 						
-						<div style={{ marginBottom: '10px' }}>
-							<strong>Attempt Count:</strong> {debugInfo.attemptCount}
+						<div style={{ 
+							display: 'grid',
+							gridTemplateColumns: '1fr 1fr',
+							gap: '15px',
+							marginBottom: '15px'
+						}}>
+							<div style={{
+								padding: '10px',
+								backgroundColor: '#000',
+								borderRadius: '6px',
+								border: '1px solid #00ff00'
+							}}>
+								<strong style={{ color: '#ffff00' }}>ATTEMPTS:</strong> 
+								<span style={{ color: '#00ff00' }}>{debugInfo.attemptCount}</span>
+							</div>
+							
+							<div style={{
+								padding: '10px',
+								backgroundColor: '#000',
+								borderRadius: '6px',
+								border: '1px solid #00ff00'
+							}}>
+								<strong style={{ color: '#ffff00' }}>LAST TRY:</strong> 
+								<span style={{ color: '#00ff00', fontSize: '12px' }}>
+									{debugInfo.lastAttempt ? new Date(debugInfo.lastAttempt).toLocaleTimeString() : 'None'}
+								</span>
+							</div>
 						</div>
 						
-						<div style={{ marginBottom: '10px' }}>
-							<strong>Last Attempt:</strong> {debugInfo.lastAttempt || 'None'}
-						</div>
-						
-						<div style={{ marginBottom: '10px' }}>
-							<strong>User Agent:</strong> 
+						<div style={{ 
+							marginBottom: '15px',
+							padding: '10px',
+							backgroundColor: '#000',
+							borderRadius: '6px',
+							border: '1px solid #00ff00'
+						}}>
+							<strong style={{ color: '#ffff00' }}>USER AGENT:</strong> 
 							<div style={{ 
-								backgroundColor: '#fff', 
-								padding: '8px', 
+								backgroundColor: '#000', 
+								padding: '10px', 
 								borderRadius: '4px', 
-								marginTop: '5px',
+								marginTop: '8px',
 								fontSize: '12px',
-								wordBreak: 'break-all'
+								color: '#00ff00',
+								border: '1px solid #00ff00',
+								wordBreak: 'break-all',
+								maxHeight: '100px',
+								overflow: 'auto'
 							}}>
 								{debugInfo.userAgent}
 							</div>
 						</div>
 						
-						<div style={{ marginBottom: '10px' }}>
-							<strong>Cookies:</strong> 
+						<div style={{ 
+							marginBottom: '20px',
+							padding: '10px',
+							backgroundColor: '#000',
+							borderRadius: '6px',
+							border: '1px solid #00ff00'
+						}}>
+							<strong style={{ color: '#ffff00' }}>COOKIES:</strong> 
 							<div style={{ 
-								backgroundColor: '#fff', 
-								padding: '8px', 
+								backgroundColor: '#000', 
+								padding: '10px', 
 								borderRadius: '4px', 
-								marginTop: '5px',
+								marginTop: '8px',
 								fontSize: '12px',
-								wordBreak: 'break-all'
+								color: debugInfo.cookies ? '#00ff00' : '#ff6666',
+								border: '1px solid #00ff00',
+								wordBreak: 'break-all',
+								maxHeight: '100px',
+								overflow: 'auto'
 							}}>
 								{debugInfo.cookies || 'No cookies found'}
 							</div>
 						</div>
 						
-						<div style={{ marginTop: '15px' }}>
+						<div style={{ 
+							display: 'flex',
+							gap: '10px',
+							flexWrap: 'wrap',
+							justifyContent: 'center'
+						}}>
 							<button 
 								onClick={checkAuthStatus}
 								style={{
-									padding: '8px 16px',
+									padding: '12px 20px',
 									backgroundColor: '#007bff',
 									color: 'white',
-									border: 'none',
-									borderRadius: '4px',
+									border: '2px solid #007bff',
+									borderRadius: '6px',
 									cursor: 'pointer',
-									marginRight: '10px'
+									fontSize: '14px',
+									fontWeight: 'bold',
+									transition: 'all 0.3s ease'
+								}}
+								onMouseOver={(e) => {
+									e.target.style.backgroundColor = '#0056b3';
+									e.target.style.borderColor = '#0056b3';
+								}}
+								onMouseOut={(e) => {
+									e.target.style.backgroundColor = '#007bff';
+									e.target.style.borderColor = '#007bff';
 								}}
 							>
-								Check Auth Status
+								🔍 Check Auth Status
 							</button>
 							
 							<button 
 								onClick={() => setDebugInfo(prev => ({ ...prev, showDebug: false }))}
 								style={{
-									padding: '8px 16px',
+									padding: '12px 20px',
 									backgroundColor: '#6c757d',
 									color: 'white',
-									border: 'none',
-									borderRadius: '4px',
-									cursor: 'pointer'
+									border: '2px solid #6c757d',
+									borderRadius: '6px',
+									cursor: 'pointer',
+									fontSize: '14px',
+									fontWeight: 'bold',
+									transition: 'all 0.3s ease'
+								}}
+								onMouseOver={(e) => {
+									e.target.style.backgroundColor = '#545b62';
+									e.target.style.borderColor = '#545b62';
+								}}
+								onMouseOut={(e) => {
+									e.target.style.backgroundColor = '#6c757d';
+									e.target.style.borderColor = '#6c757d';
 								}}
 							>
-								Hide Debug
+								👁️ Hide Debug
 							</button>
 						</div>
 					</div>

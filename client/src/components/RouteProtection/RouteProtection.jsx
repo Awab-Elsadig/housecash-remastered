@@ -151,58 +151,131 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 				
 				{/* Debug info for iPhone troubleshooting */}
 				<div style={{
-					backgroundColor: '#f5f5f5',
-					border: '2px solid #ddd',
-					borderRadius: '8px',
-					padding: '15px',
-					fontSize: '14px',
-					fontFamily: 'monospace',
-					maxWidth: '500px',
-					width: '100%'
+					backgroundColor: '#1a1a1a',
+					border: '3px solid #ff6600',
+					borderRadius: '12px',
+					padding: '20px',
+					fontSize: '16px',
+					fontFamily: 'Courier New, monospace',
+					maxWidth: '600px',
+					width: '100%',
+					color: '#ff6600',
+					boxShadow: '0 4px 20px rgba(255, 102, 0, 0.3)'
 				}}>
-					<h4 style={{ margin: '0 0 10px 0', color: '#333' }}>🔍 RouteProtection Debug</h4>
+					<h4 style={{ 
+						margin: '0 0 20px 0', 
+						color: '#ff6600', 
+						fontSize: '18px',
+						textAlign: 'center',
+						borderBottom: '2px solid #ff6600',
+						paddingBottom: '10px'
+					}}>
+						🔍 ROUTE PROTECTION DEBUG
+					</h4>
 					
-					<div style={{ marginBottom: '10px' }}>
-						<strong>Current Path:</strong> {location.pathname}
+					<div style={{ 
+						display: 'grid',
+						gridTemplateColumns: '1fr 1fr',
+						gap: '15px',
+						marginBottom: '15px'
+					}}>
+						<div style={{
+							padding: '10px',
+							backgroundColor: '#000',
+							borderRadius: '6px',
+							border: '1px solid #ff6600'
+						}}>
+							<strong style={{ color: '#ffff00' }}>PATH:</strong> 
+							<span style={{ color: '#ff6600' }}>{location.pathname}</span>
+						</div>
+						
+						<div style={{
+							padding: '10px',
+							backgroundColor: '#000',
+							borderRadius: '6px',
+							border: '1px solid #ff6600'
+						}}>
+							<strong style={{ color: '#ffff00' }}>AUTH REQUIRED:</strong> 
+							<span style={{ color: requireAuth ? '#ff0000' : '#00ff00' }}>
+								{requireAuth ? 'YES' : 'NO'}
+							</span>
+						</div>
 					</div>
 					
-					<div style={{ marginBottom: '10px' }}>
-						<strong>Requires Auth:</strong> {requireAuth ? 'Yes' : 'No'}
-					</div>
-					
-					<div style={{ marginBottom: '10px' }}>
-						<strong>Check Result:</strong> {debugInfo.checkResult || 'Not checked yet'}
+					<div style={{ 
+						marginBottom: '15px',
+						padding: '10px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>CHECK RESULT:</strong> 
+						<span style={{ 
+							color: debugInfo.checkResult?.includes('✅') ? '#00ff00' : 
+								   debugInfo.checkResult?.includes('❌') ? '#ff0000' : '#ff6600'
+						}}>
+							{debugInfo.checkResult || 'Not checked yet'}
+						</span>
 					</div>
 					
 					{debugInfo.errorDetails && (
-						<div style={{ marginBottom: '10px' }}>
-							<strong>Error Details:</strong> 
+						<div style={{ 
+							marginBottom: '15px',
+							padding: '10px',
+							backgroundColor: '#000',
+							borderRadius: '6px',
+							border: '1px solid #ff0000'
+						}}>
+							<strong style={{ color: '#ff0000' }}>ERROR DETAILS:</strong> 
 							<div style={{ 
-								backgroundColor: '#fff', 
-								padding: '8px', 
+								backgroundColor: '#000', 
+								padding: '10px', 
 								borderRadius: '4px', 
-								marginTop: '5px',
+								marginTop: '8px',
 								wordBreak: 'break-all',
-								fontSize: '12px'
+								fontSize: '14px',
+								color: '#ff6666',
+								border: '1px solid #ff0000',
+								maxHeight: '200px',
+								overflow: 'auto'
 							}}>
 								{debugInfo.errorDetails}
 							</div>
 						</div>
 					)}
 					
-					<div style={{ marginBottom: '10px' }}>
-						<strong>Last Check:</strong> {debugInfo.lastCheck || 'Never'}
+					<div style={{ 
+						marginBottom: '15px',
+						padding: '10px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>LAST CHECK:</strong> 
+						<span style={{ color: '#ff6600', fontSize: '14px' }}>
+							{debugInfo.lastCheck ? new Date(debugInfo.lastCheck).toLocaleString() : 'Never'}
+						</span>
 					</div>
 					
-					<div style={{ marginBottom: '10px' }}>
-						<strong>User Agent:</strong> 
+					<div style={{ 
+						marginBottom: '15px',
+						padding: '10px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>USER AGENT:</strong> 
 						<div style={{ 
-							backgroundColor: '#fff', 
-							padding: '8px', 
+							backgroundColor: '#000', 
+							padding: '10px', 
 							borderRadius: '4px', 
-							marginTop: '5px',
+							marginTop: '8px',
 							fontSize: '12px',
-							wordBreak: 'break-all'
+							color: '#ff6600',
+							border: '1px solid #ff6600',
+							wordBreak: 'break-all',
+							maxHeight: '100px',
+							overflow: 'auto'
 						}}>
 							{debugInfo.userAgent}
 						</div>
