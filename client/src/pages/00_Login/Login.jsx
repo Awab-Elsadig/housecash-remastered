@@ -20,6 +20,17 @@ const Login = () => {
 
 	const { updateUser, updateHouseMembers } = useUser();
 	const [showPassword, setShowPassword] = useState(false);
+	
+	// Debug states for iPhone troubleshooting
+	const [debugInfo, setDebugInfo] = useState({
+		showDebug: false,
+		authStatus: "Not checked",
+		lastAttempt: null,
+		errorDetails: null,
+		userAgent: navigator.userAgent,
+		cookies: document.cookie,
+		attemptCount: 0
+	});
 
 	// Handle Input Change
 	const handleInputChange = (e) => {
@@ -52,6 +63,16 @@ const Login = () => {
 		console.log("API Base URL:", axios.defaults.baseURL);
 		console.log("Environment VITE_API_URL:", import.meta.env.VITE_API_URL);
 		
+		// Update debug info
+		setDebugInfo(prev => ({
+			...prev,
+			showDebug: true,
+			authStatus: "Attempting login...",
+			lastAttempt: new Date().toISOString(),
+			attemptCount: prev.attemptCount + 1,
+			cookies: document.cookie
+		}));
+		
 		if (validateForm()) {
 			setLoading(true);
 			
@@ -62,6 +83,13 @@ const Login = () => {
 					console.log("Sending login request to:", `${axios.defaults.baseURL}/api/auth/login`);
 					console.log("Request payload:", values);
 					console.log("Request headers:", { withCredentials: true });
+					
+					// Update debug status
+					setDebugInfo(prev => ({
+						...prev,
+						authStatus: `Login attempt ${retryCount + 1} in progress...`,
+						errorDetails: null
+					}));
 					
 					const response = await axios.post("/api/auth/login", values, { 
 						withCredentials: true,
@@ -91,6 +119,13 @@ const Login = () => {
 							membersValue: response.data.houseMembers?.members
 						});
 						
+						// Update debug status
+						setDebugInfo(prev => ({
+							...prev,
+							authStatus: "Login successful! Updating user data...",
+							errorDetails: null
+						}));
+						
 						// Update user data first
 						if (response.data.user) {
 							updateUser(response.data.user);
@@ -111,6 +146,13 @@ const Login = () => {
 							updateHouseMembers([]);
 						}
 
+						// Update debug status before navigation
+						setDebugInfo(prev => ({
+							...prev,
+							authStatus: "Login successful! Ready to navigate to dashboard...",
+							errorDetails: null
+						}));
+
 						console.log("Navigating to dashboard...");
 						// Then navigate to dashboard
 						navigate("/dashboard");
@@ -118,6 +160,14 @@ const Login = () => {
 					} else {
 						console.log("Unexpected response status:", response.status);
 						setErrors((prev) => ({ ...prev, connectionError: true }));
+						
+						// Update debug status
+						setDebugInfo(prev => ({
+							...prev,
+							authStatus: `Login failed - Unexpected status: ${response.status}`,
+							errorDetails: `Status: ${response.status}, StatusText: ${response.statusText}`
+						}));
+						
 						return false;
 					}
 				} catch (error) {
@@ -138,9 +188,20 @@ const Login = () => {
 										  error.code === 'ECONNABORTED' ||
 										  !error.response;
 					
+					// Update debug status
+					setDebugInfo(prev => ({
+						...prev,
+						authStatus: `Login attempt ${retryCount + 1} failed`,
+						errorDetails: `Error: ${error.message}, Code: ${error.code}, Status: ${error.response?.status}, Response: ${JSON.stringify(error.response?.data)}`
+					}));
+					
 					// Retry logic for iOS Safari network issues
 					if (isNetworkError && retryCount < 2) {
 						console.log(`Network error detected, retrying in ${(retryCount + 1) * 1000}ms...`);
+						setDebugInfo(prev => ({
+							...prev,
+							authStatus: `Network error detected, retrying in ${(retryCount + 1) * 1000}ms...`
+						}));
 						await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1000));
 						return attemptLogin(retryCount + 1);
 					}
@@ -160,6 +221,51 @@ const Login = () => {
 			}
 		} else {
 			console.log("Form validation failed:", errors);
+			setDebugInfo(prev => ({
+				...prev,
+				authStatus: "Form validation failed",
+				errorDetails: JSON.stringify(errors)
+			}));
+		}
+	};
+
+	// Function to check current authentication status
+	const checkAuthStatus = async () => {
+		try {
+			setDebugInfo(prev => ({
+				...prev,
+				authStatus: "Checking authentication status...",
+				errorDetails: null
+			}));
+			
+			const response = await axios.get("/api/users/me", { 
+				withCredentials: true,
+				timeout: 10000,
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json'
+				}
+			});
+			
+			if (response.status === 200 && response.data) {
+				setDebugInfo(prev => ({
+					...prev,
+					authStatus: "✅ AUTHENTICATED - User is logged in",
+					errorDetails: `User ID: ${response.data._id}, Email: ${response.data.email}`
+				}));
+			} else {
+				setDebugInfo(prev => ({
+					...prev,
+					authStatus: "❌ NOT AUTHENTICATED - No valid session",
+					errorDetails: `Status: ${response.status}`
+				}));
+			}
+		} catch (error) {
+			setDebugInfo(prev => ({
+				...prev,
+				authStatus: "❌ AUTHENTICATION CHECK FAILED",
+				errorDetails: `Error: ${error.message}, Code: ${error.code}, Status: ${error.response?.status}`
+			}));
 		}
 	};
 
@@ -249,6 +355,106 @@ const Login = () => {
 						<button onClick={handleSubmit} disabled={loading}>
 							{loading ? "Logging in..." : "Login"}
 						</button>
+					</div>
+					
+					{/* Debug Panel - Temporary for iPhone troubleshooting */}
+					<div style={{
+						marginTop: '20px',
+						padding: '15px',
+						backgroundColor: '#f5f5f5',
+						border: '2px solid #ddd',
+						borderRadius: '8px',
+						fontSize: '14px',
+						fontFamily: 'monospace'
+					}}>
+						<h4 style={{ margin: '0 0 10px 0', color: '#333' }}>🔍 Debug Panel (iPhone Troubleshooting)</h4>
+						
+						<div style={{ marginBottom: '10px' }}>
+							<strong>Status:</strong> {debugInfo.authStatus}
+						</div>
+						
+						{debugInfo.errorDetails && (
+							<div style={{ marginBottom: '10px' }}>
+								<strong>Error Details:</strong> 
+								<div style={{ 
+									backgroundColor: '#fff', 
+									padding: '8px', 
+									borderRadius: '4px', 
+									marginTop: '5px',
+									wordBreak: 'break-all',
+									fontSize: '12px'
+								}}>
+									{debugInfo.errorDetails}
+								</div>
+							</div>
+						)}
+						
+						<div style={{ marginBottom: '10px' }}>
+							<strong>Attempt Count:</strong> {debugInfo.attemptCount}
+						</div>
+						
+						<div style={{ marginBottom: '10px' }}>
+							<strong>Last Attempt:</strong> {debugInfo.lastAttempt || 'None'}
+						</div>
+						
+						<div style={{ marginBottom: '10px' }}>
+							<strong>User Agent:</strong> 
+							<div style={{ 
+								backgroundColor: '#fff', 
+								padding: '8px', 
+								borderRadius: '4px', 
+								marginTop: '5px',
+								fontSize: '12px',
+								wordBreak: 'break-all'
+							}}>
+								{debugInfo.userAgent}
+							</div>
+						</div>
+						
+						<div style={{ marginBottom: '10px' }}>
+							<strong>Cookies:</strong> 
+							<div style={{ 
+								backgroundColor: '#fff', 
+								padding: '8px', 
+								borderRadius: '4px', 
+								marginTop: '5px',
+								fontSize: '12px',
+								wordBreak: 'break-all'
+							}}>
+								{debugInfo.cookies || 'No cookies found'}
+							</div>
+						</div>
+						
+						<div style={{ marginTop: '15px' }}>
+							<button 
+								onClick={checkAuthStatus}
+								style={{
+									padding: '8px 16px',
+									backgroundColor: '#007bff',
+									color: 'white',
+									border: 'none',
+									borderRadius: '4px',
+									cursor: 'pointer',
+									marginRight: '10px'
+								}}
+							>
+								Check Auth Status
+							</button>
+							
+							<button 
+								onClick={() => setDebugInfo(prev => ({ ...prev, showDebug: false }))}
+								style={{
+									padding: '8px 16px',
+									backgroundColor: '#6c757d',
+									color: 'white',
+									border: 'none',
+									borderRadius: '4px',
+									cursor: 'pointer'
+								}}
+							>
+								Hide Debug
+							</button>
+						</div>
 					</div>
 				</form>
 			</div>
