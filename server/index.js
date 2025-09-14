@@ -22,42 +22,48 @@ import paymentApprovalRoutes from "./src/routes/paymentApproval.route.js";
 dotenv.config();
 
 const app = express();
+const isProduction = process.env.NODE_ENV === "production";
 
 // Middleware
 app.use(express.json());
 
-// CORS: allow multiple known origins incl. local dev
-const envOrigins = (process.env.ORIGIN || "").split(",").map((s) => s.trim()).filter(Boolean);
+// CORS configuration for both development and production
 const allowedOrigins = [
-	...envOrigins,
-	"https://housecash.vercel.app", // Production frontend
-	"http://localhost:3000",
-	"http://localhost:5173",
-	"http://127.0.0.1:3000",
-	"http://127.0.0.1:5173",
-].filter(Boolean);
+	'http://localhost:3000',
+	'http://localhost:5173',
+	'https://housecash.vercel.app',
+	'https://housecash-server.vercel.app'
+];
 
-console.log("CORS allowed origins:", allowedOrigins);
-
-app.use(
-	cors({
-		origin: (origin, callback) => {
-			console.log(`CORS request from origin: ${origin}`);
-			// Allow non-browser requests (no origin) and whitelisted origins
-			if (!origin || allowedOrigins.includes(origin)) {
-				console.log(`CORS: Allowing origin ${origin}`);
-				return callback(null, true);
-			}
-			console.log(`CORS: Blocking origin ${origin}`);
-			return callback(new Error(`Not allowed by CORS: ${origin}`));
-		},
-		credentials: true,
-		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-		allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-	})
-);
+app.use(cors({
+	origin: function (origin, callback) {
+		// Allow requests with no origin (like mobile apps or curl requests)
+		if (!origin) return callback(null, true);
+		
+		if (allowedOrigins.indexOf(origin) !== -1) {
+			callback(null, true);
+		} else {
+			console.log('CORS blocked origin:', origin);
+			callback(new Error('Not allowed by CORS'));
+		}
+	},
+	credentials: true,
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+	allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+	exposedHeaders: ['Set-Cookie']
+}));
 
 app.use(cookieParser());
+
+// Add explicit OPTIONS handler for preflight requests
+app.options('*', (req, res) => {
+	console.log('OPTIONS preflight request from:', req.headers.origin);
+	res.header('Access-Control-Allow-Origin', req.headers.origin);
+	res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+	res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+	res.header('Access-Control-Allow-Credentials', 'true');
+	res.sendStatus(200);
+});
 
 // Connect to database
 connectDB().catch((error) => {
@@ -80,70 +86,23 @@ app.use(
 			client: mongoose.connection.getClient(),
 		}),
 		cookie: {
-			secure: false,
-			sameSite: "lax",
+			secure: isProduction, // Only secure in production
+			sameSite: isProduction ? "none" : "lax", // Different sameSite for local vs production
 			maxAge: 1000 * 60 * 60 * 24, // 1 day
 		},
 	})
 );
 
-// Add session debug middleware
-app.use((req, res, next) => {
-	if (req.path.includes("resolve-balance")) {
-		console.log(`Request to resolve-balance: ${req.method} ${req.path}`);
-		console.log("Request body:", req.body);
-		console.log("Request headers:", req.headers);
-	}
+
+app.use("/api/auth", (req, res, next) => {
+	console.log("=== AUTH ROUTE DEBUG ===");
+	console.log("Auth route hit:", req.method, req.url);
+	console.log("Origin:", req.headers.origin);
+	console.log("User-Agent:", req.headers['user-agent']);
+	console.log("Request body:", req.body);
+	console.log("=== END AUTH ROUTE DEBUG ===");
 	next();
-});
-
-// Routes
-app.use("/", (req, res) => {
-	res.json({ message: "HouseCash Server is running!", timestamp: new Date().toISOString() });
-});
-
-app.use("/test", (req, res) => {
-	res.send("Hello World!");
-});
-
-// CORS test endpoint
-app.use("/cors-test", (req, res) => {
-	res.json({
-		message: "CORS test successful",
-		origin: req.headers.origin,
-		allowedOrigins: allowedOrigins
-	});
-});
-
-// Database health check
-app.use("/health", async (req, res) => {
-	try {
-		const dbState = mongoose.connection.readyState;
-		const dbStates = {
-			0: "disconnected",
-			1: "connected", 
-			2: "connecting",
-			3: "disconnecting"
-		};
-		
-		res.json({
-			status: "ok",
-			database: {
-				state: dbStates[dbState] || "unknown",
-				readyState: dbState
-			},
-			timestamp: new Date().toISOString()
-		});
-	} catch (error) {
-		res.status(500).json({
-			status: "error",
-			error: error.message,
-			timestamp: new Date().toISOString()
-		});
-	}
-});
-
-app.use("/api/auth", authRoutes);
+}, authRoutes);
 app.use("/api/validate", validationRoutes);
 app.use("/api/houses", houseRoutes);
 app.use("/api/users", userRoutes);
@@ -156,7 +115,20 @@ app.use("/api/settlements", settlementRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/payment-approvals", paymentApprovalRoutes);
 
-app.listen(process.env.PORT, () => {
-	console.log(`Server is running on port ${process.env.PORT}`);
-	console.log("CORS allowed origins:", allowedOrigins);
+// Simple health check - moved to end so it doesn't interfere with API routes
+app.use("/", (req, res) => {
+	res.json({ message: "HouseCash Server is running!", timestamp: new Date().toISOString() });
+});
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+	console.log("=== SERVER STARTUP DEBUG ===");
+	console.log(`Server is running on port ${PORT}`);
+	console.log("Environment:", process.env.NODE_ENV || "development");
+	console.log("CORS: Allow all origins (development mode)");
+	console.log("Database connection state:", mongoose.connection.readyState);
+	console.log("Session secret configured:", !!process.env.SESSION_SECRET);
+	console.log("MongoDB URI configured:", !!process.env.MONGODB_URI);
+	console.log("=== END SERVER STARTUP DEBUG ===");
 });

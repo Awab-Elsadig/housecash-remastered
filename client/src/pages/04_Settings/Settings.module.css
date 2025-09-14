@@ -36,8 +36,7 @@
 .backBtn:hover,
 .logout:hover {
 	background: rgba(255, 255, 255, 0.2);
-	border-color: rgba(255, 255, 255, 0.3);
-	transform: translateY(-1px);
+	border-color: var(--mainColor);
 }
 
 .backBtn svg,
@@ -155,7 +154,6 @@
 	background: var(--mainColor);
 	border-color: var(--mainColor);
 	color: white;
-	transform: scale(1.05);
 }
 
 .editBtn svg,
@@ -212,7 +210,7 @@
 }
 
 .changePasswordBtn:hover {
-	transform: translateY(-2px);
+	border-color: var(--mainColorDark);
 	box-shadow: 0 8px 25px rgba(var(--mainColor-rgb), 0.4);
 }
 
@@ -309,7 +307,7 @@
 }
 
 .saveBtn:hover {
-	transform: translateY(-1px);
+	border-color: var(--mainColorDark);
 	box-shadow: 0 4px 15px rgba(var(--mainColor-rgb), 0.3);
 }
 
@@ -321,7 +319,7 @@
 
 .cancelBtn:hover {
 	background: rgba(255, 255, 255, 0.15);
-	border-color: rgba(255, 255, 255, 0.3);
+	border-color: var(--mainColor);
 }
 
 .error {

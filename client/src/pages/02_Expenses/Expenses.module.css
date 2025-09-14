@@ -27,9 +27,10 @@
 	flex-direction: column;
 	align-items: center;
 	gap: 0.5rem;
+	transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-/* Hover removed */
+.statCard:hover { border-color: var(--mainColor); }
 
 .statIcon {
 	font-size: 1.1rem;
@@ -292,10 +293,10 @@
 	background: rgba(255, 255, 255, 0.03);
 	border: 1px solid rgba(255, 255, 255, 0.06);
 	position: relative;
-	transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.expenseRow:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.05); }
+.expenseRow:hover { background: rgba(255, 255, 255, 0.05); border-color: var(--mainColor); }
 
 /* ===== EXPENSE ITEM COLUMNS ===== */
 .expenseDate,
@@ -842,12 +843,12 @@
 	margin-bottom: 0.75rem;
 	backdrop-filter: var(--glassBlur);
 	cursor: pointer;
-	transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+	transition: border-color 0.2s ease, background-color 0.2s ease;
 	position: relative;
 	overflow: hidden;
 }
 
-.mobileCard:hover { transform: translateY(-2px); border-color: var(--mainColor); }
+.mobileCard:hover { border-color: var(--mainColor); }
 
 .mobileCard::before {
 	content: "";

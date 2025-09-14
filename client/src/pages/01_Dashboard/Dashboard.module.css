@@ -53,9 +53,9 @@
 	grid-row-gap: 0.35rem;
 	align-items: center;
 	text-align: left;
-	transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+	transition: border-color 0.2s ease, background-color 0.2s ease;
 }
-.statCard:hover { transform: translateY(-2px); border-color: var(--mainColor); }
+.statCard:hover { border-color: var(--mainColor); }
 
 /* Hover removed */
 
@@ -72,10 +72,17 @@
 	border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.statCard[data-type="net"][data-positive="true"] .statIcon { color: var(--goodColor); }
-.statCard[data-type="net"][data-positive="false"] .statIcon { color: var(--badColor); }
-.statCard[data-type="owing"] .statIcon { color: var(--badColor); }
-.statCard[data-type="owed"] .statIcon { color: var(--goodColor); }
+.statCard[data-type="net"][data-positive="true"] .statIcon { color: var(--goodColor) !important; }
+.statCard[data-type="net"][data-positive="false"] .statIcon { color: var(--badColor) !important; }
+.statCard[data-type="owing"] .statIcon { color: var(--badColor) !important; }
+.statCard[data-type="owed"] .statIcon { color: var(--goodColor) !important; }
+
+.statCard[data-type="net"][data-positive="true"] .statValue {
+	color: var(--goodColor) !important;
+}
+.statCard[data-type="net"][data-positive="false"] .statValue {
+	color: var(--badColor) !important;
+}
 
 .statContent {
 	display: flex;
@@ -99,12 +106,7 @@
 	margin-top: 0.1rem;
 }
 
-.statCard[data-type="net"][data-positive="true"] .statValue {
-	color: var(--goodColor);
-}
-.statCard[data-type="net"][data-positive="false"] .statValue {
-	color: var(--badColor);
-}
+
 
 .statSub {
 	font-size: 0.75rem;
@@ -181,9 +183,9 @@
 	background: rgba(255, 255, 255, 0.03);
 	position: relative;
 	cursor: pointer;
-	transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
 }
-.netRow:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.05); }
+.netRow:hover { background: rgba(255, 255, 255, 0.05); }
 
 /* Hover removed */
 
@@ -196,6 +198,12 @@
 	background: var(--mainColor);
 	border-radius: 4px;
 }
+.netRow[data-positive="true"] .netAccent {
+	background: var(--goodColor) !important;
+}
+.netRow[data-positive="false"] .netAccent {
+	background: var(--badColor) !important;
+}
 
 .netAvatar {
 	width: 34px;
@@ -206,13 +214,6 @@
 	place-items: center;
 	font-weight: 700;
 	font-size: 0.9rem;
-}
-
-.netRow[data-positive="true"] .netAccent {
-	background: var(--goodColor);
-}
-.netRow[data-positive="false"] .netAccent {
-	background: var(--badColor);
 }
 
 .netMemberInfo {
@@ -251,10 +252,10 @@
 	font-weight: 550;
 }
 .netTotal[data-positive="true"] {
-	color: var(--goodColor);
+	color: var(--goodColor) !important;
 }
 .netTotal[data-positive="false"] {
-	color: var(--badColor);
+	color: var(--badColor) !important;
 }
 
 .netActions {
@@ -275,9 +276,9 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
-	transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+	transition: border-color 0.2s ease, background-color 0.2s ease;
 }
-.card:hover { transform: translateY(-2px); border-color: var(--mainColor); }
+.card:hover { border-color: var(--mainColor); }
 
 .cardHeader {
 	display: flex;
@@ -328,9 +329,6 @@
 	font-weight: 600;
 	color: var(--badColor);
 }
-.itemShare[data-direction="theyOwe"] {
-	color: var(--goodColor);
-}
 
 
 .itemOfTotal {
@@ -372,8 +370,7 @@
 	font-weight: 600;
 	transition: all var(--transition-base);
 }
-.btnPrimary, .btnGhost, .btnIcon { transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease; }
-.btnPrimary:hover, .btnGhost:hover, .btnIcon:hover { transform: translateY(-1px); }
+.btnPrimary, .btnGhost, .btnIcon { transition: background-color 0.12s ease, border-color 0.12s ease; }
 
 .btnPrimary {
 	background: var(--mainColor);
@@ -529,22 +526,9 @@
 	gap: 0.75rem;
 }
 
-.modalItem .itemShare[data-direction="theyOwe"] {
-	color: var(--goodColor);
-}
-.modalItem .itemShare[data-direction="youOwe"] {
-	color: var(--badColor);
-}
-
 .itemDirection {
 	font-size: 0.8rem;
 	font-weight: 600;
-}
-.modalItem[data-direction="theyOwe"] .itemDirection {
-	color: var(--goodColor);
-}
-.modalItem[data-direction="youOwe"] .itemDirection {
-	color: var(--badColor);
 }
 
 @keyframes fadeIn {

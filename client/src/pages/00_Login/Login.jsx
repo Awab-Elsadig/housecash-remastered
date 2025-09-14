@@ -46,28 +46,88 @@ const Login = () => {
 	// Handle Submit
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		console.log("=== LOGIN DEBUG START ===");
+		console.log("Form validation result:", validateForm());
+		console.log("Form values:", values);
+		console.log("API Base URL:", axios.defaults.baseURL);
+		console.log("Environment VITE_API_URL:", import.meta.env.VITE_API_URL);
+		
 		if (validateForm()) {
 			setLoading(true);
 			try {
+				console.log("Sending login request to:", `${axios.defaults.baseURL}/api/auth/login`);
+				console.log("Request payload:", values);
+				console.log("Request headers:", { withCredentials: true });
+				
 				const response = await axios.post("/api/auth/login", values, { withCredentials: true });
 
-				if (response.status === 200) {
-					// Update user data first
-					updateUser(response.data.user);
-					updateHouseMembers(response.data.houseMembers.members);
+				console.log("Response received:", {
+					status: response.status,
+					statusText: response.statusText,
+					data: response.data,
+					headers: response.headers
+				});
 
+				if (response.status === 200) {
+					console.log("Login successful, updating user data...");
+					console.log("Response data structure:", {
+						hasUser: !!response.data.user,
+						hasHouseMembers: !!response.data.houseMembers,
+						houseMembersType: typeof response.data.houseMembers,
+						houseMembersValue: response.data.houseMembers,
+						hasMembers: !!response.data.houseMembers?.members,
+						membersType: typeof response.data.houseMembers?.members,
+						membersValue: response.data.houseMembers?.members
+					});
+					
+					// Update user data first
+					if (response.data.user) {
+						updateUser(response.data.user);
+						console.log("User data updated successfully");
+					} else {
+						console.error("No user data in response");
+					}
+					
+					// Update house members with proper null checking
+					if (response.data.houseMembers) {
+						// The server returns the house object with members array
+						const members = response.data.houseMembers.members || [];
+						updateHouseMembers(members);
+						console.log("House members updated successfully:", members.length, "members");
+					} else {
+						console.error("No house members data in response:", response.data.houseMembers);
+						// Set empty array as fallback
+						updateHouseMembers([]);
+					}
+
+					console.log("Navigating to dashboard...");
 					// Then navigate to dashboard
 					navigate("/dashboard");
 				} else {
+					console.log("Unexpected response status:", response.status);
 					setErrors((prev) => ({ ...prev, connectionError: true }));
 				}
 			} catch (error) {
+				console.log("=== LOGIN ERROR DETAILS ===");
+				console.log("Error object:", error);
+				console.log("Error message:", error.message);
+				console.log("Error response:", error.response);
+				console.log("Error response data:", error.response?.data);
+				console.log("Error response status:", error.response?.status);
+				console.log("Error response statusText:", error.response?.statusText);
+				console.log("Error response headers:", error.response?.headers);
+				console.log("Network error:", error.code);
+				console.log("Request config:", error.config);
+				
 				setErrors((prev) => ({ ...prev, connectionError: true }));
-				setTheError(error.response?.data?.error || "Login failed");
+				setTheError(error.response?.data?.error || error.message || "Login failed");
 				console.error("Login Error: ", error.response?.data);
 			} finally {
 				setLoading(false);
+				console.log("=== LOGIN DEBUG END ===");
 			}
+		} else {
+			console.log("Form validation failed:", errors);
 		}
 	};
 
