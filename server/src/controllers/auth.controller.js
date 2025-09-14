@@ -213,13 +213,6 @@ export const logout = async (req, res) => {
 				secure: isProduction,
 				sameSite: isProduction ? "none" : "lax",
 			});
-			// Clear backup cookie if it exists
-			res.clearCookie("token_backup", {
-				path: "/",
-				httpOnly: true,
-				secure: isProduction,
-				sameSite: isProduction ? "lax" : "lax",
-			});
 			res.clearCookie("connect.sid", {
 				path: "/",
 				httpOnly: true,
