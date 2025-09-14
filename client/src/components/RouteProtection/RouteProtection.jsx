@@ -22,6 +22,9 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 			try {
 				console.log("RouteProtection: Checking authentication for", location.pathname);
 				
+				// Add delay to allow cookies to be set after login
+				await new Promise(resolve => setTimeout(resolve, 1000));
+				
 				// Update debug info
 				setDebugInfo(prev => ({
 					...prev,
@@ -61,11 +64,11 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 						errorDetails: `User ID: ${response.data._id}, Email: ${response.data.email}`
 					}));
 					
-					// If user is on login page but already authenticated, redirect to dashboard
+					// DISABLED REDIRECT - Just log for debugging
 					if (location.pathname === "/" || location.pathname === "/login") {
-						console.log("RouteProtection: Redirecting authenticated user from login to dashboard");
-						navigate("/dashboard", { replace: true });
-						return;
+						console.log("RouteProtection: User is authenticated on login page - would redirect to dashboard (disabled for debugging)");
+						// navigate("/dashboard", { replace: true });
+						// return;
 					}
 				} else {
 					console.log("RouteProtection: User is not authenticated");
@@ -94,11 +97,11 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 					errorDetails: `Error: ${error.message}, Code: ${error.code}, Status: ${error.response?.status}`
 				}));
 				
-				// If route requires auth but user is not authenticated, redirect to login
+				// DISABLED REDIRECT - Just log for debugging
 				if (requireAuth && (error.response?.status === 401 || error.response?.status === 403)) {
-					console.log("RouteProtection: Redirecting unauthenticated user to login");
-					navigate("/", { replace: true });
-					return;
+					console.log("RouteProtection: User is unauthenticated - would redirect to login (disabled for debugging)");
+					// navigate("/", { replace: true });
+					// return;
 				}
 			} finally {
 				setIsChecking(false);
@@ -218,6 +221,19 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 						</span>
 					</div>
 					
+					<div style={{ 
+						marginBottom: '15px',
+						padding: '10px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>AUTHENTICATED:</strong> 
+						<span style={{ color: isAuthenticated ? '#00ff00' : '#ff0000' }}>
+							{isAuthenticated ? 'YES' : 'NO'}
+						</span>
+					</div>
+					
 					{debugInfo.errorDetails && (
 						<div style={{ 
 							marginBottom: '15px',
@@ -285,17 +301,21 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 		);
 	}
 
-	// If route requires auth but user is not authenticated, don't render children
+	// DISABLED REDIRECTS FOR DEBUGGING - Always render children
+	// This prevents any redirects so we can see debug information
+	
+	// Show debug info if authentication failed but still render children
 	if (requireAuth && !isAuthenticated) {
-		return null; // Will redirect to login
+		console.log("RouteProtection: Authentication failed but rendering children for debugging");
+		// Update debug info to show auth failure
+		setDebugInfo(prev => ({
+			...prev,
+			checkResult: "❌ AUTH FAILED - But staying on page for debugging",
+			errorDetails: "Authentication check failed but redirect disabled for debugging"
+		}));
 	}
 
-	// If route doesn't require auth (like login page) and user is authenticated, don't render children
-	if (!requireAuth && isAuthenticated) {
-		return null; // Will redirect to dashboard
-	}
-
-	// Render children if authentication check passes
+	// Always render children - no redirects
 	return children;
 };
 
