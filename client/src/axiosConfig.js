@@ -9,7 +9,16 @@ console.log("All env vars:", import.meta.env);
 console.log("=== END ENVIRONMENT DEBUG ===");
 
 // Set the base URL for all axios requests
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const getApiUrl = () => {
+	// In production, use the environment variable or default to Vercel backend
+	if (import.meta.env.PROD) {
+		return import.meta.env.VITE_API_URL || "https://housecash-server.vercel.app";
+	}
+	// In development, use localhost
+	return import.meta.env.VITE_API_URL || "http://localhost:4000";
+};
+
+axios.defaults.baseURL = getApiUrl();
 console.log("Axios baseURL set to:", axios.defaults.baseURL);
 
 // Include cookies in all requests
