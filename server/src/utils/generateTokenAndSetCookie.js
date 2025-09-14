@@ -27,6 +27,7 @@ function generateTokenAndSetCookie(res, userID) {
 		cookieOptions.sameSite = "lax";
 	}
 
+	console.log("Setting cookie with options:", cookieOptions);
 	res.cookie("token", token, cookieOptions);
 
 	// Also set a backup cookie with different settings for iOS compatibility
@@ -40,6 +41,26 @@ function generateTokenAndSetCookie(res, userID) {
 			sameSite: "lax", // Try lax as backup
 		});
 	}
+
+	// Set additional cookies for iOS Safari compatibility
+	res.cookie("auth_token", token, {
+		httpOnly: false, // Allow JavaScript access for debugging
+		expires: new Date(Date.now() + oneWeekInMs),
+		maxAge: oneWeekInMs,
+		path: "/",
+		secure: isProduction,
+		sameSite: isProduction ? "none" : "lax",
+	});
+
+	// Set a non-httpOnly cookie for debugging
+	res.cookie("debug_auth", "true", {
+		httpOnly: false,
+		expires: new Date(Date.now() + oneWeekInMs),
+		maxAge: oneWeekInMs,
+		path: "/",
+		secure: isProduction,
+		sameSite: isProduction ? "none" : "lax",
+	});
 
 	return token;
 }

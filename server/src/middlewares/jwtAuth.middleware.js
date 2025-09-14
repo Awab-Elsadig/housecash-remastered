@@ -6,7 +6,11 @@ export const jwtAuthMiddleware = async (req, res, next) => {
 	const token =
 		(req.cookies && req.cookies.token) || 
 		(req.cookies && req.cookies.token_backup) || 
+		(req.cookies && req.cookies.auth_token) ||
 		(req.headers.authorization && req.headers.authorization.split(" ")[1]);
+
+	console.log("JWT Middleware - Available cookies:", req.cookies);
+	console.log("JWT Middleware - Token found:", !!token);
 
 	if (!token) {
 		return res.status(401).json({ error: "Access denied, no token provided" });

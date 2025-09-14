@@ -433,6 +433,23 @@ const Dashboard = () => {
 						</button>
 						
 						<button 
+							onClick={checkAuthStatus}
+							style={{
+								padding: '8px 12px',
+								backgroundColor: '#28a745',
+								color: 'white',
+								border: '2px solid #28a745',
+								borderRadius: '4px',
+								cursor: 'pointer',
+								fontSize: '12px',
+								fontWeight: 'bold',
+								width: '100%'
+							}}
+						>
+							🔍 Check Auth Status
+						</button>
+						
+						<button 
 							onClick={() => {
 								console.log('Bypass loading and show dashboard');
 								setLoadingTimeout(false);
