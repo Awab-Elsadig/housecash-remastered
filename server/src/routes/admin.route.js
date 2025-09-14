@@ -32,8 +32,8 @@ router.get("/impersonation-status", (req, res) => {
 router.post("/stop-impersonation", stopImpersonation);
 
 // PDF report of all past expenses
-router.get("/reports/expenses.pdf", generateExpensesReport);
-router.get("/reports/expenses.csv", generateExpensesCSV);
+router.get("/reports/expenses-pdf", generateExpensesReport);
+router.get("/reports/expenses-csv", generateExpensesCSV);
 
 // Migration endpoint
 router.post("/migrate/items/remove-got", migrateItemsRemoveGot);

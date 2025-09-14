@@ -4,6 +4,6 @@ import { checkEmail, checkHouseCode } from "../controllers/validation.controller
 const router = express.Router();
 
 router.post("/check-email", checkEmail);
-router.post("/check-hosue-code", checkHouseCode);
+router.post("/check-house-code", checkHouseCode);
 
 export default router;

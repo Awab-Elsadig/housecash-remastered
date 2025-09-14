@@ -24,21 +24,6 @@ export const createHouse = async (req, res) => {
 	}
 };
 
-export const checkHouseCode = async (req, res) => {
-	const { houseCode } = req.body;
-
-	try {
-		const houseExists = await House.findOne({ houseCode });
-
-		if (houseExists) {
-			res.status(200).json({ exists: true });
-		} else {
-			res.status(200).json({ exists: false });
-		}
-	} catch (error) {
-		res.status(500).json({ error: error });
-	}
-};
 
 export const addItemToHouse = async (req, res) => {
 	const { houseCode } = req.params;
