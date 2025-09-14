@@ -188,22 +188,24 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
 	try {
+		const isProduction = process.env.NODE_ENV === "production";
+		
 		req.session.destroy((err) => {
 			if (err) {
 				return res.status(500).json({ error: "Logout failed" });
 			}
-			// Clear the session cookie.
+			// Clear the session cookie with environment-appropriate settings
 			res.clearCookie("token", {
 				path: "/",
 				httpOnly: true,
-				secure: true,
-				sameSite: "none",
+				secure: isProduction,
+				sameSite: isProduction ? "none" : "lax",
 			});
 			res.clearCookie("connect.sid", {
 				path: "/",
 				httpOnly: true,
-				secure: true,
-				sameSite: "none",
+				secure: isProduction,
+				sameSite: isProduction ? "none" : "lax",
 			});
 			res.status(200).json({
 				success: true,

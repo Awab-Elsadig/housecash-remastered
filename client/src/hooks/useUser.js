@@ -81,6 +81,7 @@ export const useUser = () => {
 		}
 
 		// Always fetch fresh data from server to handle impersonation properly
+		// RouteProtection will handle redirects, so we don't need to handle 401 here
 		fetchCurrentUser();
 	}, [fetchCurrentUser]);
 

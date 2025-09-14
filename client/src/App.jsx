@@ -10,6 +10,7 @@ import { ImpersonationProvider } from "./contexts/ImpersonationContext";
 import { SettlementProvider } from "./contexts/SettlementContext";
 import { PaymentApprovalProvider } from "./contexts/PaymentApprovalContext";
 import { useUser } from "./hooks/useUser";
+import RouteProtection from "./components/RouteProtection";
 
 function SettlementWrapper({ children }) {
 	const { user } = useUser();
@@ -32,8 +33,17 @@ function App() {
 			<ImpersonationProvider>
 				<SettlementWrapper>
 					<Routes>
-						{/* Login route - standalone without layout */}
-						<Route path="/" element={<Login />} />
+						{/* Login routes - standalone without layout, doesn't require auth */}
+						<Route path="/" element={
+							<RouteProtection requireAuth={false}>
+								<Login />
+							</RouteProtection>
+						} />
+						<Route path="/login" element={
+							<RouteProtection requireAuth={false}>
+								<Login />
+							</RouteProtection>
+						} />
 
 						{/* All other routes with main app layout */}
 						<Route

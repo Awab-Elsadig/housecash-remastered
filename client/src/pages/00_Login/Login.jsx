@@ -134,13 +134,43 @@ const Login = () => {
 	useEffect(() => {
 		document.title = "Login - HouseCash";
 
-		// Clear all session data including impersonation
+		// Enable pull-to-refresh on mobile by allowing body overflow
+		document.body.style.overflowY = "auto";
+		document.body.style.touchAction = "pan-y";
+
+		// Check if user is already logged in
+		const checkExistingAuth = async () => {
+			try {
+				console.log("Checking if user is already authenticated...");
+				const response = await axios.get("/api/users/me", { withCredentials: true });
+				
+				if (response.status === 200 && response.data) {
+					console.log("User is already logged in, redirecting to dashboard");
+					// User is already logged in, redirect to dashboard
+					navigate("/dashboard");
+					return;
+				}
+			} catch (error) {
+				console.log("User is not authenticated or session expired:", error.response?.status);
+				// User is not logged in, continue with login page
+			}
+		};
+
+		checkExistingAuth();
+
+		// Clear all session data including impersonation (but only if not authenticated)
 		sessionStorage.removeItem("originalAdmin");
 		sessionStorage.removeItem("user");
 		sessionStorage.removeItem("items");
 		sessionStorage.removeItem("houseMembers");
 		sessionStorage.removeItem("impersonationData");
-	}, []);
+
+		// Cleanup function to restore original body styles when component unmounts
+		return () => {
+			document.body.style.overflowY = "hidden";
+			document.body.style.touchAction = "auto";
+		};
+	}, [navigate]);
 
 	return (
 		<div className={classes.login}>

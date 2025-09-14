@@ -28,15 +28,9 @@ axios.interceptors.request.use(
 		console.log("Request headers:", config.headers);
 		console.log("With credentials:", config.withCredentials);
 		
-		// Attach JWT token from sessionStorage if available
-		const user = sessionStorage.getItem("user");
-		const token = user ? JSON.parse(user).token : null;
-		if (token) {
-			config.headers.Authorization = `Bearer ${token}`;
-			console.log("JWT token attached to request");
-		} else {
-			console.log("No JWT token found in sessionStorage");
-		}
+		// JWT token is automatically sent via HTTP-only cookie
+		// No need to manually attach it to headers
+		console.log("Using cookie-based authentication");
 		
 		console.log("=== END AXIOS REQUEST DEBUG ===");
 		return config;
@@ -76,11 +70,9 @@ axios.interceptors.response.use(
 		
 		// Handle common errors here
 		if (error.response?.status === 401) {
-			console.log("401 Unauthorized - clearing session and redirecting");
-			// Handle unauthorized access
-			// Clear session storage and redirect to login
-			sessionStorage.clear();
-			window.location.href = "/";
+			console.log("401 Unauthorized - RouteProtection will handle redirect");
+			// RouteProtection component will handle redirects
+			// Don't automatically redirect here to avoid conflicts
 		}
 		return Promise.reject(error);
 	}

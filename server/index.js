@@ -88,7 +88,7 @@ app.use(
 		cookie: {
 			secure: isProduction, // Only secure in production
 			sameSite: isProduction ? "none" : "lax", // Different sameSite for local vs production
-			maxAge: 1000 * 60 * 60 * 24, // 1 day
+			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (1 week)
 		},
 	})
 );

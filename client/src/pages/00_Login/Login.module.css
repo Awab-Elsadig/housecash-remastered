@@ -1,11 +1,14 @@
 /* Login Page Styles - Subtle design matching expenses page */
 .login {
-	height: 100dvh;
+	min-height: 100dvh;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	box-sizing: border-box;
+	/* Allow pull-to-refresh on mobile */
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 .login h1 {
@@ -167,6 +170,9 @@
 @media (max-width: 768px) {
 	.login {
 		padding: 2rem;
+		/* Ensure pull-to-refresh works on mobile */
+		min-height: 100vh;
+		min-height: 100dvh;
 	}
 
 	.login h1 {
@@ -176,5 +182,15 @@
 
 	.formLayout {
 		padding: 1.5rem;
+	}
+}
+
+/* Ensure pull-to-refresh works on all mobile devices */
+@media (max-width: 768px) {
+	.login {
+		/* Allow overscroll for pull-to-refresh */
+		overscroll-behavior-y: auto;
+		/* Enable momentum scrolling on iOS */
+		-webkit-overflow-scrolling: touch;
 	}
 }

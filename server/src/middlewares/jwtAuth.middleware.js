@@ -3,7 +3,6 @@ import { User } from "../models/user.model.js"; // adjust path as needed
 
 export const jwtAuthMiddleware = async (req, res, next) => {
 	// Try to get token from cookie or from the Authorization header.
-
 	const token =
 		(req.cookies && req.cookies.token) || (req.headers.authorization && req.headers.authorization.split(" ")[1]);
 
