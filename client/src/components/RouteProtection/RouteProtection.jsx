@@ -7,6 +7,7 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 	const location = useLocation();
 	const [isChecking, setIsChecking] = useState(true);
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
+	const [isLoggingOut, setIsLoggingOut] = useState(false);
 
 	useEffect(() => {
 		const checkAuth = async () => {
@@ -17,6 +18,7 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 				if (response.status === 200 && response.data) {
 					console.log("RouteProtection: User is authenticated");
 					setIsAuthenticated(true);
+					setIsLoggingOut(false);
 					
 					// If user is on login page but already authenticated, redirect to dashboard
 					if (location.pathname === "/" || location.pathname === "/login") {
@@ -46,8 +48,33 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 		checkAuth();
 	}, [navigate, location.pathname, requireAuth]);
 
-	// Show loading while checking authentication
-	if (isChecking) {
+	// Listen for logout events
+	useEffect(() => {
+		const handleLogout = () => {
+			setIsLoggingOut(true);
+			setIsAuthenticated(false);
+		};
+
+		// Listen for storage changes (logout clears sessionStorage)
+		const handleStorageChange = (e) => {
+			if (e.key === 'user' && e.newValue === null) {
+				handleLogout();
+			}
+		};
+
+		window.addEventListener('storage', handleStorageChange);
+		
+		// Also listen for custom logout event
+		window.addEventListener('userLogout', handleLogout);
+
+		return () => {
+			window.removeEventListener('storage', handleStorageChange);
+			window.removeEventListener('userLogout', handleLogout);
+		};
+	}, []);
+
+	// Show loading while checking authentication or logging out
+	if (isChecking || isLoggingOut) {
 		return (
 			<div style={{ 
 				display: 'flex', 
@@ -56,7 +83,7 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 				height: '100vh',
 				fontSize: '18px'
 			}}>
-				Checking authentication...
+				{isLoggingOut ? 'Logging out...' : 'Checking authentication...'}
 			</div>
 		);
 	}

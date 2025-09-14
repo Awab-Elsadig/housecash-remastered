@@ -20,7 +20,7 @@ const Settings = () => {
 	}, []);
 
 	const navigate = useNavigate();
-	const { user, updateUser, houseMembers, updateHouseMembers } = useUser();
+	const { user, updateUser, houseMembers, updateHouseMembers, logout } = useUser();
 	const editingInput = useRef();
 
 	// Comprehensive loading check - wait for all data to be processed
@@ -33,13 +33,8 @@ const Settings = () => {
 	const [copySuccess, setCopySuccess] = useState(false);
 	const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
-	const logout = async () => {
-		axios.post("/api/auth/logout", {}, { withCredentials: true }).then((res) => {
-			console.log(res.data);
-		});
-		sessionStorage.removeItem("user");
-		sessionStorage.removeItem("houseMembers");
-		sessionStorage.removeItem("items");
+	const handleLogout = async () => {
+		await logout();
 		navigate("/");
 	};
 
@@ -181,7 +176,7 @@ const Settings = () => {
 				</div>
 
 				<Tooltip content="Log out of your account" position="left">
-					<button className={classes.logout} onClick={logout}>
+					<button className={classes.logout} onClick={handleLogout}>
 						<TbLogout />
 					</button>
 				</Tooltip>

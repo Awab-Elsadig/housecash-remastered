@@ -278,6 +278,9 @@ export const useUser = () => {
 			setHouseMembers([]);
 			setItems([]);
 			sessionStorage.clear();
+			
+			// Dispatch logout event for RouteProtection to handle
+			window.dispatchEvent(new CustomEvent('userLogout'));
 		}
 	}, []);
 
