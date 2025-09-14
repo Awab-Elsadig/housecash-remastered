@@ -32,14 +32,18 @@ const allowedOrigins = [
 	'http://localhost:3000',
 	'http://localhost:5173',
 	'https://housecash.vercel.app',
-	'https://housecash-server.vercel.app'
+	'https://housecash-server.vercel.app',
+	'https://housecash.vercel.app/', // Add trailing slash variant
+	'https://housecash-server.vercel.app/' // Add trailing slash variant
 ];
 
 app.use(cors({
 	origin: function (origin, callback) {
 		console.log('=== CORS DEBUG ===');
 		console.log('Request origin:', origin);
+		console.log('Request type:', typeof origin);
 		console.log('Allowed origins:', allowedOrigins);
+		console.log('Origin in allowed list:', allowedOrigins.indexOf(origin));
 		
 		// Allow requests with no origin (like mobile apps or curl requests)
 		if (!origin) {
@@ -51,8 +55,15 @@ app.use(cors({
 			console.log('Origin allowed:', origin);
 			callback(null, true);
 		} else {
-			console.log('CORS blocked origin:', origin);
-			callback(new Error('Not allowed by CORS'));
+			// In production, be more permissive for Vercel domains
+			if (isProduction && origin && origin.includes('vercel.app')) {
+				console.log('Allowing Vercel domain in production:', origin);
+				callback(null, true);
+			} else {
+				console.log('CORS blocked origin:', origin);
+				console.log('This origin is not in the allowed list');
+				callback(new Error('Not allowed by CORS'));
+			}
 		}
 		console.log('=== END CORS DEBUG ===');
 	},
