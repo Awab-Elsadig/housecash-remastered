@@ -37,15 +37,24 @@ const allowedOrigins = [
 
 app.use(cors({
 	origin: function (origin, callback) {
+		console.log('=== CORS DEBUG ===');
+		console.log('Request origin:', origin);
+		console.log('Allowed origins:', allowedOrigins);
+		
 		// Allow requests with no origin (like mobile apps or curl requests)
-		if (!origin) return callback(null, true);
+		if (!origin) {
+			console.log('No origin provided, allowing request');
+			return callback(null, true);
+		}
 		
 		if (allowedOrigins.indexOf(origin) !== -1) {
+			console.log('Origin allowed:', origin);
 			callback(null, true);
 		} else {
 			console.log('CORS blocked origin:', origin);
 			callback(new Error('Not allowed by CORS'));
 		}
+		console.log('=== END CORS DEBUG ===');
 	},
 	credentials: true,
 	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -116,8 +125,17 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/payment-approvals", paymentApprovalRoutes);
 
 // Simple health check - moved to end so it doesn't interfere with API routes
-app.use("/", (req, res) => {
-	res.json({ message: "HouseCash Server is running!", timestamp: new Date().toISOString() });
+app.get("/", (req, res) => {
+	console.log("=== HEALTH CHECK DEBUG ===");
+	console.log("Health check request from:", req.headers.origin);
+	console.log("Request headers:", req.headers);
+	console.log("=== END HEALTH CHECK DEBUG ===");
+	res.json({ 
+		message: "HouseCash Server is running!", 
+		timestamp: new Date().toISOString(),
+		environment: process.env.NODE_ENV || "development",
+		corsOrigins: allowedOrigins
+	});
 });
 
 const PORT = process.env.PORT || 5000;
@@ -126,9 +144,10 @@ app.listen(PORT, () => {
 	console.log("=== SERVER STARTUP DEBUG ===");
 	console.log(`Server is running on port ${PORT}`);
 	console.log("Environment:", process.env.NODE_ENV || "development");
-	console.log("CORS: Allow all origins (development mode)");
+	console.log("CORS allowed origins:", allowedOrigins);
 	console.log("Database connection state:", mongoose.connection.readyState);
 	console.log("Session secret configured:", !!process.env.SESSION_SECRET);
 	console.log("MongoDB URI configured:", !!process.env.MONGODB_URI);
+	console.log("JWT Secret configured:", !!process.env.JWT_SECRET);
 	console.log("=== END SERVER STARTUP DEBUG ===");
 });
