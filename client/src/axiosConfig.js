@@ -62,7 +62,7 @@ axios.interceptors.response.use(
 		console.log("=== END AXIOS RESPONSE DEBUG ===");
 		return response;
 	},
-	(error) => {
+	async (error) => {
 		console.log("=== AXIOS RESPONSE ERROR DEBUG ===");
 		console.log("Error:", error);
 		console.log("Error message:", error.message);
@@ -83,6 +83,13 @@ axios.interceptors.response.use(
 			// RouteProtection component will handle redirects
 			// Don't automatically redirect here to avoid conflicts
 		}
+		
+		// Handle network errors that might be iOS Safari related
+		if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+			console.log("Network error detected, might be iOS Safari issue");
+			// For login requests, we'll let the component handle retry
+		}
+		
 		return Promise.reject(error);
 	}
 );

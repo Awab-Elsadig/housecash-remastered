@@ -13,7 +13,25 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 		const checkAuth = async () => {
 			try {
 				console.log("RouteProtection: Checking authentication for", location.pathname);
-				const response = await axios.get("/api/users/me", { withCredentials: true });
+				
+				// Add mobile-specific headers for iOS Safari
+				const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+				const requestConfig = {
+					withCredentials: true,
+					timeout: 10000,
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'application/json'
+					}
+				};
+				
+				// Add mobile-specific headers
+				if (isMobile) {
+					requestConfig.headers['Cache-Control'] = 'no-cache';
+					requestConfig.headers['Pragma'] = 'no-cache';
+				}
+				
+				const response = await axios.get("/api/users/me", requestConfig);
 				
 				if (response.status === 200 && response.data) {
 					console.log("RouteProtection: User is authenticated");
@@ -32,6 +50,11 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 				}
 			} catch (error) {
 				console.log("RouteProtection: Authentication check failed:", error.response?.status);
+				console.log("RouteProtection: Error details:", {
+					message: error.message,
+					code: error.code,
+					response: error.response?.status
+				});
 				setIsAuthenticated(false);
 				
 				// If route requires auth but user is not authenticated, redirect to login

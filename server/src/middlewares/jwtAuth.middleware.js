@@ -2,9 +2,11 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js"; // adjust path as needed
 
 export const jwtAuthMiddleware = async (req, res, next) => {
-	// Try to get token from cookie or from the Authorization header.
+	// Try to get token from cookie (primary and backup) or from the Authorization header.
 	const token =
-		(req.cookies && req.cookies.token) || (req.headers.authorization && req.headers.authorization.split(" ")[1]);
+		(req.cookies && req.cookies.token) || 
+		(req.cookies && req.cookies.token_backup) || 
+		(req.headers.authorization && req.headers.authorization.split(" ")[1]);
 
 	if (!token) {
 		return res.status(401).json({ error: "Access denied, no token provided" });

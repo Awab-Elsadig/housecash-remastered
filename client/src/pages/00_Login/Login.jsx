@@ -43,7 +43,7 @@ const Login = () => {
 		return Object.keys(currentErrors).length === 0;
 	};
 
-	// Handle Submit
+	// Handle Submit with iOS Safari retry logic
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		console.log("=== LOGIN DEBUG START ===");
@@ -54,74 +54,106 @@ const Login = () => {
 		
 		if (validateForm()) {
 			setLoading(true);
-			try {
-				console.log("Sending login request to:", `${axios.defaults.baseURL}/api/auth/login`);
-				console.log("Request payload:", values);
-				console.log("Request headers:", { withCredentials: true });
-				
-				const response = await axios.post("/api/auth/login", values, { withCredentials: true });
-
-				console.log("Response received:", {
-					status: response.status,
-					statusText: response.statusText,
-					data: response.data,
-					headers: response.headers
-				});
-
-				if (response.status === 200) {
-					console.log("Login successful, updating user data...");
-					console.log("Response data structure:", {
-						hasUser: !!response.data.user,
-						hasHouseMembers: !!response.data.houseMembers,
-						houseMembersType: typeof response.data.houseMembers,
-						houseMembersValue: response.data.houseMembers,
-						hasMembers: !!response.data.houseMembers?.members,
-						membersType: typeof response.data.houseMembers?.members,
-						membersValue: response.data.houseMembers?.members
+			
+			// Retry logic for iOS Safari
+			const attemptLogin = async (retryCount = 0) => {
+				try {
+					console.log(`Login attempt ${retryCount + 1}`);
+					console.log("Sending login request to:", `${axios.defaults.baseURL}/api/auth/login`);
+					console.log("Request payload:", values);
+					console.log("Request headers:", { withCredentials: true });
+					
+					const response = await axios.post("/api/auth/login", values, { 
+						withCredentials: true,
+						timeout: 10000, // 10 second timeout
+						headers: {
+							'Content-Type': 'application/json',
+							'Accept': 'application/json'
+						}
 					});
-					
-					// Update user data first
-					if (response.data.user) {
-						updateUser(response.data.user);
-						console.log("User data updated successfully");
-					} else {
-						console.error("No user data in response");
-					}
-					
-					// Update house members with proper null checking
-					if (response.data.houseMembers) {
-						// The server returns the house object with members array
-						const members = response.data.houseMembers.members || [];
-						updateHouseMembers(members);
-						console.log("House members updated successfully:", members.length, "members");
-					} else {
-						console.error("No house members data in response:", response.data.houseMembers);
-						// Set empty array as fallback
-						updateHouseMembers([]);
-					}
 
-					console.log("Navigating to dashboard...");
-					// Then navigate to dashboard
-					navigate("/dashboard");
-				} else {
-					console.log("Unexpected response status:", response.status);
+					console.log("Response received:", {
+						status: response.status,
+						statusText: response.statusText,
+						data: response.data,
+						headers: response.headers
+					});
+
+					if (response.status === 200) {
+						console.log("Login successful, updating user data...");
+						console.log("Response data structure:", {
+							hasUser: !!response.data.user,
+							hasHouseMembers: !!response.data.houseMembers,
+							houseMembersType: typeof response.data.houseMembers,
+							houseMembersValue: response.data.houseMembers,
+							hasMembers: !!response.data.houseMembers?.members,
+							membersType: typeof response.data.houseMembers?.members,
+							membersValue: response.data.houseMembers?.members
+						});
+						
+						// Update user data first
+						if (response.data.user) {
+							updateUser(response.data.user);
+							console.log("User data updated successfully");
+						} else {
+							console.error("No user data in response");
+						}
+						
+						// Update house members with proper null checking
+						if (response.data.houseMembers) {
+							// The server returns the house object with members array
+							const members = response.data.houseMembers.members || [];
+							updateHouseMembers(members);
+							console.log("House members updated successfully:", members.length, "members");
+						} else {
+							console.error("No house members data in response:", response.data.houseMembers);
+							// Set empty array as fallback
+							updateHouseMembers([]);
+						}
+
+						console.log("Navigating to dashboard...");
+						// Then navigate to dashboard
+						navigate("/dashboard");
+						return true; // Success
+					} else {
+						console.log("Unexpected response status:", response.status);
+						setErrors((prev) => ({ ...prev, connectionError: true }));
+						return false;
+					}
+				} catch (error) {
+					console.log(`=== LOGIN ERROR DETAILS (Attempt ${retryCount + 1}) ===`);
+					console.log("Error object:", error);
+					console.log("Error message:", error.message);
+					console.log("Error response:", error.response);
+					console.log("Error response data:", error.response?.data);
+					console.log("Error response status:", error.response?.status);
+					console.log("Error response statusText:", error.response?.statusText);
+					console.log("Error response headers:", error.response?.headers);
+					console.log("Network error:", error.code);
+					console.log("Request config:", error.config);
+					
+					// Check if this is a network error that might be iOS Safari related
+					const isNetworkError = error.code === 'NETWORK_ERROR' || 
+										  error.message === 'Network Error' || 
+										  error.code === 'ECONNABORTED' ||
+										  !error.response;
+					
+					// Retry logic for iOS Safari network issues
+					if (isNetworkError && retryCount < 2) {
+						console.log(`Network error detected, retrying in ${(retryCount + 1) * 1000}ms...`);
+						await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1000));
+						return attemptLogin(retryCount + 1);
+					}
+					
 					setErrors((prev) => ({ ...prev, connectionError: true }));
+					setTheError(error.response?.data?.error || error.message || "Login failed");
+					console.error("Login Error: ", error.response?.data);
+					return false;
 				}
-			} catch (error) {
-				console.log("=== LOGIN ERROR DETAILS ===");
-				console.log("Error object:", error);
-				console.log("Error message:", error.message);
-				console.log("Error response:", error.response);
-				console.log("Error response data:", error.response?.data);
-				console.log("Error response status:", error.response?.status);
-				console.log("Error response statusText:", error.response?.statusText);
-				console.log("Error response headers:", error.response?.headers);
-				console.log("Network error:", error.code);
-				console.log("Request config:", error.config);
-				
-				setErrors((prev) => ({ ...prev, connectionError: true }));
-				setTheError(error.response?.data?.error || error.message || "Login failed");
-				console.error("Login Error: ", error.response?.data);
+			};
+			
+			try {
+				await attemptLogin();
 			} finally {
 				setLoading(false);
 				console.log("=== LOGIN DEBUG END ===");
@@ -138,27 +170,7 @@ const Login = () => {
 		document.body.style.overflowY = "auto";
 		document.body.style.touchAction = "pan-y";
 
-		// Check if user is already logged in
-		const checkExistingAuth = async () => {
-			try {
-				console.log("Checking if user is already authenticated...");
-				const response = await axios.get("/api/users/me", { withCredentials: true });
-				
-				if (response.status === 200 && response.data) {
-					console.log("User is already logged in, redirecting to dashboard");
-					// User is already logged in, redirect to dashboard
-					navigate("/dashboard");
-					return;
-				}
-			} catch (error) {
-				console.log("User is not authenticated or session expired:", error.response?.status);
-				// User is not logged in, continue with login page
-			}
-		};
-
-		checkExistingAuth();
-
-		// Clear all session data including impersonation (but only if not authenticated)
+		// Clear all session data including impersonation
 		sessionStorage.removeItem("originalAdmin");
 		sessionStorage.removeItem("user");
 		sessionStorage.removeItem("items");
@@ -170,7 +182,7 @@ const Login = () => {
 			document.body.style.overflowY = "hidden";
 			document.body.style.touchAction = "auto";
 		};
-	}, [navigate]);
+	}, []);
 
 	return (
 		<div className={classes.login}>
