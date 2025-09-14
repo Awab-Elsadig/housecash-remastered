@@ -85,17 +85,34 @@ app.options('*', (req, res) => {
 	res.sendStatus(200);
 });
 
-// Connect to database
-connectDB().catch((error) => {
-	console.error("=== DATABASE CONNECTION FAILED ===");
-	console.error("Error:", error.message);
-	console.error("Error code:", error.code);
-	console.error("Error name:", error.name);
-	console.error("Full error:", error);
-	console.error("=== END DATABASE CONNECTION ERROR ===");
-	// Don't crash the server, just log the error
-	// The server can still handle requests, but database operations will fail
-});
+// Connect to database with retry mechanism
+const connectWithRetry = async (retries = 3) => {
+	for (let i = 0; i < retries; i++) {
+		try {
+			console.log(`=== DATABASE CONNECTION ATTEMPT ${i + 1}/${retries} ===`);
+			await connectDB();
+			console.log("Database connected successfully!");
+			return;
+		} catch (error) {
+			console.error(`=== DATABASE CONNECTION FAILED (Attempt ${i + 1}) ===`);
+			console.error("Error:", error.message);
+			console.error("Error code:", error.code);
+			console.error("Error name:", error.name);
+			console.error("Full error:", error);
+			console.error("=== END DATABASE CONNECTION ERROR ===");
+			
+			if (i === retries - 1) {
+				console.error("All database connection attempts failed");
+				return;
+			}
+			
+			console.log(`Retrying database connection in 2 seconds...`);
+			await new Promise(resolve => setTimeout(resolve, 2000));
+		}
+	}
+};
+
+connectWithRetry();
 
 // Trust first proxy
 app.set("trust proxy", 1);
@@ -150,8 +167,51 @@ app.get("/", (req, res) => {
 		message: "HouseCash Server is running!", 
 		timestamp: new Date().toISOString(),
 		environment: process.env.NODE_ENV || "development",
-		corsOrigins: allowedOrigins
+		corsOrigins: allowedOrigins,
+		databaseStatus: mongoose.connection.readyState,
+		databaseStates: {
+			0: "disconnected",
+			1: "connected", 
+			2: "connecting",
+			3: "disconnecting"
+		}
 	});
+});
+
+// Database test endpoint
+app.get("/test-db", async (req, res) => {
+	try {
+		console.log("=== DATABASE TEST ENDPOINT ===");
+		console.log("Database connection state:", mongoose.connection.readyState);
+		
+		if (mongoose.connection.readyState !== 1) {
+			console.log("Database not connected, attempting connection...");
+			await mongoose.connect(process.env.MONGO_URI, { 
+				serverSelectionTimeoutMS: 10000,
+				connectTimeoutMS: 10000
+			});
+		}
+		
+		// Test a simple database operation
+		const { User } = await import("./src/models/user.model.js");
+		const userCount = await User.countDocuments();
+		
+		res.json({
+			status: "success",
+			databaseConnected: mongoose.connection.readyState === 1,
+			connectionState: mongoose.connection.readyState,
+			userCount: userCount,
+			timestamp: new Date().toISOString()
+		});
+	} catch (error) {
+		console.error("Database test failed:", error);
+		res.status(500).json({
+			status: "error",
+			error: error.message,
+			databaseConnected: mongoose.connection.readyState === 1,
+			connectionState: mongoose.connection.readyState
+		});
+	}
 });
 
 const PORT = process.env.PORT || 5000;
