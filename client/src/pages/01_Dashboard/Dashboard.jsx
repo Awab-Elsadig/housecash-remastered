@@ -36,21 +36,48 @@ const Dashboard = () => {
 		houseMembersData: null,
 		itemsData: null
 	});
+	
+	// Error state to catch crashes
+	const [hasError, setHasError] = useState(false);
+	const [errorMessage, setErrorMessage] = useState(null);
 
-	const { paymentsByMember, netPerMember, bilateral, totals } = useDashboardData(
-		user?._id?.toString(),
-		items,
-		houseMembers
-	);
+	// Wrap dashboard data calculation in try-catch
+	let paymentsByMember, netPerMember, bilateral, totals;
+	let dataReady, isLoading;
+	
+	try {
+		const dashboardData = useDashboardData(
+			user?._id?.toString(),
+			items,
+			houseMembers
+		);
+		
+		paymentsByMember = dashboardData.paymentsByMember;
+		netPerMember = dashboardData.netPerMember;
+		bilateral = dashboardData.bilateral;
+		totals = dashboardData.totals;
 
-	const dataReady =
-		user &&
-		houseMembers &&
-		houseMembers.length > 0 &&
-		items !== null &&
-		items !== undefined;
+		dataReady =
+			user &&
+			houseMembers &&
+			houseMembers.length > 0 &&
+			items !== null &&
+			items !== undefined;
 
-	const isLoading = useDataLoading(dataReady);
+		isLoading = useDataLoading(dataReady);
+	} catch (error) {
+		console.error("Dashboard data calculation error:", error);
+		setHasError(true);
+		setErrorMessage(`Dashboard data error: ${error.message}`);
+		
+		// Set default values to prevent crashes
+		paymentsByMember = [];
+		netPerMember = [];
+		bilateral = [];
+		totals = { totalOwed: 0, totalOwing: 0, netBalance: 0 };
+		dataReady = false;
+		isLoading = false;
+	}
 
 	// Function to check authentication status
 	const checkAuthStatus = async () => {
@@ -183,6 +210,59 @@ const Dashboard = () => {
 		[detailMemberId, items, user?._id]
 	);
 
+	// Show error screen if there's a crash
+	if (hasError) {
+		return (
+			<main className={classes.dashboard} role="main" style={{ padding: '20px' }}>
+				<div style={{
+					backgroundColor: '#1a1a1a',
+					border: '3px solid #ff0000',
+					borderRadius: '12px',
+					padding: '20px',
+					fontSize: '16px',
+					fontFamily: 'Courier New, monospace',
+					color: '#ff0000',
+					textAlign: 'center'
+				}}>
+					<h2 style={{ color: '#ff0000', marginBottom: '20px' }}>
+						❌ DASHBOARD CRASH DETECTED
+					</h2>
+					<div style={{ marginBottom: '20px' }}>
+						<strong>Error:</strong> {errorMessage}
+					</div>
+					<div style={{ marginBottom: '20px' }}>
+						<strong>User:</strong> {user ? '✅ Loaded' : '❌ Not loaded'}
+					</div>
+					<div style={{ marginBottom: '20px' }}>
+						<strong>House Members:</strong> {houseMembers?.length || 0}
+					</div>
+					<div style={{ marginBottom: '20px' }}>
+						<strong>Items:</strong> {items?.length || 0}
+					</div>
+					<button 
+						onClick={() => {
+							setHasError(false);
+							setErrorMessage(null);
+							window.location.reload();
+						}}
+						style={{
+							padding: '12px 24px',
+							backgroundColor: '#ff0000',
+							color: 'white',
+							border: 'none',
+							borderRadius: '6px',
+							cursor: 'pointer',
+							fontSize: '16px',
+							fontWeight: 'bold'
+						}}
+					>
+						🔄 Reload Page
+					</button>
+				</div>
+			</main>
+		);
+	}
+
 	if (isLoading || !user) {
 		return (
 			<main className={classes.dashboard} role="main" aria-busy="true" aria-live="polite">
@@ -191,35 +271,37 @@ const Dashboard = () => {
 		);
 	}
 
-	return (
-		<>
-			<main className={classes.dashboard} role="main">
-				<Summary totals={totals} />
+	// Wrap main render in try-catch
+	try {
+		return (
+			<>
+				<main className={classes.dashboard} role="main">
+					<Summary totals={totals} />
 
-				<div className={classes.mainContent}>
-					<section aria-label="Net balances">
-						<NetBalances
-							netPerMember={netPerMember}
-							houseMembers={houseMembers}
-							bilateral={bilateral}
-							setDetailMemberId={setDetailMemberId}
-							settlementContext={settlementContext}
-							user={user}
-							items={items}
-						/>
-						<PeopleOweMe user={user} items={items} houseMembers={houseMembers} />
-					</section>
-					<section aria-label="Pending payments">
-						<PendingPayments
-							paymentsByMember={paymentsByMember}
-							updateItems={updateItems}
-							items={items}
-							fetchItems={fetchItems}
-							user={user}
-						/>
-					</section>
-				</div>
-			</main>
+					<div className={classes.mainContent}>
+						<section aria-label="Net balances">
+							<NetBalances
+								netPerMember={netPerMember}
+								houseMembers={houseMembers}
+								bilateral={bilateral}
+								setDetailMemberId={setDetailMemberId}
+								settlementContext={settlementContext}
+								user={user}
+								items={items}
+							/>
+							<PeopleOweMe user={user} items={items} houseMembers={houseMembers} />
+						</section>
+						<section aria-label="Pending payments">
+							<PendingPayments
+								paymentsByMember={paymentsByMember}
+								updateItems={updateItems}
+								items={items}
+								fetchItems={fetchItems}
+								user={user}
+							/>
+						</section>
+					</div>
+				</main>
 			
 			{/* Floating Action Buttons */}
 			<div className={classes.floatingActionButtons}>
@@ -413,18 +495,81 @@ const Dashboard = () => {
 				</div>
 			)}
 			
-			{detailMemberId && (
-				<DetailModal
-					isOpen={!!detailMemberId}
-					onClose={closeDetail}
-					memberId={detailMemberId}
-					houseMembers={houseMembers}
-					bilateral={bilateral}
-					detailItems={detailItems}
-				/>
-			)}
-		</>
-	);
+				{detailMemberId && (
+					<DetailModal
+						isOpen={!!detailMemberId}
+						onClose={closeDetail}
+						memberId={detailMemberId}
+						houseMembers={houseMembers}
+						bilateral={bilateral}
+						detailItems={detailItems}
+					/>
+				)}
+			</>
+		);
+	} catch (error) {
+		console.error("Dashboard render error:", error);
+		setHasError(true);
+		setErrorMessage(`Render error: ${error.message}`);
+		
+		// Return error screen
+		return (
+			<main className={classes.dashboard} role="main" style={{ padding: '20px' }}>
+				<div style={{
+					backgroundColor: '#1a1a1a',
+					border: '3px solid #ff0000',
+					borderRadius: '12px',
+					padding: '20px',
+					fontSize: '16px',
+					fontFamily: 'Courier New, monospace',
+					color: '#ff0000',
+					textAlign: 'center'
+				}}>
+					<h2 style={{ color: '#ff0000', marginBottom: '20px' }}>
+						❌ DASHBOARD RENDER CRASH
+					</h2>
+					<div style={{ marginBottom: '20px' }}>
+						<strong>Error:</strong> {error.message}
+					</div>
+					<div style={{ marginBottom: '20px' }}>
+						<strong>Stack:</strong> 
+						<div style={{ 
+							backgroundColor: '#000', 
+							padding: '10px', 
+							borderRadius: '4px', 
+							marginTop: '5px',
+							fontSize: '12px',
+							color: '#ff6666',
+							wordBreak: 'break-all',
+							maxHeight: '200px',
+							overflow: 'auto'
+						}}>
+							{error.stack}
+						</div>
+					</div>
+					<button 
+						onClick={() => {
+							setHasError(false);
+							setErrorMessage(null);
+							window.location.reload();
+						}}
+						style={{
+							padding: '12px 24px',
+							backgroundColor: '#ff0000',
+							color: 'white',
+							border: 'none',
+							borderRadius: '6px',
+							cursor: 'pointer',
+							fontSize: '16px',
+							fontWeight: 'bold'
+						}}
+					>
+						🔄 Reload Page
+					</button>
+				</div>
+			</main>
+		);
+	}
 };
 
 export default Dashboard;
