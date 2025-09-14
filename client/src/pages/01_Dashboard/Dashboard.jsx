@@ -34,11 +34,7 @@ const Dashboard = () => {
 		houseMembers &&
 		houseMembers.length > 0 &&
 		items !== null &&
-		items !== undefined &&
-		paymentsByMember &&
-		netPerMember &&
-		bilateral &&
-		totals;
+		items !== undefined;
 
 	const isLoading = useDataLoading(dataReady);
 

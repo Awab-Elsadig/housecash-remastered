@@ -126,7 +126,7 @@ const PendingPayments = ({ paymentsByMember, items, updateItems, fetchItems, use
 		[items, user?._id, requestPayment]
 	);
 
-	const paymentEntries = Object.entries(paymentsByMember);
+	const paymentEntries = Object.entries(paymentsByMember || {});
 
 	return (
 		<section className={classes.panel} aria-labelledby="pending-heading">

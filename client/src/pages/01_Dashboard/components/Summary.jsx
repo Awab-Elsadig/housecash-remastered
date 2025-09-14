@@ -20,26 +20,28 @@ const StatCard = ({ icon, label, value, subtext, "data-type": dataType }) => {
 };
 
 const Summary = ({ totals }) => {
+	const safeTotals = totals || { net: 0, owed: 0, owing: 0 };
+	
 	return (
 		<section className={classes.summaryGrid} aria-label="Financial summary">
 			<StatCard
 				icon={<FaSackDollar />}
 				label="Net Balance"
-				value={totals.net}
-				subtext={totals.net >= 0 ? "In your favor" : "You owe overall"}
+				value={safeTotals.net}
+				subtext={safeTotals.net >= 0 ? "In your favor" : "You owe overall"}
 				data-type="net"
 			/>
 			<StatCard
 				icon={<FaArrowTrendUp />}
 				label="Owed to You"
-				value={totals.owed}
+				value={safeTotals.owed}
 				subtext="From other members"
 				data-type="owed"
 			/>
 			<StatCard
 				icon={<FaArrowTrendDown />}
 				label="You Owe"
-				value={totals.owing}
+				value={safeTotals.owing}
 				subtext="Across all items"
 				data-type="owing"
 			/>

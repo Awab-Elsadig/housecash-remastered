@@ -168,7 +168,7 @@ const NetBalanceRow = ({
 };
 
 const NetBalances = ({ netPerMember, houseMembers, bilateral, setDetailMemberId, settlementContext, user, items }) => {
-	const netEntries = Object.entries(netPerMember).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+	const netEntries = Object.entries(netPerMember || {}).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
 
 	return (
 		<section className={classes.panel} aria-labelledby="net-heading">
