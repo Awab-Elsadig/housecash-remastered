@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "../../hooks/useUser";
+import usePageRefresh from "../../hooks/usePageRefresh";
 import axios from "axios";
 import classes from "./Admin.module.css";
 import {
@@ -250,6 +251,19 @@ const Admin = () => {
 			setMigrateLoading(false);
 		}
 	};
+
+	// Refresh function for admin page
+	const handleRefresh = useCallback(async () => {
+		try {
+			// Refresh users list
+			await fetchAllUsers();
+		} catch (error) {
+			console.error("Error refreshing admin data:", error);
+		}
+	}, []);
+
+	// Register refresh function with the global refresh system
+	usePageRefresh(handleRefresh, 'admin');
 
 	if (!isAdmin) {
 		return (

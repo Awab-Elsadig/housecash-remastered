@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import classes from "./Settings.module.css";
 import { useNavigate } from "react-router-dom";
 import { IoMdArrowRoundBack } from "react-icons/io";
@@ -9,6 +9,7 @@ import axios from "axios";
 import { useUser } from "../../hooks/useUser";
 import { useDataLoading } from "../../hooks/useLoading";
 import { SettingsSkeleton } from "../../components/Skeleton";
+import usePageRefresh from "../../hooks/usePageRefresh";
 import ably from "../../ablyConfig";
 import ProfilePictureUpload from "../../components/ProfilePictureUpload/ProfilePictureUpload";
 import ProfileAvatarModal from "../../components/ProfileAvatarModal/ProfileAvatarModal";
@@ -148,6 +149,19 @@ const Settings = () => {
 			console.error("Failed to update avatar preferences", e);
 		}
 	};
+
+	// Refresh function for settings page
+	const handleRefresh = useCallback(async () => {
+		try {
+			// Refresh user data
+			await updateUser();
+		} catch (error) {
+			console.error("Error refreshing settings data:", error);
+		}
+	}, [updateUser]);
+
+	// Register refresh function with the global refresh system
+	usePageRefresh(handleRefresh, 'settings');
 
 	if (isLoading) {
 		return <SettingsSkeleton />;

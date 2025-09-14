@@ -116,8 +116,7 @@ body {
 	flex-direction: column;
 	height: 100vh;
 	height: 100dvh;
-	overflow-x: auto;
-	overflow-y: hidden; /* Keep main container non-scrollable */
+	overflow: hidden; /* Keep main container non-scrollable */
 }
 
 /* Mobile sidebar backdrop */

@@ -8,6 +8,7 @@ import { format, parseISO } from "date-fns";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import RefreshButton from "../../components/RefreshButton";
 import AddItemButton from "../../components/AddItemButton/AddItemButton";
+import usePageRefresh from "../../hooks/usePageRefresh";
 import classes from "./PaymentHistory.module.css";
 import {
 	FaAngleDown,
@@ -265,6 +266,9 @@ const PaymentHistory = () => {
 			setIsRefreshing(false);
 		}
 	}, []);
+
+	// Register refresh function with the global refresh system
+	usePageRefresh(handleRefresh, 'payment-history');
 
 	useEffect(() => {
 		const fetchPayments = async () => {

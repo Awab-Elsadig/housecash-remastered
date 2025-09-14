@@ -1,0 +1,86 @@
+.swipeRefreshContainer {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Enable pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
+}
+
+.content {
+  min-height: 100%;
+}
+
+.pullIndicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  z-index: 10;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.pullIcon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  transition: transform 0.2s ease;
+}
+
+.pullText {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.refreshIndicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.refreshSpinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 8px;
+}
+
+.refreshText {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Ensure the main content area is scrollable */
+.swipeRefreshContainer {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Enable pull-to-refresh on mobile */
+  overscroll-behavior-y: contain;
+}

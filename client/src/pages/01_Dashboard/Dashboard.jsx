@@ -13,6 +13,7 @@ import DetailModal from "./components/DetailModal";
 import PeopleOweMe from "./components/PeopleOweMe";
 import RefreshButton from "../../components/RefreshButton";
 import AddItemButton from "../../components/AddItemButton/AddItemButton";
+import usePageRefresh from "../../hooks/usePageRefresh";
 import axios from "axios";
 
 const Dashboard = () => {
@@ -40,6 +41,9 @@ const Dashboard = () => {
 	// Error state to catch crashes
 	const [hasError, setHasError] = useState(false);
 	const [errorMessage, setErrorMessage] = useState(null);
+	
+	// Loading timeout state
+	const [loadingTimeout, setLoadingTimeout] = useState(false);
 
 	// Wrap dashboard data calculation in try-catch
 	let paymentsByMember, netPerMember, bilateral, totals;
@@ -133,6 +137,23 @@ const Dashboard = () => {
 		}));
 	}, [user, houseMembers, items]);
 
+	// Loading timeout effect
+	useEffect(() => {
+		if (isLoading) {
+			console.log('Dashboard: Starting loading timeout timer');
+			const timeout = setTimeout(() => {
+				console.log('Dashboard: Loading timeout reached');
+				setLoadingTimeout(true);
+			}, 10000); // 10 second timeout
+
+			return () => {
+				clearTimeout(timeout);
+			};
+		} else {
+			setLoadingTimeout(false);
+		}
+	}, [isLoading]);
+
 	// Prevent automatic refreshing or navigation back
 	useEffect(() => {
 		// Disable browser back button
@@ -205,6 +226,9 @@ const Dashboard = () => {
 		}
 	}, [fetchCurrentUser, fetchItems]);
 
+	// Register refresh function with the global refresh system
+	usePageRefresh(handleRefresh, 'dashboard');
+
 	const detailItems = useMemo(
 		() => buildDetailItems(user?._id?.toString(), detailMemberId, items),
 		[detailMemberId, items, user?._id]
@@ -263,10 +287,174 @@ const Dashboard = () => {
 		);
 	}
 
-	if (isLoading || !user) {
+	if (isLoading || !user || loadingTimeout) {
 		return (
 			<main className={classes.dashboard} role="main" aria-busy="true" aria-live="polite">
 				<DashboardSkeleton />
+				
+				{/* Debug Panel - Always show during loading */}
+				<div style={{
+					position: 'fixed',
+					bottom: '20px',
+					right: '20px',
+					width: '350px',
+					maxHeight: '70vh',
+					overflow: 'auto',
+					backgroundColor: '#1a1a1a',
+					border: '3px solid #ff6600',
+					borderRadius: '12px',
+					padding: '20px',
+					fontSize: '14px',
+					fontFamily: 'Courier New, monospace',
+					color: '#ff6600',
+					boxShadow: '0 4px 20px rgba(255, 102, 0, 0.3)',
+					zIndex: 9999
+				}}>
+					<h4 style={{ 
+						margin: '0 0 15px 0', 
+						color: '#ff6600', 
+						fontSize: '16px',
+						textAlign: 'center',
+						borderBottom: '2px solid #ff6600',
+						paddingBottom: '8px'
+					}}>
+						🔍 LOADING DEBUG
+					</h4>
+					
+					<div style={{ 
+						marginBottom: '12px',
+						padding: '8px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>LOADING STATUS:</strong> 
+						<span style={{ color: loadingTimeout ? '#ff0000' : '#ff6600' }}>
+							{loadingTimeout ? '⏰ TIMEOUT!' : isLoading ? 'Loading...' : 'Not loading'}
+						</span>
+					</div>
+					
+					<div style={{ 
+						marginBottom: '12px',
+						padding: '8px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>USER:</strong> 
+						<span style={{ color: user ? '#00ff00' : '#ff0000' }}>
+							{user ? '✅ Loaded' : '❌ Not loaded'}
+						</span>
+					</div>
+					
+					<div style={{ 
+						marginBottom: '12px',
+						padding: '8px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>HOUSE MEMBERS:</strong> 
+						<span style={{ color: '#ff6600' }}>
+							{houseMembers?.length || 0} members
+						</span>
+					</div>
+					
+					<div style={{ 
+						marginBottom: '12px',
+						padding: '8px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>ITEMS:</strong> 
+						<span style={{ color: '#ff6600' }}>
+							{items?.length || 0} items
+						</span>
+					</div>
+					
+					<div style={{ 
+						marginBottom: '12px',
+						padding: '8px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>DATA READY:</strong> 
+						<span style={{ color: dataReady ? '#00ff00' : '#ff0000' }}>
+							{dataReady ? 'YES' : 'NO'}
+						</span>
+					</div>
+					
+					<div style={{ 
+						marginBottom: '12px',
+						padding: '8px',
+						backgroundColor: '#000',
+						borderRadius: '6px',
+						border: '1px solid #ff6600'
+					}}>
+						<strong style={{ color: '#ffff00' }}>COOKIES:</strong> 
+						<div style={{ 
+							backgroundColor: '#000', 
+							padding: '6px', 
+							borderRadius: '4px', 
+							marginTop: '4px',
+							fontSize: '10px',
+							color: document.cookie ? '#ff6600' : '#ff6666',
+							border: '1px solid #ff6600',
+							wordBreak: 'break-all',
+							maxHeight: '60px',
+							overflow: 'auto'
+						}}>
+							{document.cookie || 'No cookies found'}
+						</div>
+					</div>
+					
+					<div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+						<button 
+							onClick={() => {
+								console.log('Force reload dashboard data');
+								fetchCurrentUser();
+								fetchItems();
+							}}
+							style={{
+								padding: '8px 12px',
+								backgroundColor: '#007bff',
+								color: 'white',
+								border: '2px solid #007bff',
+								borderRadius: '4px',
+								cursor: 'pointer',
+								fontSize: '12px',
+								fontWeight: 'bold',
+								width: '100%'
+							}}
+						>
+							🔄 Force Reload Data
+						</button>
+						
+						<button 
+							onClick={() => {
+								console.log('Bypass loading and show dashboard');
+								setLoadingTimeout(false);
+								// Force bypass loading state
+								window.location.reload();
+							}}
+							style={{
+								padding: '8px 12px',
+								backgroundColor: '#ff6600',
+								color: 'white',
+								border: '2px solid #ff6600',
+								borderRadius: '4px',
+								cursor: 'pointer',
+								fontSize: '12px',
+								fontWeight: 'bold',
+								width: '100%'
+							}}
+						>
+							🚀 Bypass Loading
+						</button>
+					</div>
+				</div>
 			</main>
 		);
 	}

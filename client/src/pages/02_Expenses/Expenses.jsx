@@ -14,6 +14,7 @@ import DeleteConfirmation from "../../pages/Expenses/components/DeleteConfirmati
 import RefreshButton from "../../components/RefreshButton";
 import AddItemButton from "../../components/AddItemButton/AddItemButton";
 import Tooltip from "../../components/Tooltip";
+import usePageRefresh from "../../hooks/usePageRefresh";
 import axios from "axios";
 import ably from "../../ablyConfig";
 
@@ -54,6 +55,9 @@ const Expenses = () => {
 			setIsRefreshing(false);
 		}
 	}, [fetchCurrentUser, fetchItems]);
+
+	// Register refresh function with the global refresh system
+	usePageRefresh(handleRefresh, 'expenses');
 	// Displayed list state (show all by default)
 	const [displayedItems, setDisplayedItems] = useState([]);
 

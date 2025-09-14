@@ -8,17 +8,24 @@ import Header from "./components/Header/Header";
 import { ImpersonationProvider } from "./contexts/ImpersonationContext";
 import { SettlementProvider } from "./contexts/SettlementContext";
 import { PaymentApprovalProvider } from "./contexts/PaymentApprovalContext";
+import { RefreshProvider } from "./contexts/RefreshContext";
 import { useUser } from "./hooks/useUser";
 import RouteProtection from "./components/RouteProtection";
+import SwipeRefreshWrapper from "./components/SwipeRefreshWrapper";
 
 function SettlementWrapper({ children }) {
 	const { user } = useUser();
 	return (
 		<SettlementProvider user={user}>
-			<PaymentApprovalProvider user={user}>{children}</PaymentApprovalProvider>
+			<PaymentApprovalProvider user={user}>
+				<RefreshProvider>
+					{children}
+				</RefreshProvider>
+			</PaymentApprovalProvider>
 		</SettlementProvider>
 	);
 }
+
 
 function App() {
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -59,7 +66,9 @@ function App() {
 									)}
 									<div className="right">
 										<Header toggleMobileMenu={toggleMobileMenu} />
-										<AppRoutes />
+										<SwipeRefreshWrapper>
+											<AppRoutes />
+										</SwipeRefreshWrapper>
 									</div>
 									{/* Global Settlement Notifications */}
 								</div>
