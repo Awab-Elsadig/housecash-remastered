@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import AppRoutes from "./routes/AppRouts";
 import Login from "./pages/00_Login/Login";
 import "./index.css";
@@ -26,6 +26,30 @@ function SettlementWrapper({ children }) {
 	);
 }
 
+
+
+function AppLayout({ isMobileMenuOpen, setIsMobileMenuOpen, toggleMobileMenu }) {
+	const location = useLocation();
+	return (
+		<div className="app">
+			<Sidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+			{isMobileMenuOpen && (
+				<div
+					className="mobile-backdrop"
+					onClick={() => setIsMobileMenuOpen(false)}
+					aria-hidden="true"
+				/>
+			)}
+			<div className="right">
+				<Header toggleMobileMenu={toggleMobileMenu} />
+				<SwipeRefreshWrapper key={location.pathname}>
+					<AppRoutes />
+				</SwipeRefreshWrapper>
+			</div>
+			{/* Global Settlement Notifications */}
+		</div>
+	);
+}
 
 function App() {
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -55,23 +79,11 @@ function App() {
 						<Route
 							path="/*"
 							element={
-								<div className="app">
-									<Sidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
-									{isMobileMenuOpen && (
-										<div
-											className="mobile-backdrop"
-											onClick={() => setIsMobileMenuOpen(false)}
-											aria-hidden="true"
-										/>
-									)}
-									<div className="right">
-										<Header toggleMobileMenu={toggleMobileMenu} />
-										<SwipeRefreshWrapper>
-											<AppRoutes />
-										</SwipeRefreshWrapper>
-									</div>
-									{/* Global Settlement Notifications */}
-								</div>
+								<AppLayout 
+									isMobileMenuOpen={isMobileMenuOpen}
+									setIsMobileMenuOpen={setIsMobileMenuOpen}
+									toggleMobileMenu={toggleMobileMenu}
+								/>
 							}
 						/>
 					</Routes>

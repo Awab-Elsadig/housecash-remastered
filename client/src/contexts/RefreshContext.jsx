@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 const RefreshContext = createContext();
 
@@ -13,31 +13,35 @@ export const useRefresh = () => {
 export const RefreshProvider = ({ children }) => {
   const [refreshFunctions, setRefreshFunctions] = useState(new Map());
 
-  const registerRefreshFunction = (pageId, refreshFn) => {
-    setRefreshFunctions(prev => new Map(prev.set(pageId, refreshFn)));
-  };
+  const registerRefreshFunction = useCallback((pageId, refreshFn) => {
+    setRefreshFunctions(prev => {
+      const newMap = new Map(prev);
+      newMap.set(pageId, refreshFn);
+      return newMap;
+    });
+  }, []);
 
-  const unregisterRefreshFunction = (pageId) => {
+  const unregisterRefreshFunction = useCallback((pageId) => {
     setRefreshFunctions(prev => {
       const newMap = new Map(prev);
       newMap.delete(pageId);
       return newMap;
     });
-  };
+  }, []);
 
-  const triggerRefresh = async (pageId) => {
+  const triggerRefresh = useCallback(async (pageId) => {
     const refreshFn = refreshFunctions.get(pageId);
     if (refreshFn) {
       return await refreshFn();
     }
     return Promise.resolve();
-  };
+  }, [refreshFunctions]);
 
-  const value = {
+  const value = useMemo(() => ({
     registerRefreshFunction,
     unregisterRefreshFunction,
     triggerRefresh
-  };
+  }), [registerRefreshFunction, unregisterRefreshFunction, triggerRefresh]);
 
   return (
     <RefreshContext.Provider value={value}>
