@@ -90,8 +90,8 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(0, 0, 0, 0.5);
-	backdrop-filter: blur(4px);
+	background: rgba(0, 0, 0, 0.3);
+	backdrop-filter: blur(2px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -105,28 +105,38 @@
 	opacity: 1;
 }
 
+/* Non-clickable version for modal */
+.profilePictureContainer.nonClickable .actionOverlay {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.profilePictureContainer.nonClickable:hover .actionOverlay {
+	opacity: 0;
+}
+
 .actionButton {
-	background: rgba(255, 255, 255, 0.9);
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	background: rgba(var(--mainColor-rgb), 0.9);
+	border: 1px solid rgba(var(--mainColor-rgb), 0.3);
 	border-radius: 50%;
-	width: 36px;
-	height: 36px;
+	width: 32px;
+	height: 32px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	color: var(--mainColor);
+	color: white;
 	cursor: pointer;
 	transition: all 0.3s ease;
-	font-size: 1.1rem;
+	font-size: 0.9rem;
 	backdrop-filter: blur(10px);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .actionButton:hover {
-	background: rgba(255, 255, 255, 1);
-	color: var(--mainColor);
-	transform: scale(1.05);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	background: var(--mainColor);
+	border-color: var(--mainColor);
+	transform: scale(1.1);
+	box-shadow: 0 4px 12px rgba(var(--mainColor-rgb), 0.3);
 }
 
 .deleteButton {
@@ -189,9 +199,9 @@
 	}
 
 	.actionButton {
-		width: 30px;
-		height: 30px;
-		font-size: 0.9rem;
+		width: 28px;
+		height: 28px;
+		font-size: 0.8rem;
 	}
 }
 
@@ -216,9 +226,9 @@
 	}
 
 	.actionButton {
-		width: 25px;
-		height: 25px;
-		font-size: 0.8rem;
+		width: 24px;
+		height: 24px;
+		font-size: 0.7rem;
 	}
 
 	.actionOverlay {

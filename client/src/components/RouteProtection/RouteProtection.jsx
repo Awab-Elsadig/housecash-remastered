@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { useImpersonationContext } from "../../hooks/useImpersonationContext";
 
 const RouteProtection = ({ children, requireAuth = true }) => {
 	const navigate = useNavigate();
@@ -8,35 +9,40 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 	const [isChecking, setIsChecking] = useState(true);
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [isLoggingOut, setIsLoggingOut] = useState(false);
+	const { isImpersonating } = useImpersonationContext();
 
 	useEffect(() => {
 		const checkAuth = async () => {
 			try {
-				console.log("RouteProtection: Checking authentication for", location.pathname);
+				// First check sessionStorage for cached user data, but skip cache if impersonating
+				const cachedUser = sessionStorage.getItem("user");
+				if (cachedUser && requireAuth && !isImpersonating) {
+					setIsAuthenticated(true);
+					setIsLoggingOut(false);
+					setIsChecking(false);
+					return;
+				}
+				
+				// Only make API call if no cached data or for login page
 				const response = await axios.get("/api/users/me", { withCredentials: true });
 				
 				if (response.status === 200 && response.data) {
-					console.log("RouteProtection: User is authenticated");
 					setIsAuthenticated(true);
 					setIsLoggingOut(false);
 					
 					// If user is on login page but already authenticated, redirect to dashboard
 					if (location.pathname === "/" || location.pathname === "/login") {
-						console.log("RouteProtection: Redirecting authenticated user from login to dashboard");
 						navigate("/dashboard", { replace: true });
 						return;
 					}
 				} else {
-					console.log("RouteProtection: User is not authenticated");
 					setIsAuthenticated(false);
 				}
 			} catch (error) {
-				console.log("RouteProtection: Authentication check failed:", error.response?.status);
 				setIsAuthenticated(false);
 				
 				// If route requires auth but user is not authenticated, redirect to login
 				if (requireAuth && (error.response?.status === 401 || error.response?.status === 403)) {
-					console.log("RouteProtection: Redirecting unauthenticated user to login");
 					navigate("/", { replace: true });
 					return;
 				}
@@ -46,7 +52,23 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 		};
 
 		checkAuth();
-	}, [navigate, location.pathname, requireAuth]);
+
+		// Listen for impersonation events to trigger re-authentication
+		const handleImpersonationChange = () => {
+			setIsChecking(true);
+			checkAuth();
+		};
+
+		window.addEventListener('impersonationStarted', handleImpersonationChange);
+		window.addEventListener('impersonationStopped', handleImpersonationChange);
+
+		return () => {
+			window.removeEventListener('impersonationStarted', handleImpersonationChange);
+			window.removeEventListener('impersonationStopped', handleImpersonationChange);
+		};
+	// Run when impersonation status changes or on route change
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [navigate, requireAuth, isImpersonating]);
 
 	// Listen for logout events
 	useEffect(() => {
@@ -75,17 +97,22 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 
 	// Show loading while checking authentication or logging out
 	if (isChecking || isLoggingOut) {
-		return (
-			<div style={{ 
-				display: 'flex', 
-				justifyContent: 'center', 
-				alignItems: 'center', 
-				height: '100vh',
-				fontSize: '18px'
-			}}>
-				{isLoggingOut ? 'Logging out...' : 'Checking authentication...'}
-			</div>
-		);
+		// For public routes (login), show a blocking loader.
+		if (!requireAuth) {
+			return (
+				<div style={{ 
+					display: 'flex', 
+					justifyContent: 'center', 
+					alignItems: 'center', 
+					height: '100vh',
+					fontSize: '18px'
+				}}>
+					{isLoggingOut ? 'Logging out...' : 'Checking authentication...'}
+				</div>
+			);
+		}
+		// For protected routes, avoid blocking UI to prevent overlays capturing clicks
+		return children;
 	}
 
 	// If route requires auth but user is not authenticated, don't render children

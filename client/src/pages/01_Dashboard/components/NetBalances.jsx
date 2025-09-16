@@ -32,15 +32,32 @@ const SettlementButtons = ({ memberId, amount, user, houseMembers, settlementCon
 		getSettlementTimeRemaining,
 	} = settlementContext;
 
-	const getBilateralIds = useCallback(() => {
-		return bilateralItemIds(user?._id?.toString(), memberId, items);
-	}, [user, memberId, items]);
+	// Track which action is loading, not a generic flag
+	const [loadingAction, setLoadingAction] = useState(null); // 'settle' | 'accept' | 'decline' | null
 
+	// Reset loading when the underlying request state flips for this member so we don't carry loading into the new UI
 	const req = settlementRequests?.[memberId];
+	useEffect(() => {
+		setLoadingAction(null);
+	}, [!!req, req?.fromUserId, req?.toUserId, req?.expiresAt]);
+
+	const getBilateralIds = useCallback(() => {
+		const currentUserId = user?._id || (() => { try { return JSON.parse(sessionStorage.getItem('user')||'{}')._id; } catch { return null; } })();
+		return bilateralItemIds(currentUserId?.toString(), memberId, items);
+	}, [user, memberId, items]);
 
 	if (req) {
 		const isOutgoing = req.fromUserId === user._id;
 		if (isOutgoing) {
+			const handleCancel = async () => {
+				// Don't show loading state for cancel - make it completely optimistic
+				try {
+					await cancelSettlementRequest(memberId);
+				} catch (error) {
+					console.error("Cancel failed:", error);
+					// Could show a toast notification here if needed
+				}
+			};
 			return (
 				<div className={classes.settlePending}>
 					<span>
@@ -48,13 +65,34 @@ const SettlementButtons = ({ memberId, amount, user, houseMembers, settlementCon
 						<SettlementTimer memberId={memberId} getSettlementTimeRemaining={getSettlementTimeRemaining} />
 					</span>
 					<Tooltip content="Cancel this settlement request" position="top">
-						<button onClick={() => cancelSettlementRequest(memberId)} className={classes.btnGhost}>
+						<button 
+							onClick={handleCancel} 
+							className={classes.btnGhost}
+						>
 							Cancel
 						</button>
 					</Tooltip>
 				</div>
 			);
 		}
+
+		const handleAccept = async () => {
+			setLoadingAction('accept');
+			try {
+				const ids = getBilateralIds();
+				await acceptSettlement(memberId, ids);
+			} finally {
+				setTimeout(() => setLoadingAction(null), 500);
+			}
+		};
+		const handleDecline = async () => {
+			setLoadingAction('decline');
+			try {
+				await declineSettlement(memberId);
+			} finally {
+				setTimeout(() => setLoadingAction(null), 500);
+			}
+		};
 		return (
 			<div className={classes.settleIncoming}>
 				<span>
@@ -64,18 +102,20 @@ const SettlementButtons = ({ memberId, amount, user, houseMembers, settlementCon
 				<div>
 					<Tooltip content="Accept and settle all outstanding items with this member" position="top">
 						<button
-							onClick={async () => {
-								const ids = getBilateralIds();
-								await acceptSettlement(memberId, ids);
-							}}
-							className={classes.btnPrimary}
+							onClick={handleAccept}
+							className={`${classes.btnPrimary} ${loadingAction === 'accept' ? classes.loading : ''}`}
+							disabled={loadingAction === 'accept'}
 						>
-							Accept
+							{loadingAction === 'accept' ? 'Processing...' : 'Accept'}
 						</button>
 					</Tooltip>
 					<Tooltip content="Decline this settlement request" position="top">
-						<button onClick={() => declineSettlement(memberId)} className={classes.btnGhost}>
-							Decline
+						<button 
+							onClick={handleDecline} 
+							className={`${classes.btnGhost} ${loadingAction === 'decline' ? classes.loading : ''}`}
+							disabled={loadingAction === 'decline'}
+						>
+							{loadingAction === 'decline' ? 'Declining...' : 'Decline'}
 						</button>
 					</Tooltip>
 				</div>
@@ -83,16 +123,24 @@ const SettlementButtons = ({ memberId, amount, user, houseMembers, settlementCon
 		);
 	}
 
+	const handleSettle = async () => {
+		setLoadingAction('settle');
+		try {
+			const targetMember = houseMembers.find((m) => m._id.toString() === memberId);
+			await settleUp(memberId, user?.name, Math.abs(amount), targetMember?.name);
+		} finally {
+			setTimeout(() => setLoadingAction(null), 500);
+		}
+	};
+
 	return (
 		<Tooltip content="Send a settlement request to clear balances" position="top">
 			<button
-				className={classes.btnPrimary}
-				onClick={() => {
-					const targetMember = houseMembers.find((m) => m._id.toString() === memberId);
-					settleUp(memberId, user?.name, Math.abs(amount), targetMember?.name);
-				}}
+				className={`${classes.btnPrimary} ${loadingAction === 'settle' ? classes.loading : ''}`}
+				onClick={handleSettle}
+				disabled={loadingAction === 'settle'}
 			>
-				Settle <FaExchangeAlt />
+				{loadingAction === 'settle' ? 'Sending...' : 'Settle'} <FaExchangeAlt />
 			</button>
 		</Tooltip>
 	);

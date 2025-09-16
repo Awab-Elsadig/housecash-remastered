@@ -7,6 +7,7 @@ export const ImpersonationProvider = ({ children }) => {
 	const [isImpersonating, setIsImpersonating] = useState(false);
 	const [impersonationData, setImpersonationData] = useState(null);
 	const [loading, setLoading] = useState(true);
+	const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 	useEffect(() => {
 		const checkImpersonationStatus = async () => {
@@ -70,9 +71,23 @@ export const ImpersonationProvider = ({ children }) => {
 				sessionStorage.removeItem("user");
 				sessionStorage.removeItem("houseMembers");
 				sessionStorage.removeItem("items");
+				sessionStorage.removeItem("lastUserFetch");
 
-				// Simply reload without adding URL parameters to prevent infinite loop
-				window.location.reload();
+			// Dispatch a custom event to trigger data refresh without page reload
+			window.dispatchEvent(new CustomEvent('impersonationStarted'));
+			// Trigger context refresh
+			setRefreshTrigger(prev => prev + 1);
+			
+			// Force a data refresh event after a short delay to ensure components are ready
+			setTimeout(() => {
+				window.dispatchEvent(new CustomEvent('forceDataRefresh'));
+			}, 200);
+			
+			// Navigate to dashboard after impersonation starts
+			setTimeout(() => {
+				console.log("✓ Impersonation: Navigating to dashboard");
+				window.location.href = "/dashboard";
+			}, 500); // Reduced delay for faster navigation
 			}
 		};
 
@@ -83,7 +98,7 @@ export const ImpersonationProvider = ({ children }) => {
 		return () => {
 			window.removeEventListener("message", handleMessage);
 		};
-	}, []);
+	}, [refreshTrigger]);
 
 	const stopImpersonation = async () => {
 		try {
@@ -97,8 +112,26 @@ export const ImpersonationProvider = ({ children }) => {
 
 			// Clear local impersonation data
 			sessionStorage.removeItem("impersonationData");
+			sessionStorage.removeItem("user");
+			sessionStorage.removeItem("houseMembers");
+			sessionStorage.removeItem("items");
+			sessionStorage.removeItem("lastUserFetch");
+			
 			setIsImpersonating(false);
 			setImpersonationData(null);
+
+			// Dispatch event to trigger data refresh
+			window.dispatchEvent(new CustomEvent('impersonationStopped'));
+			// Trigger context refresh
+			setRefreshTrigger(prev => prev + 1);
+			
+			// Force a data refresh event after a short delay to ensure components are ready
+			setTimeout(() => {
+				window.dispatchEvent(new CustomEvent('forceDataRefresh'));
+			}, 200);
+			
+			// Stay in admin panel after impersonation ends
+			console.log("✓ Impersonation stopped: Staying in admin panel");
 
 			return true;
 		} catch (error) {

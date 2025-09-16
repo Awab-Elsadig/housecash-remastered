@@ -37,23 +37,37 @@ const ProfilePictureUpload = ({ currentImageUrl, onImageUpdate, onImageDelete, s
 			return;
 		}
 		try {
+			console.log("Starting image upload for file:", file.name);
 			const uploadResult = await uploadImage(file, "profile-pictures");
+			console.log("Upload result:", uploadResult);
+			
 			if (uploadResult.success) {
+				console.log("Upload successful, updating profile picture");
 				const updateResult = await updateProfilePicture(uploadResult.data.url, uploadResult.data.fileId);
+				console.log("Profile update result:", updateResult);
+				
 				if (updateResult.success) {
+					// Update local state immediately for instant UI feedback
 					setLocalImageUrl(uploadResult.data.url);
+					// Update global user state
 					onImageUpdate?.(uploadResult.data.url, updateResult.user);
+					console.log("Profile picture updated successfully");
+				} else {
+					alert("Failed to update profile picture. Please try again.");
 				}
+			} else {
+				alert(`Upload failed: ${uploadResult.error || "Unknown error"}`);
 			}
 		} catch (error) {
 			console.error("Error handling image upload:", error);
+			alert(`Upload failed: ${error.message || "Unknown error"}`);
 		}
 	};
 
 	const triggerFileSelect = () => fileInputRef.current?.click();
 
 	return (
-		<div className={`${classes.profilePictureContainer} ${classes[size]}`}>
+		<div className={`${classes.profilePictureContainer} ${classes[size]} ${!onEditClick ? classes.nonClickable : ''}`}>
 			<div className={classes.imageWrapper}>
 				<img
 					src={getProfilePictureUrl(localImageUrl, size) || defaultImage}

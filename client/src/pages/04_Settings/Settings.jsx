@@ -118,13 +118,21 @@ const Settings = () => {
 	// Handle profile picture update
 	const handleImageUpdate = (newImageUrl, updatedUser) => {
 		if (!user) return;
-		if (updatedUser) {
-			updateUser({
-				...user,
-				profilePictureUrl: newImageUrl,
-				profilePictureFileId: updatedUser.profilePictureFileId,
-			});
+		console.log("Settings: Updating user profile picture:", newImageUrl);
+		
+		// Always update the profile picture URL immediately
+		const updatedUserData = {
+			...user,
+			profilePictureUrl: newImageUrl,
+		};
+		
+		// Add fileId if provided
+		if (updatedUser?.profilePictureFileId) {
+			updatedUserData.profilePictureFileId = updatedUser.profilePictureFileId;
 		}
+		
+		updateUser(updatedUserData);
+		console.log("Settings: User data updated with new profile picture");
 	};
 
 	const handleImageDelete = () => {

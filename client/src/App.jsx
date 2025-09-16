@@ -12,6 +12,9 @@ import { RefreshProvider } from "./contexts/RefreshContext";
 import { useUser } from "./hooks/useUser";
 import RouteProtection from "./components/RouteProtection";
 import SwipeRefreshWrapper from "./components/SwipeRefreshWrapper";
+import StopImpersonationFab from "./components/StopImpersonationFab/StopImpersonationFab";
+import ImpersonationBanner from "./components/ImpersonationBanner/ImpersonationBanner";
+import { useImpersonationContext } from "./hooks/useImpersonationContext";
 
 function SettlementWrapper({ children }) {
 	const { user } = useUser();
@@ -30,8 +33,19 @@ function SettlementWrapper({ children }) {
 
 function AppLayout({ isMobileMenuOpen, setIsMobileMenuOpen, toggleMobileMenu }) {
 	const location = useLocation();
+	const { user } = useUser();
+	const { isImpersonating, impersonationData } = useImpersonationContext();
+	const isActuallyImpersonating =
+		isImpersonating &&
+		impersonationData &&
+		impersonationData.impersonatedUserId &&
+		impersonationData.originalAdminId &&
+		impersonationData.impersonatedUserId !== impersonationData.originalAdminId;
 	return (
 		<div className="app">
+			{/* Desktop Impersonation Banner */}
+			<ImpersonationBanner />
+			
 			<Sidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 			{isMobileMenuOpen && (
 				<div
@@ -40,11 +54,16 @@ function AppLayout({ isMobileMenuOpen, setIsMobileMenuOpen, toggleMobileMenu }) 
 					aria-hidden="true"
 				/>
 			)}
-			<div className="right">
+			<div className="right" key={`${location.pathname}:${user?._id || 'nouser'}:${isActuallyImpersonating ? 'impersonating' : 'normal'}`}>
 				<Header toggleMobileMenu={toggleMobileMenu} />
 				<SwipeRefreshWrapper key={location.pathname}>
 					<AppRoutes />
 				</SwipeRefreshWrapper>
+				{isActuallyImpersonating && (
+					<div className="mobile-stop-button">
+						<StopImpersonationFab />
+					</div>
+				)}
 			</div>
 			{/* Global Settlement Notifications */}
 		</div>

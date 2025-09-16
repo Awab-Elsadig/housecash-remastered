@@ -13,13 +13,15 @@ import DetailModal from "./components/DetailModal";
 import PeopleOweMe from "./components/PeopleOweMe";
 import RefreshButton from "../../components/RefreshButton";
 import AddItemButton from "../../components/AddItemButton/AddItemButton";
+import { useImpersonationContext } from "../../hooks/useImpersonationContext";
 
 const Dashboard = () => {
 	useEffect(() => {
 		document.title = "Dashboard - HouseCash";
 	}, []);
 
-	const { user, houseMembers, items, fetchItems, updateItems, fetchCurrentUser } = useUser();
+	const { user, houseMembers, items, fetchItems, updateItems, fetchCurrentUser, refreshTrigger } = useUser();
+	const { isImpersonating } = useImpersonationContext();
 	const settlementContext = useSettlement();
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -29,6 +31,17 @@ const Dashboard = () => {
 		houseMembers
 	);
 
+	// Force refresh when impersonation changes
+	useEffect(() => {
+		if (isImpersonating && user?._id && user?.houseCode) {
+			console.log("✓ Dashboard: Impersonation detected, refreshing items");
+			// Add a small delay to ensure user data is fully updated
+			setTimeout(() => {
+				fetchItems();
+			}, 100);
+		}
+	}, [isImpersonating, refreshTrigger, user?._id, user?.houseCode, fetchItems]);
+
 	const dataReady =
 		user &&
 		houseMembers &&
@@ -36,7 +49,32 @@ const Dashboard = () => {
 		items !== null &&
 		items !== undefined;
 
-	const isLoading = useDataLoading(dataReady);
+	// Add impersonation-specific loading state
+	const [isImpersonationLoading, setIsImpersonationLoading] = useState(false);
+	
+	// Track when impersonation data is being loaded
+	useEffect(() => {
+		if (isImpersonating) {
+			setIsImpersonationLoading(true);
+			// Set a timeout to clear loading state if data doesn't load
+			const timeout = setTimeout(() => {
+				setIsImpersonationLoading(false);
+			}, 5000); // 5 second timeout
+			
+			return () => clearTimeout(timeout);
+		} else {
+			setIsImpersonationLoading(false);
+		}
+	}, [isImpersonating]);
+
+	// Clear impersonation loading when data is ready
+	useEffect(() => {
+		if (isImpersonationLoading && dataReady) {
+			setIsImpersonationLoading(false);
+		}
+	}, [isImpersonationLoading, dataReady]);
+
+	const isLoading = useDataLoading(dataReady) || isImpersonationLoading;
 
 	useEffect(() => {
 		if (!user?.houseCode) return;
@@ -46,6 +84,46 @@ const Dashboard = () => {
 		return () =>
 			["fetchUpdate", "itemUpdate", "paymentNotification"].forEach((evt) => channel.unsubscribe(evt, refresh));
 	}, [fetchItems, user?.houseCode]);
+
+	// Listen for navigation-like data loading events
+	useEffect(() => {
+		const handleNavigateToPage = (event) => {
+			const { forceRefresh } = event.detail || {};
+			console.log("✓ Dashboard: Starting navigation-like data loading", { forceRefresh });
+			
+			// Step 1: Load items from cache first (like navigation does)
+			const cachedItems = sessionStorage.getItem("items");
+			if (cachedItems && !forceRefresh) {
+				try {
+					const itemsData = JSON.parse(cachedItems);
+					updateItems(itemsData);
+					console.log("✓ Dashboard: Loaded items from cache:", itemsData.length, "items");
+				} catch (e) {
+					console.error("Failed to parse cached items:", e);
+				}
+			}
+			
+			// Step 2: Fetch fresh items from server (like navigation does)
+			setTimeout(() => {
+				console.log("✓ Dashboard: Fetching fresh items from server");
+				fetchItems();
+			}, 200);
+		};
+
+		const handleForceDataRefresh = () => {
+			console.log("✓ Dashboard: Force refreshing items");
+			setTimeout(() => {
+				fetchItems();
+			}, 200);
+		};
+
+		window.addEventListener('navigateToPage', handleNavigateToPage);
+		window.addEventListener('forceDataRefresh', handleForceDataRefresh);
+		return () => {
+			window.removeEventListener('navigateToPage', handleNavigateToPage);
+			window.removeEventListener('forceDataRefresh', handleForceDataRefresh);
+		};
+	}, [fetchItems, updateItems]);
 
 	const [detailMemberId, setDetailMemberId] = useState(null);
 	const closeDetail = useCallback(() => setDetailMemberId(null), []);
@@ -81,10 +159,10 @@ const Dashboard = () => {
 	return (
 		<>
 			<main className={classes.dashboard} role="main">
-				<Summary totals={totals} />
+				<Summary totals={totals} key={`summary-${user?._id}-${refreshTrigger}`} />
 
 				<div className={classes.mainContent}>
-					<section aria-label="Net balances">
+					<section aria-label="Net balances" key={`net-balances-${user?._id}-${refreshTrigger}`}>
 						<NetBalances
 							netPerMember={netPerMember}
 							houseMembers={houseMembers}
@@ -96,7 +174,7 @@ const Dashboard = () => {
 						/>
 						<PeopleOweMe user={user} items={items} houseMembers={houseMembers} />
 					</section>
-					<section aria-label="Pending payments">
+					<section aria-label="Pending payments" key={`pending-payments-${user?._id}-${refreshTrigger}`}>
 						<PendingPayments
 							paymentsByMember={paymentsByMember}
 							updateItems={updateItems}

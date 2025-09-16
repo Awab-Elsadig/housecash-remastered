@@ -139,7 +139,19 @@ export const SettlementProvider = ({ user, children }) => {
 	// Send request
 	const settleUp = useCallback(
 		async (otherUserId, name, amount) => {
-			if (!user?._id || !otherUserId || requests[otherUserId]) return false;
+			const currentUserId = user?._id || (() => { try { return JSON.parse(sessionStorage.getItem('user')||'{}')._id; } catch { return null; } })();
+			console.log('[REQUEST] settlement request start', { otherUserId, amount, currentUserIdPresent: !!currentUserId });
+			if (!currentUserId || !otherUserId) { console.log('[BLOCK] settleUp: missing params'); return false; }
+			const existing = requests[otherUserId];
+			if (existing) {
+				if (existing.expiresAt && existing.expiresAt < Date.now()) {
+					console.log('[CLEANUP] removing expired existing settlement before re-request', existing);
+					removeExpired(otherUserId);
+				} else {
+					console.log('[BLOCK] settleUp: existing pending request found', existing);
+					return false;
+				}
+			}
 			try {
 				const { data } = await axios.post("/api/settlements/request", { targetUserId: otherUserId });
 				const expiresAt = Date.now() + 60_000;
@@ -147,7 +159,7 @@ export const SettlementProvider = ({ user, children }) => {
 					...prev,
 					[otherUserId]: {
 						id: data.requestId,
-						fromUserId: user._id,
+						fromUserId: currentUserId,
 						toUserId: otherUserId,
 						name,
 						amount,
@@ -162,7 +174,7 @@ export const SettlementProvider = ({ user, children }) => {
 				return false;
 			}
 		},
-		[user?._id, requests, cancelSettlementRequest]
+		[requests, cancelSettlementRequest, removeExpired, user?._id]
 	);
 
 	const respond = useCallback(

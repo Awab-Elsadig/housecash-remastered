@@ -11,17 +11,22 @@ export const useImageUpload = () => {
 		setUploadError(null);
 
 		try {
+			console.log("Getting ImageKit auth parameters...");
 			// Get authentication parameters from backend
 			const authResponse = await axios.get("/api/upload/imagekit-auth", {
 				withCredentials: true,
 			});
+
+			console.log("Auth response:", authResponse.data);
 
 			if (!authResponse.data.success) {
 				throw new Error("Failed to get authentication parameters");
 			}
 
 			const authParams = authResponse.data.data;
+			console.log("Auth params:", authParams);
 
+			console.log("Uploading file to ImageKit:", file.name);
 			// Upload file to ImageKit
 			const uploadResponse = await imagekit.upload({
 				file: file,
@@ -29,6 +34,8 @@ export const useImageUpload = () => {
 				folder: folder,
 				...authParams,
 			});
+
+			console.log("ImageKit upload response:", uploadResponse);
 
 			setIsUploading(false);
 			return {
@@ -52,6 +59,7 @@ export const useImageUpload = () => {
 
 	const updateProfilePicture = async (imageUrl, fileId) => {
 		try {
+			console.log("Updating profile picture:", { imageUrl, fileId });
 			const response = await axios.post(
 				"/api/upload/profile-picture",
 				{
@@ -61,6 +69,7 @@ export const useImageUpload = () => {
 				{ withCredentials: true }
 			);
 
+			console.log("Profile picture update response:", response.data);
 			return response.data;
 		} catch (error) {
 			console.error("Error updating profile picture:", error);

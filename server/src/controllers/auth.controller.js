@@ -64,22 +64,12 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-	console.log("=== SERVER LOGIN DEBUG START ===");
-	console.log("Request body:", req.body);
-	console.log("Request headers:", req.headers);
-	console.log("Request IP:", req.ip);
-	console.log("Request method:", req.method);
-	console.log("Request URL:", req.url);
-	
 	const { houseCode, email, password } = req.body || {};
-	console.log("Extracted credentials:", { email, houseCode, passwordLength: password?.length });
 
 	try {
 		// Check database connection
-		console.log("Database connection state:", mongoose.connection.readyState);
 		if (mongoose.connection.readyState !== 1) {
 			console.error("Database not connected. State:", mongoose.connection.readyState);
-			console.log("Attempting to reconnect to database...");
 			
 			// Try to reconnect
 			try {
@@ -87,7 +77,7 @@ export const login = async (req, res) => {
 					serverSelectionTimeoutMS: 10000,
 					connectTimeoutMS: 10000
 				});
-				console.log("Database reconnected successfully");
+				console.log("✓ Database reconnected");
 			} catch (reconnectError) {
 				console.error("Database reconnection failed:", reconnectError.message);
 				return res.status(500).json({ error: "Database connection failed" });
@@ -96,46 +86,23 @@ export const login = async (req, res) => {
 
 		// Validate input
 		if (!email || !password || !houseCode) {
-			console.log("Missing required fields:", { email: !!email, password: !!password, houseCode: !!houseCode });
 			return res.status(400).json({ error: "Email, password, and house code are required" });
 		}
 
 		if (houseCode.length !== 6) {
-			console.log("Invalid house code length:", houseCode.length);
 			return res.status(400).json({ error: "House code must be exactly 6 characters" });
 		}
-
-		console.log("Searching for user with email:", email, "and houseCode:", houseCode);
 		
 		// Get the user
 		const user = await User.findOne({ email, houseCode });
-		console.log("User found:", !!user);
-		if (user) {
-			console.log("User details:", { 
-				id: user._id, 
-				name: user.name, 
-				email: user.email, 
-				houseCode: user.houseCode,
-				hasPassword: !!user.password 
-			});
-		}
 
 		if (!user) {
-			console.log("User not found:", { email, houseCode });
-			// Check if user exists with different house code
-			const userWithDifferentHouse = await User.findOne({ email });
-			if (userWithDifferentHouse) {
-				console.log("User exists but with different house code:", userWithDifferentHouse.houseCode);
-			}
 			return res.status(400).json({ error: "Invalid credentials" });
 		}
 
-		console.log("Comparing password...");
 		const isPasswordCorrect = await bcrypt.compare(password, user.password);
-		console.log("Password comparison result:", isPasswordCorrect);
 
 		if (!isPasswordCorrect) {
-			console.log("Invalid password for user:", email);
 			return res.status(400).json({ error: "Invalid credentials" });
 		}
 
@@ -143,58 +110,29 @@ export const login = async (req, res) => {
 		if (req.session) {
 			delete req.session.impersonatedUserId;
 			delete req.session.originalAdminId;
-			console.log("Cleared impersonation data from session");
 		}
 
-		console.log("Finding house members for houseCode:", houseCode);
 		// Get the same house members
 		const houseMembers = await House.findOne({ houseCode }).populate("members", "-password");
-		console.log("House members found:", !!houseMembers);
-		if (houseMembers) {
-			console.log("House members count:", houseMembers.members?.length || 0);
-			console.log("House members structure:", {
-				hasMembers: !!houseMembers.members,
-				membersType: typeof houseMembers.members,
-				membersLength: houseMembers.members?.length,
-				membersIsArray: Array.isArray(houseMembers.members)
-			});
-		} else {
-			console.log("No house found for houseCode:", houseCode);
-		}
-
-		console.log("Generating JWT token...");
 		// JWT
 		try {
 			generateTokenAndSetCookie(res, user.id);
-			console.log("JWT token generated and cookie set");
 		} catch (jwtError) {
 			console.error("JWT generation error:", jwtError);
 			return res.status(500).json({ error: "Token generation failed" });
 		}
 
-		console.log("Login successful for user:", email);
 		const responseData = {
 			success: true,
 			message: "User logged in successfully",
 			user: { ...user._doc, password: undefined },
 			houseMembers,
 		};
-		console.log("Sending response:", { 
-			success: responseData.success, 
-			userId: responseData.user._id,
-			houseMembersCount: responseData.houseMembers?.members?.length || 0
-		});
 		
 		res.status(200).json(responseData);
 	} catch (error) {
-		console.log("=== SERVER LOGIN ERROR ===");
 		console.error("Login error:", error);
-		console.error("Error stack:", error.stack);
-		console.error("Error name:", error.name);
-		console.error("Error message:", error.message);
 		res.status(500).json({ error: error.message || "Login failed" });
-	} finally {
-		console.log("=== SERVER LOGIN DEBUG END ===");
 	}
 };
 

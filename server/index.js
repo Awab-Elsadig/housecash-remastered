@@ -39,33 +39,21 @@ const allowedOrigins = [
 
 app.use(cors({
 	origin: function (origin, callback) {
-		console.log('=== CORS DEBUG ===');
-		console.log('Request origin:', origin);
-		console.log('Request type:', typeof origin);
-		console.log('Allowed origins:', allowedOrigins);
-		console.log('Origin in allowed list:', allowedOrigins.indexOf(origin));
-		
 		// Allow requests with no origin (like mobile apps or curl requests)
 		if (!origin) {
-			console.log('No origin provided, allowing request');
 			return callback(null, true);
 		}
 		
 		if (allowedOrigins.indexOf(origin) !== -1) {
-			console.log('Origin allowed:', origin);
 			callback(null, true);
 		} else {
 			// In production, be more permissive for Vercel domains
 			if (isProduction && origin && origin.includes('vercel.app')) {
-				console.log('Allowing Vercel domain in production:', origin);
 				callback(null, true);
 			} else {
-				console.log('CORS blocked origin:', origin);
-				console.log('This origin is not in the allowed list');
 				callback(new Error('Not allowed by CORS'));
 			}
 		}
-		console.log('=== END CORS DEBUG ===');
 	},
 	credentials: true,
 	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -136,15 +124,7 @@ app.use(
 );
 
 
-app.use("/api/auth", (req, res, next) => {
-	console.log("=== AUTH ROUTE DEBUG ===");
-	console.log("Auth route hit:", req.method, req.url);
-	console.log("Origin:", req.headers.origin);
-	console.log("User-Agent:", req.headers['user-agent']);
-	console.log("Request body:", req.body);
-	console.log("=== END AUTH ROUTE DEBUG ===");
-	next();
-}, authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/validate", validationRoutes);
 app.use("/api/houses", houseRoutes);
 app.use("/api/users", userRoutes);
@@ -159,10 +139,6 @@ app.use("/api/payment-approvals", paymentApprovalRoutes);
 
 // Simple health check - moved to end so it doesn't interfere with API routes
 app.get("/", (req, res) => {
-	console.log("=== HEALTH CHECK DEBUG ===");
-	console.log("Health check request from:", req.headers.origin);
-	console.log("Request headers:", req.headers);
-	console.log("=== END HEALTH CHECK DEBUG ===");
 	res.json({ 
 		message: "HouseCash Server is running!", 
 		timestamp: new Date().toISOString(),
@@ -217,13 +193,7 @@ app.get("/test-db", async (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-	console.log("=== SERVER STARTUP DEBUG ===");
-	console.log(`Server is running on port ${PORT}`);
-	console.log("Environment:", process.env.NODE_ENV || "development");
-	console.log("CORS allowed origins:", allowedOrigins);
-	console.log("Database connection state:", mongoose.connection.readyState);
-	console.log("Session secret configured:", !!process.env.SESSION_SECRET);
-	console.log("MongoDB URI configured:", !!process.env.MONGODB_URI);
-	console.log("JWT Secret configured:", !!process.env.JWT_SECRET);
-	console.log("=== END SERVER STARTUP DEBUG ===");
+	console.log(`✓ Server running on port ${PORT}`);
+	console.log(`✓ Environment: ${process.env.NODE_ENV || "development"}`);
+	console.log(`✓ Database: ${mongoose.connection.readyState === 1 ? "connected" : "disconnected"}`);
 });

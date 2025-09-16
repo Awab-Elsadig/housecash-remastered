@@ -18,57 +18,97 @@
 	align-items: center;
 	justify-content: space-between;
 	width: 100%;
-	padding: 0.75rem 1rem;
-	background: linear-gradient(135deg, rgba(255, 165, 0, 0.9) 0%, rgba(255, 140, 0, 0.8) 100%);
-	border: 1px solid #ff8c00;
-	border-radius: 0.5rem;
-	margin-bottom: 1rem;
-	box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
-	animation: slideDown 0.3s ease-out;
+	padding: var(--space-md) var(--space-lg);
+	background: var(--glassBackground);
+	border: 1px solid var(--glassStroke);
+	border-radius: var(--border-radius);
+	margin-bottom: var(--space-md);
+	backdrop-filter: var(--glassBlur);
+	box-shadow: 0 8px 32px rgba(var(--mainColor-rgb), 0.15);
+	animation: slideInFromTop 0.4s var(--transition-base);
+	position: relative;
+	overflow: hidden;
+}
+
+.impersonationBanner::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background: linear-gradient(90deg, var(--mainColor), var(--mainColorDark));
+	opacity: 0.8;
 }
 
 .impersonationInfo {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
-	color: white;
+	gap: var(--space-sm);
+	color: var(--textColor);
 	font-weight: 600;
+	font-size: var(--text-sm);
 }
 
 .impersonationIcon {
-	font-size: 1.25rem;
+	font-size: var(--text-lg);
+	color: var(--mainColor);
+	filter: drop-shadow(0 2px 4px rgba(var(--mainColor-rgb), 0.3));
 }
 
 .adminInfo {
 	font-weight: 400;
-	opacity: 0.9;
-	font-size: 0.875rem;
+	opacity: 0.8;
+	font-size: var(--text-xs);
+	color: var(--textSecondary);
+	margin-left: var(--space-xs);
 }
 
 .stopImpersonationBtn {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
-	padding: 0.5rem 1rem;
-	background: rgba(255, 255, 255, 0.2);
-	border: 1px solid rgba(255, 255, 255, 0.3);
-	border-radius: 0.375rem;
-	color: white;
+	gap: var(--space-sm);
+	padding: var(--space-sm) var(--space-md);
+	background: rgba(var(--mainColor-rgb), 0.1);
+	border: 1px solid rgba(var(--mainColor-rgb), 0.3);
+	border-radius: var(--border-radius-sm);
+	color: var(--mainColor);
 	font-weight: 600;
 	cursor: pointer;
-	transition: all 0.2s ease;
-	font-size: 0.875rem;
+	transition: all var(--transition-base);
+	font-size: var(--text-xs);
+	backdrop-filter: blur(4px);
+	position: relative;
+	overflow: hidden;
+}
+
+.stopImpersonationBtn::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(var(--mainColor-rgb), 0.1), transparent);
+	transition: left var(--transition-slow);
 }
 
 .stopImpersonationBtn:hover {
-	background: rgba(255, 255, 255, 0.3);
-	transform: translateY(-1px);
+	background: rgba(var(--mainColor-rgb), 0.2);
+	border-color: var(--mainColor);
+	transform: translateY(var(--hover-translate));
+	box-shadow: 0 4px 12px rgba(var(--mainColor-rgb), 0.2);
+}
+
+.stopImpersonationBtn:hover::before {
+	left: 100%;
 }
 
 .stopImpersonationBtn:disabled {
-	opacity: 0.6;
+	opacity: 0.5;
 	cursor: not-allowed;
 	transform: none;
+	background: rgba(var(--mainColor-rgb), 0.05);
 }
 
 /* Main Header Content */
@@ -197,6 +237,7 @@
 		z-index: 11;
 		padding: 0.625rem;
 		font-size: 1.125rem;
+		transition: top var(--transition-base);
 	}
 
 	.profile {
@@ -206,6 +247,16 @@
 		top: 1rem;
 		right: 1.5rem;
 		gap: 0.75rem;
+		transition: top var(--transition-base);
+	}
+
+	/* Adjust positioning when impersonation banner is present */
+	.hasImpersonationBanner .mobileMenuButton {
+		top: calc(1rem + 80px); /* Banner height + original top */
+	}
+
+	.hasImpersonationBanner .profile {
+		top: calc(1rem + 80px); /* Banner height + original top */
 	}
 
 	.pageInfo {
@@ -214,6 +265,12 @@
 		text-align: center;
 		margin-top: 3.5rem;
 		padding: 0 3rem;
+		transition: margin-top var(--transition-base);
+	}
+
+	/* Adjust page info margin when impersonation banner is present */
+	.hasImpersonationBanner .pageInfo {
+		margin-top: calc(3.5rem + 80px); /* Original margin + banner height */
 	}
 
 	.pageTitle {
@@ -249,42 +306,54 @@
 	/* Impersonation banner mobile adjustments */
 	.impersonationBanner {
 		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem;
-		margin-bottom: 0.75rem;
+		gap: var(--space-md);
+		padding: var(--space-lg);
+		margin-bottom: var(--space-md);
 		text-align: center;
+		border-radius: var(--border-radius-sm);
 	}
 
 	.impersonationInfo {
 		justify-content: center;
 		flex-wrap: wrap;
-		gap: 0.375rem;
-		font-size: 0.875rem;
+		gap: var(--space-sm);
+		font-size: var(--text-sm);
+		line-height: 1.4;
 	}
 
 	.adminInfo {
-		font-size: 0.8rem;
+		font-size: var(--text-xs);
+		margin-left: 0;
+		margin-top: var(--space-xs);
+		display: block;
+		width: 100%;
 	}
 
 	.stopImpersonationBtn {
-		padding: 0.625rem 1.25rem;
-		font-size: 0.8rem;
+		padding: var(--space-md) var(--space-lg);
+		font-size: var(--text-sm);
 		width: 100%;
 		justify-content: center;
-		max-width: 200px;
+		max-width: 240px;
+		margin: 0 auto;
+		border-radius: var(--border-radius-sm);
 	}
 }
 
 /* Animations */
-@keyframes slideDown {
+@keyframes slideInFromTop {
 	from {
 		opacity: 0;
-		transform: translateY(-10px);
+		transform: translateY(-20px) scale(0.95);
 		max-height: 0;
+		padding-top: 0;
+		padding-bottom: 0;
 	}
 	to {
 		opacity: 1;
-		transform: translateY(0);
-		max-height: 100px;
+		transform: translateY(0) scale(1);
+		max-height: 120px;
+		padding-top: var(--space-md);
+		padding-bottom: var(--space-md);
 	}
 }

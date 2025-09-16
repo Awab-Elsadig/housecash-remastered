@@ -99,10 +99,48 @@ export const PaymentApprovalProvider = ({ user, children }) => {
     });
   }, []);
 
+  // Define cancel before request to avoid TDZ in dependency arrays
+  const cancel = useCallback(
+    async (otherUserId, silent = false) => {
+      const req = requests[otherUserId];
+      if (!req) return;
+      if (timersRef.current[otherUserId]) {
+        clearTimeout(timersRef.current[otherUserId]);
+        delete timersRef.current[otherUserId];
+      }
+      setRequests((prev) => {
+        const copy = { ...prev };
+        delete copy[otherUserId];
+        return copy;
+      });
+      if (silent) return;
+      try {
+        await axios.post("/api/payment-approvals/cancel", { requestId: req.id });
+      } catch (e) {
+        console.error("Cancel failed", e);
+      }
+    },
+    [requests]
+  );
+
   const request = useCallback(
     async (toUserId, itemIds) => {
-      if (!user?._id || !toUserId || !Array.isArray(itemIds) || itemIds.length === 0) return false;
-      if (requests[toUserId]) return false;
+      const currentUserId = user?._id || (() => { try { return JSON.parse(sessionStorage.getItem('user')||'{}')._id; } catch { return null; } })();
+      console.log('[REQUEST] payment request start', { toUserId, itemCount: Array.isArray(itemIds) ? itemIds.length : 'n/a', currentUserIdPresent: !!currentUserId });
+      if (!currentUserId || !toUserId || !Array.isArray(itemIds) || itemIds.length === 0) {
+        console.log('[BLOCK] request: missing params', { hasUser: !!currentUserId, toUserId, validItems: Array.isArray(itemIds), itemsLen: itemIds?.length });
+        return false;
+      }
+      const existing = requests[toUserId];
+      if (existing) {
+        if (existing.expiresAt && existing.expiresAt < Date.now()) {
+          console.log('[CLEANUP] removing expired existing request before re-request', existing);
+          removeExpired(toUserId);
+        } else {
+          console.log('[BLOCK] request: existing pending request found', existing);
+          return false;
+        }
+      }
       try {
         const { data } = await axios.post("/api/payment-approvals/request", { toUserId, itemIds });
         const expiresAt = Date.now() + 60_000;
@@ -110,7 +148,7 @@ export const PaymentApprovalProvider = ({ user, children }) => {
           ...prev,
           [toUserId]: {
             id: data.requestId,
-            fromUserId: user._id,
+            fromUserId: currentUserId,
             toUserId,
             items: itemIds,
             direction: "outgoing",
@@ -124,7 +162,7 @@ export const PaymentApprovalProvider = ({ user, children }) => {
         return false;
       }
     },
-    [user?._id, requests]
+    [user?._id, requests, removeExpired, cancel]
   );
 
   const respond = useCallback(
@@ -151,28 +189,6 @@ export const PaymentApprovalProvider = ({ user, children }) => {
     [requests, removeExpired]
   );
 
-  const cancel = useCallback(
-    async (otherUserId, silent = false) => {
-      const req = requests[otherUserId];
-      if (!req) return;
-      if (timersRef.current[otherUserId]) {
-        clearTimeout(timersRef.current[otherUserId]);
-        delete timersRef.current[otherUserId];
-      }
-      setRequests((prev) => {
-        const copy = { ...prev };
-        delete copy[otherUserId];
-        return copy;
-      });
-      if (silent) return;
-      try {
-        await axios.post("/api/payment-approvals/cancel", { requestId: req.id });
-      } catch (e) {
-        console.error("Cancel failed", e);
-      }
-    },
-    [requests]
-  );
 
   const getTimeRemaining = useCallback(
     (otherUserId) => {

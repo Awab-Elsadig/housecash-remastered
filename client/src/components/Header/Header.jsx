@@ -78,29 +78,6 @@ const Header = ({ toggleMobileMenu }) => {
 
 	return (
 		<div className={classes.header}>
-			{/* Impersonation Banner */}
-			{isActuallyImpersonating && (
-				<div className={classes.impersonationBanner}>
-					<div className={classes.impersonationInfo}>
-						<RiUserFollowLine className={classes.impersonationIcon} />
-						<span>
-							Impersonating: <strong>{user?.name || "Unknown User"}</strong>
-							{impersonationData?.originalAdmin && (
-								<span className={classes.adminInfo}> (Admin: {impersonationData.originalAdmin.name})</span>
-							)}
-						</span>
-					</div>
-					<button
-						className={classes.stopImpersonationBtn}
-						onClick={handleStopImpersonation}
-						disabled={stoppingImpersonation}
-					>
-						<RiUserUnfollowLine />
-						{stoppingImpersonation ? "Stopping..." : "Stop Impersonation"}
-					</button>
-				</div>
-			)}
-
 			{/* Main Header Content */}
 			<div className={classes.headerContent}>
 				{/* Mobile Menu Button */}

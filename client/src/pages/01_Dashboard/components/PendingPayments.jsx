@@ -41,44 +41,83 @@ const PaymentTimer = ({ memberId, getTimeRemaining, request }) => {
 	);
 };
 
-const PendingItem = ({ item, onPay, isSelected = false }) => (
-	<li className={`${classes.itemRow} ${isSelected ? classes.selectedItem : ''}`}>
-		<span className={classes.itemName}>{item.name}</span>
-		<div className={classes.itemDetails}>
-			<span className={classes.itemShare}>{formatCurrency(item.share)}</span>
-			<span className={classes.itemOfTotal}>/ {formatCurrency(item.price)}</span>
-		</div>
-		<div className={classes.itemPay}>
-			{isSelected ? (
-				<div className={classes.selectedIndicator}>
-					<div className={classes.selectedDot}></div>
-					<span className={classes.selectedText}>Selected</span>
-				</div>
-			) : (
-				<Tooltip content="Pay only this item" position="top">
-					<button onClick={() => onPay(item._id)} className={classes.btnIcon} aria-label={`Pay for ${item.name}`}>
-						<PiHandDepositFill />
+const PendingItem = ({ item, onPay, isSelected = false }) => {
+	const [isLoading, setIsLoading] = useState(false);
+	const handlePay = async () => {
+		setIsLoading(true);
+		try {
+			await onPay(item._id);
+		} finally {
+			setTimeout(() => setIsLoading(false), 1000);
+		}
+	};
+	return (
+		<li className={`${classes.itemRow} ${isSelected ? classes.selectedItem : ''}`}>
+			<span className={classes.itemName}>{item.name}</span>
+			<div className={classes.itemDetails}>
+				<span className={classes.itemShare}>{formatCurrency(item.share)}</span>
+				<span className={classes.itemOfTotal}>/ {formatCurrency(item.price)}</span>
+			</div>
+			<div className={classes.itemPay}>
+				{isSelected ? (
+					<div className={classes.selectedIndicator}>
+						<div className={classes.selectedDot}></div>
+						<span className={classes.selectedText}>Selected</span>
+					</div>
+				) : (
+					<Tooltip content="Pay only this item" position="top">
+						<button 
+							onClick={() => { console.log("[CLICK] Pay single item", { itemId: item._id, itemName: item.name }); handlePay(); }} 
+							className={`${classes.btnIcon} ${isLoading ? classes.loading : ''}`} 
+							disabled={isLoading}
+							aria-label={`Pay for ${item.name}`}
+						>
+							<PiHandDepositFill />
+						</button>
+					</Tooltip>
+				)}
+			</div>
+		</li>
+	);
+};
+
+const PendingPaymentsCard = ({ memberId, data, onPayItem, onPayAll, selectedItems = [], hasPendingRequest = false }) => {
+	const [isLoading, setIsLoading] = useState(false);
+	
+	// Reset loading state when pending request is cleared
+	useEffect(() => {
+		if (!hasPendingRequest) {
+			setIsLoading(false);
+		}
+	}, [hasPendingRequest]);
+	
+	const handlePayAll = async () => {
+		setIsLoading(true);
+		try {
+			await onPayAll(memberId);
+		} catch (error) {
+			// Only reset loading on error, not on success
+			setIsLoading(false);
+		}
+	};
+	
+	const isDisabled = isLoading || hasPendingRequest;
+	
+	return (
+		<div className={classes.card}>
+			<header className={classes.cardHeader}>
+				<h3 className={classes.cardTitle}>{data.memberInfo?.name || "Member"}</h3>
+				<Tooltip content={hasPendingRequest ? "Payment request already pending" : "Pay all outstanding items to this member"} position="top">
+					<button
+						onClick={() => { console.log("[CLICK] Pay all to member", { memberId, memberName: data.memberInfo?.name, itemCount: data.items?.length }); handlePayAll(); }}
+						className={`${classes.btnPrimary} ${isLoading ? classes.loading : ''}`}
+						disabled={isDisabled}
+						aria-label={`Pay all to ${data.memberInfo?.name}`}
+					>
+						{isLoading ? 'Processing...' : 'Pay All'}
 					</button>
 				</Tooltip>
-			)}
-		</div>
-	</li>
-);
-
-const PendingPaymentsCard = ({ memberId, data, onPayItem, onPayAll, selectedItems = [] }) => (
-	<div className={classes.card}>
-		<header className={classes.cardHeader}>
-			<h3 className={classes.cardTitle}>{data.memberInfo?.name || "Member"}</h3>
-			<Tooltip content="Pay all outstanding items to this member" position="top">
-				<button
-					onClick={() => onPayAll(memberId)}
-					className={classes.btnPrimary}
-					aria-label={`Pay all to ${data.memberInfo?.name}`}
-				>
-					Pay All
-				</button>
-			</Tooltip>
-		</header>
+			</header>
 		<ul className={classes.itemList}>
 			{data.items.map((item) => (
 				<PendingItem 
@@ -94,7 +133,8 @@ const PendingPaymentsCard = ({ memberId, data, onPayItem, onPayAll, selectedItem
 			<span className={classes.cardTotal}>{formatCurrency(data.total)}</span>
 		</footer>
 	</div>
-);
+	);
+};
 
 const PendingPayments = ({ paymentsByMember, items, updateItems, fetchItems, user }) => {
 	const rollbackRef = useRef(null);
@@ -102,9 +142,10 @@ const PendingPayments = ({ paymentsByMember, items, updateItems, fetchItems, use
 
 	const payItem = useCallback(
 		async (itemId) => {
-			if (!user?._id) return;
+			const currentUserId = user?._id || (() => { try { return JSON.parse(sessionStorage.getItem('user')||'{}')._id; } catch { return null; } })();
+			console.log('[ACTION] payItem', { itemId, hasUserId: !!currentUserId });
 			const item = items.find((i) => i._id === itemId);
-			if (!item) return;
+			if (!item) { console.log('[SKIP] payItem: item not found'); return; }
 			await requestPayment(item.author.toString(), [itemId]);
 		},
 		[items, user?._id, requestPayment]
@@ -112,16 +153,19 @@ const PendingPayments = ({ paymentsByMember, items, updateItems, fetchItems, use
 
 	const payAllToMember = useCallback(
 		async (memberId) => {
-			if (!user?._id) return;
+			const currentUserId = user?._id || (() => { try { return JSON.parse(sessionStorage.getItem('user')||'{}')._id; } catch { return null; } })();
+			console.log('[ACTION] payAllToMember', { memberId, hasUserId: !!currentUserId, itemsCount: items?.length });
 			const itemIds = items
 				.filter(
 					(item) =>
 						item.author.toString() === memberId &&
-						item.members.some((m) => m.userID.toString() === user._id.toString() && !m.paid)
+						item.members.some((m) => m.userID.toString() === (currentUserId||'').toString() && !m.paid)
 				)
 				.map((i) => i._id);
-			if (itemIds.length === 0) return;
-			await requestPayment(memberId, itemIds);
+			console.log('[DEBUG] payAllToMember computed itemIds', { count: itemIds.length, itemIds });
+			if (itemIds.length === 0) { console.log('[SKIP] payAllToMember: no eligible items'); return; }
+			const result = await requestPayment(memberId, itemIds);
+			console.log('[RESULT] payAllToMember requestPayment returned', result);
 		},
 		[items, user?._id, requestPayment]
 	);
@@ -140,6 +184,7 @@ const PendingPayments = ({ paymentsByMember, items, updateItems, fetchItems, use
 					{paymentEntries.map(([memberId, data]) => {
 						const req = paymentRequests?.[memberId];
 						const selectedItems = req?.items || [];
+						const hasPendingRequest = !!req && req.direction === "outgoing";
 						return (
 							<div key={memberId}>
 								<PendingPaymentsCard
@@ -148,6 +193,7 @@ const PendingPayments = ({ paymentsByMember, items, updateItems, fetchItems, use
 									onPayItem={payItem}
 									onPayAll={payAllToMember}
 									selectedItems={selectedItems}
+									hasPendingRequest={hasPendingRequest}
 								/>
 								{req && req.direction === "outgoing" && (
 									<div className={classes.awaitingApproval}>
