@@ -102,6 +102,37 @@ const connectWithRetry = async (retries = 3) => {
 
 connectWithRetry();
 
+// Debug: Check what's in the database on startup
+const checkDatabaseContents = async () => {
+	try {
+		const { Item } = await import("./src/models/item.model.js");
+		const { User } = await import("./src/models/user.model.js");
+		
+		const totalItems = await Item.countDocuments();
+		const totalUsers = await User.countDocuments();
+		
+		console.log("=== DATABASE CONTENTS CHECK ===");
+		console.log("Total items in database:", totalItems);
+		console.log("Total users in database:", totalUsers);
+		
+		if (totalItems > 0) {
+			const sampleItems = await Item.find({}).limit(5).select('name houseCode author').lean();
+			console.log("Sample items:", sampleItems);
+		}
+		
+		if (totalUsers > 0) {
+			const sampleUsers = await User.find({}).limit(5).select('email houseCode').lean();
+			console.log("Sample users:", sampleUsers);
+		}
+		console.log("=== END DATABASE CONTENTS CHECK ===");
+	} catch (error) {
+		console.error("Error checking database contents:", error);
+	}
+};
+
+// Check database contents after connection
+setTimeout(checkDatabaseContents, 2000);
+
 // Trust first proxy
 app.set("trust proxy", 1);
 

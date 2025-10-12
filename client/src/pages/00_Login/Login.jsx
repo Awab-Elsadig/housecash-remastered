@@ -74,7 +74,39 @@ const Login = () => {
 					setErrors((prev) => ({ ...prev, connectionError: true }));
 				}
 			} catch (error) {
-				console.error("Login error:", error.message);
+				// Comprehensive error logging
+				console.error("=== LOGIN ERROR DETAILS ===");
+				console.error("Error message:", error.message);
+				console.error("Error code:", error.code);
+				console.error("Error name:", error.name);
+				console.error("Error stack:", error.stack);
+				console.error("Full error object:", error);
+				
+				// Network-specific error details
+				if (error.response) {
+					console.error("Response status:", error.response.status);
+					console.error("Response statusText:", error.response.statusText);
+					console.error("Response headers:", error.response.headers);
+					console.error("Response data:", error.response.data);
+				} else if (error.request) {
+					console.error("Request object:", error.request);
+					console.error("No response received - possible network issue");
+				} else {
+					console.error("Error setting up request:", error.message);
+				}
+				
+				// Axios-specific error details
+				if (error.config) {
+					console.error("Request config:", {
+						url: error.config.url,
+						method: error.config.method,
+						baseURL: error.config.baseURL,
+						timeout: error.config.timeout,
+						withCredentials: error.config.withCredentials
+					});
+				}
+				
+				console.error("=== END LOGIN ERROR DETAILS ===");
 				
 				setErrors((prev) => ({ ...prev, connectionError: true }));
 				setTheError(error.response?.data?.error || error.message || "Login failed");
@@ -104,6 +136,21 @@ const Login = () => {
 					return;
 				}
 			} catch (error) {
+				// Comprehensive error logging for auth check
+				console.error("=== AUTH CHECK ERROR DETAILS ===");
+				console.error("Error message:", error.message);
+				console.error("Error code:", error.code);
+				console.error("Error name:", error.name);
+				
+				if (error.response) {
+					console.error("Response status:", error.response.status);
+					console.error("Response data:", error.response.data);
+				} else if (error.request) {
+					console.error("No response received - possible network issue");
+					console.error("Request object:", error.request);
+				}
+				
+				console.error("=== END AUTH CHECK ERROR DETAILS ===");
 				// User is not logged in, continue with login page
 			}
 		};

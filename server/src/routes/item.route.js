@@ -17,6 +17,7 @@ import {
 	getItemsInvestigation,
 	listItemsMissingHouseCode,
 	backfillItemsHouseCode,
+	getAllItemsDebug,
 } from "../controllers/item.controller.js";
 import { jwtAuthMiddleware } from "../middlewares/jwtAuth.middleware.js";
 
@@ -30,6 +31,7 @@ router.get("/get-items-diagnostics", jwtAuthMiddleware, getItemsDiagnostics);
 router.get("/get-items-investigation", jwtAuthMiddleware, getItemsInvestigation);
 router.get("/maintenance/list-missing-housecode", jwtAuthMiddleware, listItemsMissingHouseCode);
 router.post("/maintenance/backfill-housecode", jwtAuthMiddleware, backfillItemsHouseCode);
+router.get("/debug/all-items", jwtAuthMiddleware, getAllItemsDebug);
 router.patch("/update-item/:itemId", jwtAuthMiddleware, updateItem);
 router.delete("/delete-item/:houseCode/:userId/:itemId", jwtAuthMiddleware, deleteItem);
 

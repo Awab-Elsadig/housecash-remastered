@@ -52,14 +52,36 @@ export const createItem = async (req, res) => {
 
 export const getItems = async (req, res) => {
 	try {
+		console.log("=== GET ITEMS ENDPOINT HIT ===");
+		console.log("Request user:", req.user);
+		
 		// Get house code from the authenticated user
 		const houseCode = req.user?.houseCode;
+		console.log("House code from user:", houseCode);
+		
 		if (!houseCode) {
+			console.log("ERROR: No house code found for user");
 			return res.status(400).json({ error: "User must belong to a house to view items" });
 		}
 
+		console.log("Searching for items with houseCode:", houseCode);
+		
 		// Filter items by house code
 		const items = await Item.find({ houseCode }).sort({ createdAt: -1 }).exec();
+		
+		console.log("=== ITEMS QUERY RESULTS ===");
+		console.log("Total items found:", items.length);
+		console.log("Items:", items.map(item => ({
+			id: item._id,
+			name: item.name,
+			price: item.price,
+			houseCode: item.houseCode,
+			author: item.author,
+			membersCount: item.members?.length || 0,
+			createdAt: item.createdAt
+		})));
+		console.log("=== END ITEMS QUERY RESULTS ===");
+		
 		return res.status(200).json({ items });
 	} catch (error) {
 		console.error("Error fetching items:", error);
@@ -869,5 +891,49 @@ export const resolveBalanceBatch = async (req, res) => {
 	} catch (error) {
 		console.error("Error in batch resolve balance:", error);
 		return res.status(500).json({ error: error.message || "Error resolving balance batch" });
+	}
+};
+
+// Debug endpoint to check all items in database
+export const getAllItemsDebug = async (req, res) => {
+	try {
+		console.log("=== GET ALL ITEMS DEBUG ENDPOINT HIT ===");
+		
+		// Get all items from database
+		const allItems = await Item.find({}).sort({ createdAt: -1 }).exec();
+		
+		console.log("=== ALL ITEMS IN DATABASE ===");
+		console.log("Total items in database:", allItems.length);
+		console.log("Items:", allItems.map(item => ({
+			id: item._id,
+			name: item.name,
+			price: item.price,
+			houseCode: item.houseCode,
+			author: item.author,
+			membersCount: item.members?.length || 0,
+			createdAt: item.createdAt
+		})));
+		console.log("=== END ALL ITEMS IN DATABASE ===");
+		
+		// Get all users
+		const allUsers = await User.find({}).select('_id email houseCode').exec();
+		console.log("=== ALL USERS IN DATABASE ===");
+		console.log("Total users:", allUsers.length);
+		console.log("Users:", allUsers.map(user => ({
+			id: user._id,
+			email: user.email,
+			houseCode: user.houseCode
+		})));
+		console.log("=== END ALL USERS IN DATABASE ===");
+		
+		return res.status(200).json({ 
+			allItems: allItems.length,
+			allUsers: allUsers.length,
+			items: allItems,
+			users: allUsers
+		});
+	} catch (error) {
+		console.error("Error in getAllItemsDebug:", error);
+		return res.status(500).json({ error: error.message || "Error getting all items debug" });
 	}
 };

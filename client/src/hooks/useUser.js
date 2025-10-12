@@ -261,29 +261,53 @@ export const useUser = () => {
 
 	// Fetch items from backend
 	const fetchItems = useCallback(async () => {
+		console.log("=== CLIENT FETCH ITEMS CALLED ===");
+		console.log("User:", user);
+		console.log("User houseCode:", user?.houseCode);
+		
 		if (!user?.houseCode) {
+			console.log("ERROR: No houseCode found for user, skipping fetch");
 			return;
 		}
 
 		// Prevent duplicate calls using sessionStorage as a global flag
 		const isCurrentlyFetchingItems = sessionStorage.getItem("isFetchingItems");
 		if (isCurrentlyFetchingItems === "true") {
+			console.log("Already fetching items, skipping duplicate call");
 			return;
 		}
 
+		console.log("Starting items fetch...");
 		sessionStorage.setItem("isFetchingItems", "true");
 		setIsFetchingItems(true);
 		setLoading(true);
 		setError(null);
 
 		try {
-			console.log("✓ Fetching items from server");
+			console.log("✓ Making request to /api/items/get-items");
 			const response = await axios.get("/api/items/get-items");
+			
+			console.log("=== CLIENT ITEMS RESPONSE ===");
+			console.log("Response status:", response.status);
+			console.log("Response data:", response.data);
+			console.log("Items count:", response.data?.items?.length || 0);
+			console.log("Items:", response.data?.items);
+			console.log("=== END CLIENT ITEMS RESPONSE ===");
+			
 			if (response.data?.items) {
 				updateItems(response.data.items);
+				console.log("✓ Items updated in state");
+			} else {
+				console.log("WARNING: No items in response data");
 			}
 		} catch (error) {
-			console.error("Error fetching items:", error);
+			console.error("=== CLIENT ITEMS FETCH ERROR ===");
+			console.error("Error:", error);
+			console.error("Error message:", error.message);
+			console.error("Error response:", error.response);
+			console.error("Error response data:", error.response?.data);
+			console.error("Error response status:", error.response?.status);
+			console.error("=== END CLIENT ITEMS FETCH ERROR ===");
 			setError(error.response?.data?.error || "Failed to fetch items");
 		} finally {
 			setLoading(false);

@@ -8,11 +8,19 @@ const getApiUrl = () => {
 	if (import.meta.env.PROD) {
 		return import.meta.env.VITE_API_URL || "https://housecash-server.vercel.app";
 	}
-	// In development, use localhost
-	return import.meta.env.VITE_API_URL || "http://localhost:4000";
+	// In development, use localhost (server runs on port 5000)
+	return import.meta.env.VITE_API_URL || "http://localhost:5000";
 };
 
-axios.defaults.baseURL = getApiUrl();
+const apiUrl = getApiUrl();
+axios.defaults.baseURL = apiUrl;
+
+// Debug logging for API URL
+console.log("=== AXIOS CONFIGURATION ===");
+console.log("Environment:", import.meta.env.MODE);
+console.log("API URL:", apiUrl);
+console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
+console.log("=== END AXIOS CONFIGURATION ===");
 
 // Include cookies in all requests
 axios.defaults.withCredentials = true;
