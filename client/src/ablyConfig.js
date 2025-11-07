@@ -1,9 +1,14 @@
 import { Realtime } from "ably";
 
-// Create Ably instance
+const fallbackApiUrl = import.meta.env.DEV ? "http://localhost:5000" : "https://housecash-server.vercel.app";
+const baseApiUrl = (import.meta.env.VITE_API_URL || fallbackApiUrl).replace(/\/$/, "");
+
+// Create Ably instance using server-issued tokens
 const ably = new Realtime({
-	key: import.meta.env.VITE_ABLY_API_KEY,
-	clientId: Math.random().toString(36).substring(2, 15), // Generate random client ID
+	authUrl: `${baseApiUrl}/api/ably/token`,
+	authMethod: "GET",
+	withCredentials: true,
+	queryTime: true,
 });
 
 // Connection state logging

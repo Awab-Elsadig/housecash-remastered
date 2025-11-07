@@ -12,7 +12,6 @@ import { SettingsSkeleton } from "../../components/Skeleton";
 import usePageRefresh from "../../hooks/usePageRefresh";
 import ably from "../../ablyConfig";
 import ProfilePictureUpload from "../../components/ProfilePictureUpload/ProfilePictureUpload";
-import ProfileAvatarModal from "../../components/ProfileAvatarModal/ProfileAvatarModal";
 import Tooltip from "../../components/Tooltip";
 
 const Settings = () => {
@@ -32,7 +31,6 @@ const Settings = () => {
 	const [editingField, setEditingField] = useState(null); // 'name' or 'username'
 	const [editingValue, setEditingValue] = useState("");
 	const [copySuccess, setCopySuccess] = useState(false);
-	const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
 	const handleLogout = async () => {
 		await logout();
@@ -115,49 +113,6 @@ const Settings = () => {
 			.catch((err) => console.error("Failed to copy", err));
 	};
 
-	// Handle profile picture update
-	const handleImageUpdate = (newImageUrl, updatedUser) => {
-		if (!user) return;
-		console.log("Settings: Updating user profile picture:", newImageUrl);
-		
-		// Always update the profile picture URL immediately
-		const updatedUserData = {
-			...user,
-			profilePictureUrl: newImageUrl,
-		};
-		
-		// Add fileId if provided
-		if (updatedUser?.profilePictureFileId) {
-			updatedUserData.profilePictureFileId = updatedUser.profilePictureFileId;
-		}
-		
-		updateUser(updatedUserData);
-		console.log("Settings: User data updated with new profile picture");
-	};
-
-	const handleImageDelete = () => {
-		if (!user) return;
-		axios
-			.put(`/api/users/update-user/${user._id}`, { profilePictureUrl: null }, { withCredentials: true })
-			.then(() => {
-				updateUser({
-					...user,
-					profilePictureUrl: null,
-				});
-			})
-			.catch((err) => console.error("Error deleting profile picture", err));
-	};
-
-	const updateAvatarPrefs = async (prefs) => {
-		if (!user) return;
-		try {
-			await axios.put(`/api/users/update-user/${user._id}`, prefs, { withCredentials: true });
-			updateUser({ ...user, ...prefs });
-		} catch (e) {
-			console.error("Failed to update avatar preferences", e);
-		}
-	};
-
 	// Refresh function for settings page
 	const handleRefresh = useCallback(async () => {
 		try {
@@ -184,16 +139,7 @@ const Settings = () => {
 				</button>
 
 				<div className={classes.profileSection}>
-					<ProfilePictureUpload
-						currentImageUrl={user?.profilePictureUrl}
-						onImageUpdate={handleImageUpdate}
-						onImageDelete={handleImageDelete}
-						size="large"
-						name={user?.name}
-						avatarMode={user?.avatarMode || (user?.profilePictureUrl ? "image" : "initials")}
-						initialsCount={user?.initialsCount || 2}
-						onEditClick={() => setAvatarModalOpen(true)}
-					/>
+				<ProfilePictureUpload currentImageUrl={user?.profilePictureUrl} size="large" />
 					<h1 className={classes.userName}>{user?.name || "User"}</h1>
 				</div>
 
@@ -273,14 +219,6 @@ const Settings = () => {
 				</div>
 			)}
 
-			<ProfileAvatarModal
-				isOpen={avatarModalOpen}
-				onClose={() => setAvatarModalOpen(false)}
-				user={user}
-				onUpdateMode={(p) => updateAvatarPrefs(p)}
-				onUpdateImage={handleImageUpdate}
-				onDeleteImage={handleImageDelete}
-			/>
 		</div>
 	);
 };

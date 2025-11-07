@@ -3,22 +3,24 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Create Ably instance for server-side operations
-const ably = new Ably.Realtime({
+if (!process.env.ABLY_API_KEY) {
+	console.warn("[Ably] ABLY_API_KEY is not set; realtime features will be disabled.");
+}
+
+// Use Ably REST client for publishing from the server and generating tokens
+const ably = new Ably.Rest({
 	key: process.env.ABLY_API_KEY,
 });
 
-// Connection state logging
-ably.connection.on("connected", () => {
-	console.log("Server connected to Ably");
-});
+// Helper to generate token requests for authenticated clients
+export const createAblyTokenRequest = async (clientId) => {
+	if (!process.env.ABLY_API_KEY) {
+		throw new Error("ABLY_API_KEY is not configured on the server");
+	}
 
-ably.connection.on("disconnected", () => {
-	console.log("Server disconnected from Ably");
-});
-
-ably.connection.on("failed", (error) => {
-	console.error("Server Ably connection failed:", error);
-});
+	return ably.auth.createTokenRequest({
+		clientId,
+	});
+};
 
 export default ably;

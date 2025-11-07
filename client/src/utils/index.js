@@ -9,9 +9,6 @@ export { formatCurrencyAbbreviated, formatPercentage, parseCurrency, formatNumbe
 // Avatar utilities
 export { getUserInitials, getAvatarData, getAvatarColor } from "./avatarUtils.js";
 
-// ImageKit utilities
-export { isValidImageKitUrl, getOptimizedImageUrl, getProfilePictureUrl, preloadImage } from "./imagekitUtils.js";
-
 // String utilities
 export {
 	getFirstName,

@@ -5,7 +5,6 @@ import { RiUserUnfollowLine, RiUserFollowLine } from "react-icons/ri";
 import classes from "./Header.module.css";
 import { useUser } from "../../hooks/useUser";
 import { useImpersonationContext } from "../../hooks/useImpersonationContext";
-import { getProfilePictureUrl } from "../../utils/imagekitUtils";
 
 const Header = ({ toggleMobileMenu }) => {
 	const { user } = useUser();
@@ -76,6 +75,9 @@ const Header = ({ toggleMobileMenu }) => {
 		impersonationData.originalAdminId &&
 		impersonationData.impersonatedUserId !== impersonationData.originalAdminId;
 
+	const defaultImage = "https://thumbs.dreamstime.com/b/web-269268516.jpg";
+	const profileSrc = user?.profilePictureUrl?.trim() ? user.profilePictureUrl : defaultImage;
+
 	return (
 		<div className={classes.header}>
 			{/* Main Header Content */}
@@ -97,14 +99,16 @@ const Header = ({ toggleMobileMenu }) => {
 						<span>{user?.name ? user.name.split(" ")[0] : "User"}</span>
 					</span>
 					<img
-						src={
-							getProfilePictureUrl(user?.profilePictureUrl, "small") ||
-							"https://thumbs.dreamstime.com/b/web-269268516.jpg"
-						}
+						src={profileSrc}
 						alt="Profile"
 						className={classes.profilePic}
 						onClick={() => navigate("/settings")}
 						style={{ cursor: "pointer" }}
+						onError={(e) => {
+							if (e.target.src !== defaultImage) {
+								e.target.src = defaultImage;
+							}
+						}}
 					/>
 				</div>
 			</div>

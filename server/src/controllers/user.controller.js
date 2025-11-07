@@ -1,5 +1,4 @@
 import { User } from "../models/user.model.js";
-import imagekit from "../config/imagekit.config.js";
 
 export const updateUser = async (req, res) => {
 	const { ...updateFields } = req.body;
@@ -13,19 +12,6 @@ export const updateUser = async (req, res) => {
 			return res.status(404).json({ message: "User not found" });
 		}
 
-		// Handle profile picture deletion specifically
-		if (updateFields.profilePictureUrl === null && user.profilePictureFileId) {
-			try {
-				await imagekit.deleteFile(user.profilePictureFileId);
-				console.log(`Deleted profile picture: ${user.profilePictureFileId}`);
-				// Also clear the fileId when deleting the URL
-				updateFields.profilePictureFileId = "";
-			} catch (deleteError) {
-				console.warn("Failed to delete profile picture from ImageKit:", deleteError);
-				// Continue with update even if deletion fails
-			}
-		}
-
 		// Filter out fields you don't want to update (like password)
 		const allowedUpdates = [
 			"houseCode",
@@ -35,7 +21,6 @@ export const updateUser = async (req, res) => {
 			"email",
 			"items",
 			"profilePictureUrl",
-			"profilePictureFileId",
 		]; // Only allow these fields to be updated
 		Object.keys(updateFields).forEach((key) => {
 			if (allowedUpdates.includes(key)) {

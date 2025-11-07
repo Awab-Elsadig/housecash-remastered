@@ -1,19 +1,20 @@
 import React from "react";
 import classes from "./ProfileAvatar.module.css";
 import { getAvatarData, getAvatarColor } from "../../utils/avatarUtils";
-import { getProfilePictureUrl } from "../../utils/imagekitUtils";
 
 const ProfileAvatar = ({ imageUrl, name, size = "medium", showUsername = false, username = "", className = "", avatarMode, initialsCount }) => {
 	const user = { profilePictureUrl: imageUrl, name, avatarMode, initialsCount };
 	const avatarData = getAvatarData(user);
 	const avatarColor = getAvatarColor(name);
 
+	const defaultImage = "https://thumbs.dreamstime.com/b/web-269268516.jpg";
+
 	return (
 		<div className={`${classes.avatarContainer} ${classes[size]} ${className}`}>
 			<div className={classes.imageWrapper}>
 				{avatarData.type === "image" ? (
 					<img
-						src={getProfilePictureUrl(avatarData.source, size)}
+						src={avatarData.source || defaultImage}
 						alt={`${name || "User"}'s profile`}
 						className={classes.profileImage}
 						onError={(e) => {
