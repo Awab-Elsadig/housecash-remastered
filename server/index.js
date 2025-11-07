@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import express from "express";
-import cors from "cors";
 import session from "express-session";
 import MongoStore from "connect-mongo"; // for storing sessions in MongoDB
 import mongoose from "mongoose";
@@ -24,54 +23,80 @@ dotenv.config();
 const app = express();
 const isProduction = process.env.NODE_ENV === "production";
 
-// Middleware
-app.use(express.json());
+// Trust first proxy (needed for Vercel)
+app.set("trust proxy", 1);
 
-// CORS configuration for both development and production
+// CORS configuration - handle preflight requests first
 const allowedOrigins = [
 	'http://localhost:3000',
 	'http://localhost:5173',
 	'https://housecash.vercel.app',
 	'https://housecash-server.vercel.app',
-	'https://housecash.vercel.app/', // Add trailing slash variant
-	'https://housecash-server.vercel.app/' // Add trailing slash variant
 ];
 
-app.use(cors({
-	origin: function (origin, callback) {
-		// Allow requests with no origin (like mobile apps or curl requests)
-		if (!origin) {
-			return callback(null, true);
-		}
-		
-		if (allowedOrigins.indexOf(origin) !== -1) {
-			callback(null, true);
-		} else {
-			// In production, be more permissive for Vercel domains
-			if (isProduction && origin && origin.includes('vercel.app')) {
-				callback(null, true);
-			} else {
-				callback(new Error('Not allowed by CORS'));
-			}
-		}
-	},
-	credentials: true,
-	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-	allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-	exposedHeaders: ['Set-Cookie']
-}));
+// Helper function to check if origin is allowed
+const isOriginAllowed = (origin) => {
+	if (!origin) return true; // Allow requests with no origin
+	
+	// Normalize origin (remove trailing slash)
+	const normalizedOrigin = origin.replace(/\/$/, '');
+	
+	// Check exact match
+	if (allowedOrigins.includes(normalizedOrigin)) {
+		return true;
+	}
+	
+	// In production, allow any Vercel domain
+	if (isProduction && normalizedOrigin.includes('vercel.app')) {
+		return true;
+	}
+	
+	return false;
+};
 
-app.use(cookieParser());
-
-// Add explicit OPTIONS handler for preflight requests
+// Handle preflight OPTIONS requests explicitly - MUST be before CORS middleware
 app.options('*', (req, res) => {
-	console.log('OPTIONS preflight request from:', req.headers.origin);
-	res.header('Access-Control-Allow-Origin', req.headers.origin);
-	res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-	res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
-	res.header('Access-Control-Allow-Credentials', 'true');
-	res.sendStatus(200);
+	const origin = req.headers.origin;
+	console.log('[CORS] OPTIONS preflight request from origin:', origin);
+	
+	if (isOriginAllowed(origin)) {
+		res.header('Access-Control-Allow-Origin', origin || '*');
+		res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+		res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With');
+		res.header('Access-Control-Allow-Credentials', 'true');
+		res.header('Access-Control-Max-Age', '86400'); // 24 hours
+		console.log('[CORS] OPTIONS request allowed for origin:', origin);
+		res.sendStatus(200);
+	} else {
+		console.log('[CORS] OPTIONS request rejected for origin:', origin);
+		res.sendStatus(403);
+	}
 });
+
+// CORS middleware for actual requests (OPTIONS handled above)
+app.use((req, res, next) => {
+	// Skip CORS middleware for OPTIONS requests (handled above)
+	if (req.method === 'OPTIONS') {
+		return next();
+	}
+	
+	const origin = req.headers.origin;
+	
+	if (isOriginAllowed(origin)) {
+		res.header('Access-Control-Allow-Origin', origin || '*');
+		res.header('Access-Control-Allow-Credentials', 'true');
+		res.header('Access-Control-Expose-Headers', 'Set-Cookie');
+	} else {
+		console.log('[CORS] Request rejected for origin:', origin);
+		return res.status(403).json({ error: 'Not allowed by CORS' });
+	}
+	
+	next();
+});
+
+// Middleware
+app.use(express.json());
+app.use(cookieParser());
 
 // Connect to database with retry mechanism
 const connectWithRetry = async (retries = 3) => {
@@ -132,9 +157,6 @@ const checkDatabaseContents = async () => {
 
 // Check database contents after connection
 setTimeout(checkDatabaseContents, 2000);
-
-// Trust first proxy
-app.set("trust proxy", 1);
 
 // Setup session middleware with persistent store and proper cookie settings
 app.use(
