@@ -139,26 +139,39 @@ const sessionConfig = {
 		secure: isProduction, // Only secure in production
 		sameSite: isProduction ? "none" : "lax", // Different sameSite for local vs production
 		maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (1 week)
+		httpOnly: true, // Important for security
+		path: "/", // Ensure cookie is available for all paths
 	},
 };
 
-// Only use MongoStore if MONGO_URI is set and connection is available
-if (process.env.MONGO_URI && mongoose.connection.readyState === 1) {
+// Use MongoStore if MONGO_URI is set (works even if connection isn't ready yet)
+// This is critical for Vercel serverless functions where connection might be async
+if (process.env.MONGO_URI) {
 	try {
+		// Get database name from URI or use default
+		const dbName = process.env.MONGO_DB_NAME || "theDatabase";
+		
+		// Create MongoStore with URI directly (works even if mongoose isn't connected yet)
+		// This is important for Vercel serverless functions
 		sessionConfig.store = MongoStore.create({
-			// Reuse the active mongoose client (supports fallback URIs)
-			client: mongoose.connection.getClient(),
+			mongoUrl: process.env.MONGO_URI,
+			dbName: dbName,
+			collectionName: "sessions",
+			// Auto-remove expired sessions
+			autoRemove: "native",
+			// Connection options
+			mongoOptions: {
+				serverSelectionTimeoutMS: 5000,
+				connectTimeoutMS: 5000,
+			},
 		});
+		console.log("✓ MongoStore configured for sessions");
 	} catch (error) {
-		console.warn("⚠️  Failed to create MongoStore, using memory store");
+		console.warn("⚠️  Failed to create MongoStore:", error.message);
+		console.warn("⚠️  Using memory store (sessions will be lost on restart)");
 	}
-} else if (!process.env.MONGO_URI) {
-	console.warn("⚠️  MONGO_URI not set, using memory store (sessions will be lost on restart)");
 } else {
-	// Try to upgrade to MongoStore once database connects
-	mongoose.connection.once('connected', () => {
-		// Note: We can't dynamically change the store, restart required
-	});
+	console.warn("⚠️  MONGO_URI not set, using memory store (sessions will be lost on restart)");
 }
 
 app.use(session(sessionConfig));
