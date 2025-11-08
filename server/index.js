@@ -54,38 +54,42 @@ const isOriginAllowed = (origin) => {
 	return false;
 };
 
-// Handle preflight OPTIONS requests explicitly - MUST be before CORS middleware
-app.options('*', (req, res) => {
-	const origin = req.headers.origin;
-	console.log('[CORS] OPTIONS preflight request from origin:', origin);
-	
-	if (isOriginAllowed(origin)) {
-		res.header('Access-Control-Allow-Origin', origin || '*');
-		res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-		res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With');
-		res.header('Access-Control-Allow-Credentials', 'true');
-		res.header('Access-Control-Max-Age', '86400'); // 24 hours
-		console.log('[CORS] OPTIONS request allowed for origin:', origin);
-		res.sendStatus(200);
-	} else {
-		console.log('[CORS] OPTIONS request rejected for origin:', origin);
-		res.sendStatus(403);
-	}
-});
-
-// CORS middleware for actual requests (OPTIONS handled above)
+// CORS middleware - must be applied to ALL requests including OPTIONS
+// This MUST be the first middleware after trust proxy
 app.use((req, res, next) => {
-	// Skip CORS middleware for OPTIONS requests (handled above)
-	if (req.method === 'OPTIONS') {
-		return next();
+	const origin = req.headers.origin;
+	const method = req.method;
+	const path = req.path;
+	
+	console.log(`[CORS] ${method} ${path} from origin: ${origin || 'no origin'}`);
+	
+	// Handle preflight OPTIONS requests
+	if (method === 'OPTIONS') {
+		if (isOriginAllowed(origin)) {
+			// Set CORS headers for preflight
+			if (origin) {
+				res.setHeader('Access-Control-Allow-Origin', origin);
+			}
+			res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+			res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With');
+			res.setHeader('Access-Control-Allow-Credentials', 'true');
+			res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+			console.log('[CORS] OPTIONS request allowed for origin:', origin);
+			return res.status(200).end();
+		} else {
+			console.log('[CORS] OPTIONS request rejected for origin:', origin);
+			return res.status(403).end();
+		}
 	}
 	
-	const origin = req.headers.origin;
-	
+	// Handle actual requests
 	if (isOriginAllowed(origin)) {
-		res.header('Access-Control-Allow-Origin', origin || '*');
-		res.header('Access-Control-Allow-Credentials', 'true');
-		res.header('Access-Control-Expose-Headers', 'Set-Cookie');
+		// Set CORS headers for actual requests
+		if (origin) {
+			res.setHeader('Access-Control-Allow-Origin', origin);
+		}
+		res.setHeader('Access-Control-Allow-Credentials', 'true');
+		res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
 	} else {
 		console.log('[CORS] Request rejected for origin:', origin);
 		return res.status(403).json({ error: 'Not allowed by CORS' });
@@ -245,8 +249,14 @@ app.get("/test-db", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-	console.log(`✓ Server running on port ${PORT}`);
-	console.log(`✓ Environment: ${process.env.NODE_ENV || "development"}`);
-	console.log(`✓ Database: ${mongoose.connection.readyState === 1 ? "connected" : "disconnected"}`);
-});
+// Start server for local development (not on Vercel)
+if (!process.env.VERCEL) {
+	app.listen(PORT, () => {
+		console.log(`✓ Server running on port ${PORT}`);
+		console.log(`✓ Environment: ${process.env.NODE_ENV || "development"}`);
+		console.log(`✓ Database: ${mongoose.connection.readyState === 1 ? "connected" : "disconnected"}`);
+	});
+}
+
+// Export for Vercel serverless functions
+export default app;
