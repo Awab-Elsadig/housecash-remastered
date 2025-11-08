@@ -68,6 +68,10 @@ const Login = () => {
 						updateHouseMembers([]);
 					}
 
+					// Connect Ably for real-time updates after login
+					const { connectAbly } = await import("../../ablyConfig");
+					connectAbly();
+
 					// Then navigate to dashboard
 					navigate("/dashboard");
 				} else {

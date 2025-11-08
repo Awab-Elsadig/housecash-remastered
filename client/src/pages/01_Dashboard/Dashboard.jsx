@@ -78,6 +78,15 @@ const Dashboard = () => {
 
 	useEffect(() => {
 		if (!user?.houseCode) return;
+
+		// Import and connect Ably if not already connected
+		import("../../ablyConfig").then(({ connectAbly, isAblyConnected }) => {
+			if (!isAblyConnected()) {
+				connectAbly();
+			}
+		});
+
+		// Subscribe to house channel for real-time updates
 		const channel = ably.channels.get(`house:${user.houseCode}`);
 		const refresh = () => fetchItems();
 		["fetchUpdate", "itemUpdate", "paymentNotification"].forEach((evt) => channel.subscribe(evt, refresh));

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useImpersonationContext } from "../../hooks/useImpersonationContext";
+import { connectAbly } from "../../ablyConfig";
 
 const RouteProtection = ({ children, requireAuth = true }) => {
 	const navigate = useNavigate();
@@ -29,6 +30,9 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 				if (response.status === 200 && response.data) {
 					setIsAuthenticated(true);
 					setIsLoggingOut(false);
+					
+					// Connect Ably for real-time updates when authenticated
+					connectAbly();
 					
 					// If user is on login page but already authenticated, redirect to dashboard
 					if (location.pathname === "/" || location.pathname === "/login") {

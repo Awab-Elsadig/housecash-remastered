@@ -213,20 +213,41 @@ app.use((err, req, res, next) => {
 });
 
 // Simple health check - moved to end so it doesn't interfere with API routes
-app.get("/", (req, res) => {
-	res.json({ 
-		message: "HouseCash Server is running!", 
-		timestamp: new Date().toISOString(),
-		environment: process.env.NODE_ENV || "development",
-		corsOrigins: allowedOrigins,
-		databaseStatus: mongoose.connection.readyState,
-		databaseStates: {
-			0: "disconnected",
-			1: "connected", 
-			2: "connecting",
-			3: "disconnecting"
-		}
-	});
+app.get("/", async (req, res) => {
+	try {
+		const { checkAblyStatus } = await import("./src/utils/ablyConfig.js");
+		const ablyStatus = await checkAblyStatus();
+		
+		res.json({ 
+			message: "HouseCash Server is running!", 
+			timestamp: new Date().toISOString(),
+			environment: process.env.NODE_ENV || "development",
+			corsOrigins: allowedOrigins,
+			databaseStatus: mongoose.connection.readyState,
+			databaseStates: {
+				0: "disconnected",
+				1: "connected", 
+				2: "connecting",
+				3: "disconnecting"
+			},
+			ablyStatus: ablyStatus
+		});
+	} catch (error) {
+		res.json({ 
+			message: "HouseCash Server is running!", 
+			timestamp: new Date().toISOString(),
+			environment: process.env.NODE_ENV || "development",
+			corsOrigins: allowedOrigins,
+			databaseStatus: mongoose.connection.readyState,
+			databaseStates: {
+				0: "disconnected",
+				1: "connected", 
+				2: "connecting",
+				3: "disconnecting"
+			},
+			ablyStatus: { status: "error", message: error.message }
+		});
+	}
 });
 
 // Database test endpoint
@@ -265,13 +286,34 @@ app.get("/test-db", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Check Ably status on startup
+const checkAblyOnStartup = async () => {
+	try {
+		const { checkAblyStatus } = await import("./src/utils/ablyConfig.js");
+		const ablyStatus = await checkAblyStatus();
+		if (ablyStatus.configured && ablyStatus.status === "ready") {
+			console.log(`✅ Ably: ${ablyStatus.message}`);
+		} else if (ablyStatus.configured) {
+			console.warn(`⚠️  Ably: ${ablyStatus.message}`);
+		} else {
+			console.warn(`⚠️  Ably: ${ablyStatus.message}`);
+		}
+	} catch (error) {
+		console.warn(`⚠️  Ably: Failed to check status - ${error.message}`);
+	}
+};
+
 // Start server for local development (not on Vercel)
 if (!process.env.VERCEL) {
-	app.listen(PORT, () => {
+	app.listen(PORT, async () => {
 		console.log(`✓ Server running on port ${PORT}`);
 		console.log(`✓ Environment: ${process.env.NODE_ENV || "development"}`);
 		console.log(`✓ Database: ${mongoose.connection.readyState === 1 ? "connected" : "disconnected"}`);
+		await checkAblyOnStartup();
 	});
+} else {
+	// On Vercel, check Ably status after a short delay
+	setTimeout(checkAblyOnStartup, 1000);
 }
 
 // Export for Vercel serverless functions

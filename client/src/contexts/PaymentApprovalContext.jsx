@@ -46,6 +46,14 @@ export const PaymentApprovalProvider = ({ user, children }) => {
 
   useEffect(() => {
     if (!user?._id) return;
+    
+    // Import and connect Ably if not already connected
+    import("../ablyConfig").then(({ connectAbly, isAblyConnected }) => {
+      if (!isAblyConnected()) {
+        connectAbly();
+      }
+    });
+    
     channelRef.current = ably.channels.get(`user:payment:${user._id}`);
 
     const onRequest = ({ data }) => {

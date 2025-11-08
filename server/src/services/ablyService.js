@@ -5,6 +5,7 @@ class AblyService {
 	// Send a notification to a specific house channel
 	static async sendToHouse(houseCode, eventName, data) {
 		if (!ably) {
+			console.warn(`[Ably] Ably not configured, skipping ${eventName} to house:${houseCode}`);
 			return;
 		}
 		
@@ -13,6 +14,8 @@ class AblyService {
 			await channel.publish(eventName, data);
 		} catch (error) {
 			console.error(`[Ably] Error sending ${eventName} to house:${houseCode}:`, error.message);
+			console.error(`[Ably] Error details:`, error);
+			// Don't throw - allow the request to continue even if Ably fails
 		}
 	}
 

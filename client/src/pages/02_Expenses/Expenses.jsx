@@ -75,24 +75,28 @@ const Expenses = () => {
 	useEffect(() => {
 		if (!user?.houseCode) return;
 
+		// Import and connect Ably if not already connected
+		import("../../ablyConfig").then(({ connectAbly, isAblyConnected }) => {
+			if (!isAblyConnected()) {
+				connectAbly();
+			}
+		});
+
 		// Subscribe to house channel for real-time updates
 		const channel = ably.channels.get(`house:${user.houseCode}`);
 
 		// Listen for fetch updates
 		const fetchUpdateHandler = () => {
-			console.log("Received fetchUpdate event from Ably in Expenses");
 			fetchItems();
 		};
 
 		// Listen for item updates
 		const itemUpdateHandler = (message) => {
-			console.log("Received itemUpdate event from Ably in Expenses:", message.data);
 			fetchItems();
 		};
 
 		// Listen for payment notifications
 		const paymentNotificationHandler = (message) => {
-			console.log("Received paymentNotification event from Ably in Expenses:", message.data);
 			fetchItems();
 		};
 

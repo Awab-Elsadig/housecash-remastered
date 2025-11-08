@@ -56,9 +56,28 @@ export const SettlementProvider = ({ user, children }) => {
 	// Subscribe to personal settlement channel
 	useEffect(() => {
 		if (!user?._id) return;
-		channelRef.current = ably.channels.get(`user:settlement:${user._id}`);
+		
+		const channelName = `user:settlement:${user._id}`;
+		console.log(`[SettlementContext] Setting up Ably subscription for channel: ${channelName}`);
+		
+		// Import and connect Ably - always reconnect when user changes
+		import("../ablyConfig").then(({ connectAbly, isAblyConnected }) => {
+			// Force reconnect when user changes to ensure we're authenticated with the correct user ID
+			// This is critical for impersonation - we need a new token with the new user ID
+			if (!isAblyConnected() || ably.connection.state !== "connected") {
+				console.log(`[SettlementContext] Connecting Ably for user: ${user._id}`);
+				connectAbly(true); // Force reconnect to get new token with new user ID
+			} else {
+				// Even if connected, force reconnect when user changes to ensure correct authentication
+				console.log(`[SettlementContext] Forcing Ably reconnection for user change: ${user._id}`);
+				connectAbly(true);
+			}
+		});
+		
+		channelRef.current = ably.channels.get(channelName);
 
 		const onRequest = ({ data }) => {
+			console.log(`[SettlementContext] Received settlement:request:`, data);
 			setRequests((prev) => ({
 				...prev,
 				[data.fromUserId === user._id ? data.toUserId : data.fromUserId]: {
@@ -69,6 +88,7 @@ export const SettlementProvider = ({ user, children }) => {
 			}));
 		};
 		const onCompleted = ({ data }) => {
+			console.log(`[SettlementContext] Received settlement:completed:`, data);
 			setRequests((prev) => {
 				const copy = { ...prev };
 				delete copy[data.otherUserId];
@@ -76,6 +96,7 @@ export const SettlementProvider = ({ user, children }) => {
 			});
 		};
 		const onCancelled = ({ data }) => {
+			console.log(`[SettlementContext] Received settlement:cancelled:`, data);
 			setRequests((prev) => {
 				const copy = { ...prev };
 				delete copy[data.otherUserId];
@@ -83,10 +104,13 @@ export const SettlementProvider = ({ user, children }) => {
 			});
 		};
 
+		console.log(`[SettlementContext] Subscribing to events on channel: ${channelName}`);
 		channelRef.current.subscribe("settlement:request", onRequest);
 		channelRef.current.subscribe("settlement:completed", onCompleted);
 		channelRef.current.subscribe("settlement:cancelled", onCancelled);
+		
 		return () => {
+			console.log(`[SettlementContext] Cleaning up subscription for channel: ${channelName}`);
 			try {
 				channelRef.current.unsubscribe("settlement:request", onRequest);
 				channelRef.current.unsubscribe("settlement:completed", onCompleted);

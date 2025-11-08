@@ -19,6 +19,22 @@ export const connectDB = async () => {
 			socketTimeoutMS: 15000
 		});
 		console.log(`✅ Connected to Database: ${dbName}`);
+		
+		// Check and log Ably status after database connection
+		try {
+			const { checkAblyStatus } = await import("../utils/ablyConfig.js");
+			const ablyStatus = await checkAblyStatus();
+			if (ablyStatus.configured && ablyStatus.status === "ready") {
+				console.log(`✅ Ably: ${ablyStatus.message}`);
+			} else if (ablyStatus.configured) {
+				console.warn(`⚠️  Ably: ${ablyStatus.message}`);
+			} else {
+				console.warn(`⚠️  Ably: ${ablyStatus.message}`);
+			}
+		} catch (ablyError) {
+			console.warn(`⚠️  Ably: Failed to check status - ${ablyError.message}`);
+		}
+		
 		return;
 	} catch (error) {
 		const code = error?.code || error?.cause?.code;
@@ -32,6 +48,22 @@ export const connectDB = async () => {
 					serverSelectionTimeoutMS: 8000 
 				});
 				console.log(`✅ Connected to Database (fallback URI): ${dbName}`);
+				
+				// Check and log Ably status after database connection
+				try {
+					const { checkAblyStatus } = await import("../utils/ablyConfig.js");
+					const ablyStatus = await checkAblyStatus();
+					if (ablyStatus.configured && ablyStatus.status === "ready") {
+						console.log(`✅ Ably: ${ablyStatus.message}`);
+					} else if (ablyStatus.configured) {
+						console.warn(`⚠️  Ably: ${ablyStatus.message}`);
+					} else {
+						console.warn(`⚠️  Ably: ${ablyStatus.message}`);
+					}
+				} catch (ablyError) {
+					console.warn(`⚠️  Ably: Failed to check status - ${ablyError.message}`);
+				}
+				
 				return;
 			} catch (fallbackError) {
 				console.error("❌ Database connection failed:", fallbackError?.message || fallbackError);

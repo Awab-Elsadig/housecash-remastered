@@ -57,12 +57,27 @@ export const requestSettlement = async (req, res) => {
 			houseCode: record.houseCode,
 			createdAt: record.createdAt.getTime(),
 		};
-		await ably.channels.get(channelFrom).publish("settlement:request", recordData);
-		await ably.channels.get(channelTo).publish("settlement:request", recordData);
+		
+		// Publish to Ably channels if Ably is configured
+		if (ably) {
+			try {
+				console.log(`[Ably] Publishing settlement:request to channels: ${channelFrom}, ${channelTo}`);
+				await ably.channels.get(channelFrom).publish("settlement:request", recordData);
+				await ably.channels.get(channelTo).publish("settlement:request", recordData);
+				console.log(`[Ably] Successfully published settlement:request for requestId: ${requestId}`);
+			} catch (ablyError) {
+				console.error("[Ably] Error publishing to Ably channels:", ablyError);
+				// Continue even if Ably fails - the request is already saved
+			}
+		} else {
+			console.warn("[Ably] Ably not configured, skipping settlement:request publish");
+		}
+		
 		res.json({ success: true, requestId });
 	} catch (e) {
-		console.error("requestSettlement error", e);
-		res.status(500).json({ error: "Failed to create settlement request" });
+		console.error("requestSettlement error:", e);
+		console.error("Error stack:", e.stack);
+		res.status(500).json({ error: "Failed to create settlement request", details: e.message });
 	}
 };
 
@@ -160,15 +175,29 @@ export const respondSettlement = async (req, res) => {
 		await record.save();
 
 		const ably = (await import("../utils/ablyConfig.js")).default;
-		const channelFrom = ably.channels.get(`user:settlement:${record.fromUserId}`);
-		const channelTo = ably.channels.get(`user:settlement:${record.toUserId}`);
 		const payload = { otherUserId: accept ? record.fromUserId.toString() : record.toUserId.toString(), processed };
 
-		await channelFrom.publish(accept ? "settlement:completed" : "settlement:cancelled", payload);
-		await channelTo.publish(accept ? "settlement:completed" : "settlement:cancelled", {
-			...payload,
-			otherUserId: record.fromUserId.toString(),
-		});
+		// Publish to Ably channels if Ably is configured
+		if (ably) {
+			try {
+				const channelFrom = ably.channels.get(`user:settlement:${record.fromUserId}`);
+				const channelTo = ably.channels.get(`user:settlement:${record.toUserId}`);
+				const eventName = accept ? "settlement:completed" : "settlement:cancelled";
+				console.log(`[Ably] Publishing ${eventName} to channels: user:settlement:${record.fromUserId}, user:settlement:${record.toUserId}`);
+				await channelFrom.publish(eventName, payload);
+				await channelTo.publish(eventName, {
+					...payload,
+					otherUserId: record.fromUserId.toString(),
+				});
+				console.log(`[Ably] Successfully published ${eventName} for requestId: ${requestId}`);
+			} catch (ablyError) {
+				console.error("[Ably] Error publishing to Ably channels:", ablyError);
+				// Continue even if Ably fails - the settlement is already processed
+			}
+		} else {
+			console.warn("[Ably] Ably not configured, skipping settlement response publish");
+		}
+		
 		await AblyService.sendFetchUpdate(record.houseCode);
 		res.json({ success: true, processed });
 	} catch (e) {
@@ -189,12 +218,22 @@ export const cancelSettlement = async (req, res) => {
 		await record.save();
 		
 		const ably = (await import("../utils/ablyConfig.js")).default;
-		await ably.channels
-			.get(`user:settlement:${record.toUserId}`)
-			.publish("settlement:cancelled", { otherUserId: record.fromUserId.toString() });
-		await ably.channels
-			.get(`user:settlement:${record.fromUserId}`)
-			.publish("settlement:cancelled", { otherUserId: record.toUserId.toString() });
+		
+		// Publish to Ably channels if Ably is configured
+		if (ably) {
+			try {
+				await ably.channels
+					.get(`user:settlement:${record.toUserId}`)
+					.publish("settlement:cancelled", { otherUserId: record.fromUserId.toString() });
+				await ably.channels
+					.get(`user:settlement:${record.fromUserId}`)
+					.publish("settlement:cancelled", { otherUserId: record.toUserId.toString() });
+			} catch (ablyError) {
+				console.error("Error publishing to Ably channels:", ablyError);
+				// Continue even if Ably fails - the cancellation is already saved
+			}
+		}
+		
 		res.json({ success: true });
 	} catch (e) {
 		console.error("cancelSettlement error", e);
