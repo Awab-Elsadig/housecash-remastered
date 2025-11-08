@@ -12,6 +12,7 @@
 	overflow-y: auto;
 	overflow-x: hidden;
 	-webkit-overflow-scrolling: touch;
+	padding-bottom: calc(var(--page-padding) + 4rem);
 }
 
 .header {
@@ -107,6 +108,13 @@
 	grid-template-columns: 1fr 1fr;
 	gap: var(--page-gap);
 	min-width: 0;
+}
+
+/* Add gap between NetBalances and PeopleOweMe */
+.mainContent > section[aria-label="Net balances"] {
+	display: flex;
+	flex-direction: column;
+	gap: var(--page-gap);
 }
 
 .panel {
@@ -396,7 +404,6 @@
 	position: fixed;
 	inset: 0;
 	background: rgba(0, 0, 0, 0.6);
-	backdrop-filter: blur(5px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -408,13 +415,11 @@
 .modal {
 	background: linear-gradient(160deg, rgba(7, 54, 80, 0.65) 0%, rgba(25, 36, 50, 0.45) 100%), var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: blur(10px);
 	border-radius: var(--border-radius-lg);
 	width: min(500px, 100%);
 	max-height: 90vh;
 	display: flex;
 	flex-direction: column;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .modalHeader {
@@ -527,12 +532,82 @@
 	}
 }
 
+/* Floating Action Buttons */
+.floatingActionButtons {
+	position: fixed;
+	bottom: 2rem;
+	right: 2rem;
+	z-index: 15;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+}
+
+.floatingActionButtons > button {
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	background: var(--mainColor);
+	border: none;
+	color: #fff;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	cursor: pointer;
+}
+
+/* Override RefreshButton styling to match AddItemButton size */
+.floatingActionButtons .refreshButton {
+	width: 56px !important;
+	height: 56px !important;
+	background: var(--glassBackground, rgba(255, 255, 255, 0.1)) !important;
+	border: 1px solid var(--glassStroke, rgba(255, 255, 255, 0.2)) !important;
+}
+
+.floatingActionButtons > button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.floatingActionButtons .refreshIcon {
+	font-size: 1.4rem;
+	font-weight: 600;
+}
+
+.floatingActionButtons .spinning {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+/* Hide text on refresh button - icon only */
+.floatingActionButtons > button > span:not(.refreshIcon) {
+	display: none;
+}
+
+.mobileOnly {
+	display: none;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .dashboard {
     padding: var(--page-padding);
     gap: var(--page-gap);
-    padding-bottom: calc(var(--page-padding) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--page-padding) + 4rem);
+  }
+  
+  .mobileOnly {
+	display: block !important;
+  }
+  
+  .desktopOnly {
+	display: none !important;
   }
 
   .title { font-size: 1.75rem; }

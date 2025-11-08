@@ -6,7 +6,6 @@
 	right: 0;
 	bottom: 0;
 	background: rgba(0, 0, 0, 0.7);
-	backdrop-filter: blur(4px);
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -17,7 +16,7 @@
 }
 
 .addItem {
-	background: linear-gradient(160deg, rgba(7, 54, 80, 0.65) 0%, rgba(25, 36, 50, 0.45) 100%), var(--glassBackground);
+	background: rgba(var(--darkColor-rgb), 0.9);
 	border: 1px solid var(--glassStroke);
 	border-radius: 1rem;
 	max-width: 500px;
@@ -319,7 +318,6 @@
 /* Error states */
 .inputGroup input:invalid {
 	border-color: #ef4444;
-	box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 /* Focus within for better accessibility */

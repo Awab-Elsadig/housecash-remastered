@@ -27,7 +27,6 @@
 	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
 	border-radius: 1rem;
-	backdrop-filter: blur(10px);
 	min-height: 400px;
 }
 
@@ -59,8 +58,6 @@
 	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
 	border-radius: var(--border-radius);
-	backdrop-filter: var(--glassBlur);
-	box-shadow: 0 8px 32px rgba(var(--mainColor-rgb), 0.15);
 	animation: slideInFromTop 0.4s var(--transition-base);
 	position: relative;
 	overflow: hidden;
@@ -105,7 +102,6 @@
 	cursor: pointer;
 	transition: all var(--transition-base);
 	font-size: var(--text-xs);
-	backdrop-filter: blur(4px);
 	position: relative;
 	overflow: hidden;
 }
@@ -125,7 +121,6 @@
 	background: rgba(var(--mainColor-rgb), 0.2);
 	border-color: var(--mainColor);
 	transform: translateY(var(--hover-translate));
-	box-shadow: 0 4px 12px rgba(var(--mainColor-rgb), 0.2);
 }
 
 .stopImpersonationBtn:hover::before {
@@ -152,7 +147,6 @@
 	border-radius: 1rem;
 	padding: 1.5rem;
 	text-align: center;
-	backdrop-filter: blur(10px);
 	transition: all 0.2s ease;
 	display: flex;
 	flex-direction: column;
@@ -162,7 +156,6 @@
 
 .statCard:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 	border-color: var(--mainColor);
 }
 
@@ -193,7 +186,6 @@
 	border: 1px solid var(--glassStroke);
 	border-radius: 1rem;
 	padding: 1.5rem;
-	backdrop-filter: blur(10px);
 	display: flex;
 	flex-direction: column;
 	gap: 1.5rem;
@@ -375,7 +367,6 @@
 .impersonateBtn:hover {
 	background: rgba(var(--goodColor-rgb), 0.8);
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(var(--goodColor-rgb), 0.3);
 }
 
 .impersonateBtn:disabled {

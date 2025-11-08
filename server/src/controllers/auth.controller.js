@@ -73,7 +73,9 @@ export const login = async (req, res) => {
 			
 			// Try to reconnect
 			try {
+				const dbName = process.env.MONGO_DB_NAME || "theDatabase";
 				await mongoose.connect(process.env.MONGO_URI, { 
+					dbName: dbName,
 					serverSelectionTimeoutMS: 10000,
 					connectTimeoutMS: 10000
 				});

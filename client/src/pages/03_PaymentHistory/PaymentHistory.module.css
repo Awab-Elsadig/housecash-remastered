@@ -31,7 +31,6 @@
 	background: var(--mainColor);
 	border: none;
 	color: #fff;
-	box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -43,7 +42,6 @@
 .floatingActionButtons .refreshButton {
 	background: var(--glassBackground, rgba(255, 255, 255, 0.1)) !important;
 	border: 1px solid var(--glassStroke, rgba(255, 255, 255, 0.2)) !important;
-	backdrop-filter: blur(10px);
 }
 
 .floatingActionButtons > button:disabled {
@@ -94,7 +92,6 @@
 	border-radius: var(--border-radius-sm);
 	padding: 1.1rem;
 	text-align: center;
-	backdrop-filter: blur(10px);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -137,7 +134,6 @@
 .mainContent {
 	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: blur(10px);
 	border-radius: var(--border-radius);
 	padding: var(--card-padding);
 	display: flex;
@@ -227,7 +223,6 @@
 
 .transactionCard {
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
 	border-radius: 1rem;
 	overflow: hidden;
 	transition: border-color 0.2s ease;
@@ -442,13 +437,11 @@
 .modal {
 	background: linear-gradient(160deg, rgba(7, 54, 80, 0.65) 0%, rgba(25, 36, 50, 0.45) 100%), var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: blur(10px);
 	border-radius: var(--border-radius-lg);
 	width: min(500px, 100%);
 	max-height: 90vh;
 	display: flex;
 	flex-direction: column;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .modalHeader {
@@ -782,7 +775,6 @@
 		border-radius: 1.25rem;
 		background: linear-gradient(160deg, rgba(7, 54, 80, 0.4) 0%, rgba(25, 36, 50, 0.3) 100%), var(--glassBackground);
 		border: 1px solid rgba(255, 255, 255, 0.1);
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 	}
 
 	.transactionHeader {

@@ -4,10 +4,8 @@
 	display: flex;
 	flex-direction: column;
 	background-color: var(--headerBackground);
-	box-shadow: var(--headerShadow);
 	position: relative;
 	padding: 1rem 2rem;
-	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* 0: no of pixels, 2: vertical offset, 10: blur radius */
 	border-bottom: 1px solid var(--glassStroke);
 	z-index: 10;
 }
@@ -23,8 +21,6 @@
 	border: 1px solid var(--glassStroke);
 	border-radius: var(--border-radius);
 	margin-bottom: var(--space-md);
-	backdrop-filter: var(--glassBlur);
-	box-shadow: 0 8px 32px rgba(var(--mainColor-rgb), 0.15);
 	animation: slideInFromTop 0.4s var(--transition-base);
 	position: relative;
 	overflow: hidden;
@@ -53,7 +49,6 @@
 .impersonationIcon {
 	font-size: var(--text-lg);
 	color: var(--mainColor);
-	filter: drop-shadow(0 2px 4px rgba(var(--mainColor-rgb), 0.3));
 }
 
 .adminInfo {
@@ -77,7 +72,6 @@
 	cursor: pointer;
 	transition: all var(--transition-base);
 	font-size: var(--text-xs);
-	backdrop-filter: blur(4px);
 	position: relative;
 	overflow: hidden;
 }
@@ -97,7 +91,6 @@
 	background: rgba(var(--mainColor-rgb), 0.2);
 	border-color: var(--mainColor);
 	transform: translateY(var(--hover-translate));
-	box-shadow: 0 4px 12px rgba(var(--mainColor-rgb), 0.2);
 }
 
 .stopImpersonationBtn:hover::before {
@@ -124,7 +117,6 @@
 	display: none;
 	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
 	color: var(--text-primary);
 	padding: 0.75rem;
 	border-radius: 0.5rem;

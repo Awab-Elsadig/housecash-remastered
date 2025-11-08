@@ -13,16 +13,15 @@
 
 .sidebar {
 	flex-shrink: 0;
-	background: rgba(var(--darkColor-rgb), 0.7);
+	background: rgba(var(--darkColor-rgb), 0.9);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
 	width: 20rem;
 	display: flex;
 	flex-direction: column;
 	padding: 1rem 2rem;
 	position: sticky;
 	height: 100vh;
-	transition: transform 0.25s ease-out;
+	transition: transform 0.15s ease-out;
 	z-index: 20;
 	will-change: transform;
 	contain: paint;
@@ -87,7 +86,6 @@
 	background: var(--glassBackground);
 	color: white;
 	border-color: var(--glassStroke);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .icon {
@@ -118,9 +116,9 @@
 		z-index: 1000;
 		transform: translateX(-100%);
 		width: 280px;
-		box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 		will-change: transform;
 		contain: paint;
+		transition: transform 0.15s ease-out;
 	}
 
 	.sidebar .navLink {

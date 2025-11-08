@@ -15,13 +15,6 @@ const getApiUrl = () => {
 const apiUrl = getApiUrl();
 axios.defaults.baseURL = apiUrl;
 
-// Debug logging for API URL
-console.log("=== AXIOS CONFIGURATION ===");
-console.log("Environment:", import.meta.env.MODE);
-console.log("API URL:", apiUrl);
-console.log("VITE_API_URL:", import.meta.env.VITE_API_URL);
-console.log("=== END AXIOS CONFIGURATION ===");
-
 // Include cookies in all requests
 axios.defaults.withCredentials = true;
 
@@ -31,7 +24,10 @@ axios.interceptors.request.use(
 		return config;
 	},
 	(error) => {
-		console.error("Axios request error:", error);
+		// Only log unexpected request errors
+		if (import.meta.env.DEV && !error.config?.url?.includes("/api/users/me")) {
+			console.error("Axios request error:", error);
+		}
 		return Promise.reject(error);
 	}
 );
@@ -42,10 +38,12 @@ axios.interceptors.response.use(
 		return response;
 	},
 	(error) => {
-		// Handle common errors here
+		// Suppress 401 errors - they're expected during auth checks
+		// RouteProtection and Login components handle these gracefully
 		if (error.response?.status === 401) {
-			// RouteProtection component will handle redirects
-			// Don't automatically redirect here to avoid conflicts
+			// Silent - expected behavior during auth checks
+			// Still reject the promise so components can handle it gracefully
+			return Promise.reject(error);
 		}
 		return Promise.reject(error);
 	}

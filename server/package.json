@@ -25,6 +25,7 @@
 		"mailtrap": "^4.2.0",
 		"mongoose": "^8.16.5",
 		"nodemailer": "^6.10.1",
-		"pdfkit": "^0.15.2"
+		"pdfkit": "^0.15.2",
+		"uuid": "^9.0.1"
 	}
 }

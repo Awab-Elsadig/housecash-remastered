@@ -59,9 +59,6 @@ const isOriginAllowed = (origin) => {
 app.use((req, res, next) => {
 	const origin = req.headers.origin;
 	const method = req.method;
-	const path = req.path;
-	
-	console.log(`[CORS] ${method} ${path} from origin: ${origin || 'no origin'}`);
 	
 	// Handle preflight OPTIONS requests
 	if (method === 'OPTIONS') {
@@ -74,10 +71,9 @@ app.use((req, res, next) => {
 			res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, X-Requested-With');
 			res.setHeader('Access-Control-Allow-Credentials', 'true');
 			res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
-			console.log('[CORS] OPTIONS request allowed for origin:', origin);
 			return res.status(200).end();
 		} else {
-			console.log('[CORS] OPTIONS request rejected for origin:', origin);
+			console.warn(`[CORS] OPTIONS request rejected for origin: ${origin}`);
 			return res.status(403).end();
 		}
 	}
@@ -91,7 +87,7 @@ app.use((req, res, next) => {
 		res.setHeader('Access-Control-Allow-Credentials', 'true');
 		res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
 	} else {
-		console.log('[CORS] Request rejected for origin:', origin);
+		console.warn(`[CORS] Request rejected for origin: ${origin}`);
 		return res.status(403).json({ error: 'Not allowed by CORS' });
 	}
 	
@@ -104,26 +100,27 @@ app.use(cookieParser());
 
 // Connect to database with retry mechanism
 const connectWithRetry = async (retries = 3) => {
+	// Skip connection attempts if MONGO_URI is not set
+	if (!process.env.MONGO_URI) {
+		console.warn("⚠️  MONGO_URI not set - database features disabled");
+		return;
+	}
+	
 	for (let i = 0; i < retries; i++) {
 		try {
-			console.log(`=== DATABASE CONNECTION ATTEMPT ${i + 1}/${retries} ===`);
 			await connectDB();
-			console.log("Database connected successfully!");
 			return;
 		} catch (error) {
-			console.error(`=== DATABASE CONNECTION FAILED (Attempt ${i + 1}) ===`);
-			console.error("Error:", error.message);
-			console.error("Error code:", error.code);
-			console.error("Error name:", error.name);
-			console.error("Full error:", error);
-			console.error("=== END DATABASE CONNECTION ERROR ===");
-			
-			if (i === retries - 1) {
-				console.error("All database connection attempts failed");
+			// If error is about missing MONGO_URI, don't retry
+			if (error.message === "MONGO_URI is not set") {
 				return;
 			}
 			
-			console.log(`Retrying database connection in 2 seconds...`);
+			if (i === retries - 1) {
+				console.error(`❌ Database connection failed after ${retries} attempts:`, error.message);
+				return;
+			}
+			
 			await new Promise(resolve => setTimeout(resolve, 2000));
 		}
 	}
@@ -131,54 +128,40 @@ const connectWithRetry = async (retries = 3) => {
 
 connectWithRetry();
 
-// Debug: Check what's in the database on startup
-const checkDatabaseContents = async () => {
-	try {
-		const { Item } = await import("./src/models/item.model.js");
-		const { User } = await import("./src/models/user.model.js");
-		
-		const totalItems = await Item.countDocuments();
-		const totalUsers = await User.countDocuments();
-		
-		console.log("=== DATABASE CONTENTS CHECK ===");
-		console.log("Total items in database:", totalItems);
-		console.log("Total users in database:", totalUsers);
-		
-		if (totalItems > 0) {
-			const sampleItems = await Item.find({}).limit(5).select('name houseCode author').lean();
-			console.log("Sample items:", sampleItems);
-		}
-		
-		if (totalUsers > 0) {
-			const sampleUsers = await User.find({}).limit(5).select('email houseCode').lean();
-			console.log("Sample users:", sampleUsers);
-		}
-		console.log("=== END DATABASE CONTENTS CHECK ===");
-	} catch (error) {
-		console.error("Error checking database contents:", error);
-	}
-};
-
-// Check database contents after connection
-setTimeout(checkDatabaseContents, 2000);
 
 // Setup session middleware with persistent store and proper cookie settings
-app.use(
-	session({
-		secret: process.env.SESSION_SECRET || "your_secret_key",
-		resave: false,
-		saveUninitialized: false,
-		store: MongoStore.create({
+// Use MongoStore if MongoDB is configured, otherwise use memory store
+const sessionConfig = {
+	secret: process.env.SESSION_SECRET || "your_secret_key",
+	resave: false,
+	saveUninitialized: false,
+	cookie: {
+		secure: isProduction, // Only secure in production
+		sameSite: isProduction ? "none" : "lax", // Different sameSite for local vs production
+		maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (1 week)
+	},
+};
+
+// Only use MongoStore if MONGO_URI is set and connection is available
+if (process.env.MONGO_URI && mongoose.connection.readyState === 1) {
+	try {
+		sessionConfig.store = MongoStore.create({
 			// Reuse the active mongoose client (supports fallback URIs)
 			client: mongoose.connection.getClient(),
-		}),
-		cookie: {
-			secure: isProduction, // Only secure in production
-			sameSite: isProduction ? "none" : "lax", // Different sameSite for local vs production
-			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (1 week)
-		},
-	})
-);
+		});
+	} catch (error) {
+		console.warn("⚠️  Failed to create MongoStore, using memory store");
+	}
+} else if (!process.env.MONGO_URI) {
+	console.warn("⚠️  MONGO_URI not set, using memory store (sessions will be lost on restart)");
+} else {
+	// Try to upgrade to MongoStore once database connects
+	mongoose.connection.once('connected', () => {
+		// Note: We can't dynamically change the store, restart required
+	});
+}
+
+app.use(session(sessionConfig));
 
 
 app.use("/api/auth", authRoutes);
@@ -193,6 +176,28 @@ app.use("/api/settlements", settlementRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/payment-approvals", paymentApprovalRoutes);
 app.use("/api/ably", ablyRoutes);
+
+// Error handler - ensure CORS headers are set even on errors
+app.use((err, req, res, next) => {
+	const origin = req.headers.origin;
+	
+	// Set CORS headers even for error responses
+	if (isOriginAllowed(origin) && origin) {
+		res.setHeader('Access-Control-Allow-Origin', origin);
+		res.setHeader('Access-Control-Allow-Credentials', 'true');
+	}
+	
+	// Log the error (only in development or for 500 errors)
+	if (process.env.NODE_ENV === 'development' || err.status >= 500) {
+		console.error(`[ERROR] ${err.status || 500}:`, err.message);
+	}
+	
+	// Send error response
+	res.status(err.status || 500).json({
+		error: err.message || 'Internal Server Error',
+		...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+	});
+});
 
 // Simple health check - moved to end so it doesn't interfere with API routes
 app.get("/", (req, res) => {
@@ -214,12 +219,10 @@ app.get("/", (req, res) => {
 // Database test endpoint
 app.get("/test-db", async (req, res) => {
 	try {
-		console.log("=== DATABASE TEST ENDPOINT ===");
-		console.log("Database connection state:", mongoose.connection.readyState);
-		
 		if (mongoose.connection.readyState !== 1) {
-			console.log("Database not connected, attempting connection...");
+			const dbName = process.env.MONGO_DB_NAME || "theDatabase";
 			await mongoose.connect(process.env.MONGO_URI, { 
+				dbName: dbName,
 				serverSelectionTimeoutMS: 10000,
 				connectTimeoutMS: 10000
 			});

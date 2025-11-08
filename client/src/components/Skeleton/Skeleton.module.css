@@ -31,7 +31,6 @@
 	padding: var(--card-padding);
 	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
 	border-radius: var(--border-radius);
 	margin-bottom: var(--card-gap);
 }
@@ -57,7 +56,6 @@
 	padding: var(--card-padding);
 	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
 	border-radius: var(--border-radius-sm);
 }
 
@@ -75,7 +73,6 @@
 	padding: var(--card-padding);
 	background: var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: var(--glassBlur);
 	border-radius: var(--border-radius);
 }
 

@@ -6,7 +6,6 @@
 	right: 0;
 	bottom: 0;
 	background: rgba(0, 0, 0, 0.7);
-	backdrop-filter: blur(4px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -17,9 +16,7 @@
 .modal {
 	background: linear-gradient(160deg, rgba(7, 54, 80, 0.65) 0%, rgba(25, 36, 50, 0.45) 100%), var(--glassBackground);
 	border: 1px solid var(--glassStroke);
-	backdrop-filter: blur(10px);
 	border-radius: var(--border-radius);
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 	max-width: 400px;
 	width: 90%;
 	max-height: 90vh;
@@ -174,7 +171,6 @@
 	background: rgba(var(--badColor-rgb), 0.8);
 	border-color: var(--badColor);
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(var(--badColor-rgb), 0.3);
 }
 
 .deleteButton:active {

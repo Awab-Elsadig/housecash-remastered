@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IoClose } from "react-icons/io5";
-import { motion, AnimatePresence } from "framer-motion";
 import classes from "./Sidebar.module.css";
 import { navItems } from "./navigationConfig";
 import NavigationItem from "./NavigationItem";
@@ -51,12 +50,6 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
 		if (isMobile) handleMobileMenuClose();
 	}, [isMobile, handleMobileMenuClose]);
 
-	// Framer variants (use % so it slides fully off-screen)
-	const variants = {
-		closed: { x: "-100%", transition: { duration: 0.25, ease: "easeOut", type: "tween" } },
-		open: { x: 0, transition: { duration: 0.25, ease: "easeOut", type: "tween" } },
-	};
-
 	// Desktop: render static sidebar
 	if (!isMobile) {
 		return (
@@ -79,39 +72,31 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
 		);
 	}
 
-	// Mobile: off-canvas with framer-motion
+	// Mobile: off-canvas with CSS transitions (always in DOM for instant response)
 	return (
-		<AnimatePresence mode="wait">
-			{isMobileMenuOpen && (
-				<motion.div
-					key="sidebar-mobile"
-					ref={panelRef}
-					className={`${classes.sidebar}`}
-					initial="closed"
-					animate="open"
-					exit="closed"
-					variants={variants}
-					role="dialog"
-					aria-modal="true"
-					aria-label="Mobile menu"
-				>
-					<button className={classes.mobileCloseButton} onClick={handleMobileMenuClose} aria-label="Close mobile menu">
-						<IoClose />
-					</button>
-					<div className={classes.logoSection}>
-						<img className={classes.nameLogo} src="/Logo Full - White.png" alt="Housecash Logo" />
-					</div>
-					<nav className={classes.navLinks} aria-label="Sidebar navigation">
-						{filteredNavItems.map((item) => (
-							<NavigationItem key={item.id} item={item} onClick={handleNavClick} />
-						))}
-					</nav>
-					<div className={classes.addItemButtonContainer}>
-						<AddItemButton />
-					</div>
-				</motion.div>
-			)}
-		</AnimatePresence>
+		<div
+			ref={panelRef}
+			className={`${classes.sidebar} ${isMobileMenuOpen ? classes.mobileOpen : ''}`}
+			role="dialog"
+			aria-modal="true"
+			aria-label="Mobile menu"
+			aria-hidden={!isMobileMenuOpen}
+		>
+			<button className={classes.mobileCloseButton} onClick={handleMobileMenuClose} aria-label="Close mobile menu">
+				<IoClose />
+			</button>
+			<div className={classes.logoSection}>
+				<img className={classes.nameLogo} src="/Logo Full - White.png" alt="Housecash Logo" />
+			</div>
+			<nav className={classes.navLinks} aria-label="Sidebar navigation">
+				{filteredNavItems.map((item) => (
+					<NavigationItem key={item.id} item={item} onClick={handleNavClick} />
+				))}
+			</nav>
+			<div className={classes.addItemButtonContainer}>
+				<AddItemButton />
+			</div>
+		</div>
 	);
 };
 

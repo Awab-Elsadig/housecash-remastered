@@ -52,35 +52,15 @@ export const createItem = async (req, res) => {
 
 export const getItems = async (req, res) => {
 	try {
-		console.log("=== GET ITEMS ENDPOINT HIT ===");
-		console.log("Request user:", req.user);
-		
 		// Get house code from the authenticated user
 		const houseCode = req.user?.houseCode;
-		console.log("House code from user:", houseCode);
 		
 		if (!houseCode) {
-			console.log("ERROR: No house code found for user");
 			return res.status(400).json({ error: "User must belong to a house to view items" });
 		}
-
-		console.log("Searching for items with houseCode:", houseCode);
 		
 		// Filter items by house code
 		const items = await Item.find({ houseCode }).sort({ createdAt: -1 }).exec();
-		
-		console.log("=== ITEMS QUERY RESULTS ===");
-		console.log("Total items found:", items.length);
-		console.log("Items:", items.map(item => ({
-			id: item._id,
-			name: item.name,
-			price: item.price,
-			houseCode: item.houseCode,
-			author: item.author,
-			membersCount: item.members?.length || 0,
-			createdAt: item.createdAt
-		})));
-		console.log("=== END ITEMS QUERY RESULTS ===");
 		
 		return res.status(200).json({ items });
 	} catch (error) {
@@ -641,11 +621,7 @@ export const updatePaymentStatus = async (req, res) => {
 };
 
 export const resolveBalance = async (req, res) => {
-	console.log("=== RESOLVE BALANCE ENDPOINT HIT ===");
 	const { senderId, recipientId, items, direction } = req.body;
-
-	console.log("resolveBalance called with:", { senderId, recipientId, items, direction });
-	console.log("Request user:", req.user);
 
 	try {
 		// Get house code from the authenticated user
@@ -654,9 +630,6 @@ export const resolveBalance = async (req, res) => {
 			return res.status(400).json({ error: "User must belong to a house" });
 		}
 
-		console.log("House code:", houseCode);
-		console.log("Authenticated user:", req.user._id.toString());
-
 		// Validate that the authenticated user is the recipient or sender (for owing items)
 		if (req.user._id.toString() !== recipientId && req.user._id.toString() !== senderId) {
 			return res.status(403).json({ error: "Unauthorized: You must be involved in this settlement" });
@@ -664,32 +637,12 @@ export const resolveBalance = async (req, res) => {
 
 		// Extract item IDs and handle different item structures
 		const itemIds = items.map((item) => item.id || item._id);
-		console.log("Item IDs to update:", itemIds);
-		console.log("Full items data:", JSON.stringify(items, null, 2));
 
 		let updatePromises = [];
 
 		if (direction === "paying") {
-			console.log("Processing payment direction - sender paying recipient");
-			console.log(`Looking for items where sender ${senderId} is a member and needs to be marked as paid`);
-
 			// Sender is paying recipient: mark sender as paid
 			updatePromises = itemIds.map(async (itemId) => {
-				console.log(`Trying to update item ${itemId} for sender ${senderId}`);
-
-				// First, let's check if the item exists and what its structure is
-				const item = await Item.findById(itemId);
-				if (item) {
-					console.log(`Found item ${itemId}:`, {
-						id: item._id,
-						author: item.author,
-						houseCode: item.houseCode,
-						members: item.members.map((m) => ({ userID: m.userID, paid: m.paid })),
-					});
-				} else {
-					console.log(`Item ${itemId} not found`);
-				}
-
 				return Item.findOneAndUpdate(
 					{
 						_id: itemId,
@@ -703,27 +656,9 @@ export const resolveBalance = async (req, res) => {
 				);
 			});
 		} else if (direction === "collecting") {
-			console.log("Processing collecting direction - sender collecting from recipient");
-			console.log(`Looking for items authored by ${senderId} where recipient ${recipientId} is a member`);
-
 			// Direction is 'collecting': sender is collecting from recipient
 			// This means recipient owes money to sender, so mark recipient as paid
 			updatePromises = itemIds.map(async (itemId) => {
-				console.log(`Trying to update item ${itemId} for recipient ${recipientId} authored by ${senderId}`);
-
-				// First, let's check if the item exists and what its structure is
-				const item = await Item.findById(itemId);
-				if (item) {
-					console.log(`Found item ${itemId}:`, {
-						id: item._id,
-						author: item.author,
-						houseCode: item.houseCode,
-						members: item.members.map((m) => ({ userID: m.userID, paid: m.paid })),
-					});
-				} else {
-					console.log(`Item ${itemId} not found`);
-				}
-
 				return Item.findOneAndUpdate(
 					{
 						_id: itemId,
@@ -738,29 +673,15 @@ export const resolveBalance = async (req, res) => {
 				);
 			});
 		} else {
-			console.log("Invalid direction:", direction);
 			return res.status(400).json({ error: "Invalid direction specified" });
 		}
 
 		const updatedItems = await Promise.all(updatePromises);
-		console.log(
-			"Update results:",
-			updatedItems.map((item) => (item ? item._id : null))
-		);
 
 		// Filter out null results (items not found or user not a member)
 		const successfulUpdates = updatedItems.filter((item) => item !== null);
 
-		console.log("Successful updates count:", successfulUpdates.length);
-
 		if (successfulUpdates.length === 0) {
-			console.log("No successful updates - debugging info:");
-			console.log("- House code:", houseCode);
-			console.log("- Sender ID:", senderId);
-			console.log("- Recipient ID:", recipientId);
-			console.log("- Direction:", direction);
-			console.log("- Item IDs:", itemIds);
-
 			return res.status(404).json({ error: "No items found or user not a member of specified items" });
 		}
 
@@ -781,11 +702,7 @@ export const resolveBalance = async (req, res) => {
 
 // Batch resolve balances for settlement - more efficient than individual calls
 export const resolveBalanceBatch = async (req, res) => {
-	console.log("=== BATCH RESOLVE BALANCE ENDPOINT HIT ===");
 	const { items, userIds, settlementId } = req.body;
-
-	console.log("resolveBalanceBatch called with:", { items, userIds, settlementId });
-	console.log("Request user:", req.user);
 
 	try {
 		// Get house code from the authenticated user
@@ -793,9 +710,6 @@ export const resolveBalanceBatch = async (req, res) => {
 		if (!houseCode) {
 			return res.status(400).json({ error: "User must belong to a house" });
 		}
-
-		console.log("House code:", houseCode);
-		console.log("Authenticated user:", req.user._id.toString());
 
 		if (!items || items.length === 0) {
 			return res.status(400).json({ error: "No items provided for batch resolution" });
@@ -815,29 +729,18 @@ export const resolveBalanceBatch = async (req, res) => {
 
 		// Extract item IDs
 		const itemIds = items.map((item) => item.id || item._id);
-		console.log("Processing item IDs:", itemIds);
 
 		for (const itemId of itemIds) {
-			console.log(`Processing item ${itemId} for settlement between users: ${userIds.join(", ")}`);
-
 			// Get the item to determine author and members
 			const item = await Item.findById(itemId);
 			if (!item) {
-				console.log(`Item ${itemId} not found, skipping`);
 				continue;
 			}
-
-			console.log(`Item ${itemId} details:`, {
-				author: item.author,
-				members: item.members.map((m) => ({ userID: m.userID, paid: m.paid })),
-			});
 
 			// For settlement, mark unpaid members as paid (this clears the debt)
 			for (const userId of userIds) {
 				const memberIndex = item.members.findIndex((m) => m.userID.toString() === userId);
 				if (memberIndex !== -1 && !item.members[memberIndex].paid) {
-					console.log(`Marking user ${userId} as paid for item ${itemId} (settlement)`);
-
 					const updatePromise = Item.findOneAndUpdate(
 						{
 							_id: itemId,
@@ -848,31 +751,15 @@ export const resolveBalanceBatch = async (req, res) => {
 							$set: { "members.$.paid": true },
 						},
 						{ new: true }
-					).then((result) => {
-						if (result) {
-							console.log(`Successfully updated item ${itemId} for user ${userId} - marked as paid`);
-							return result;
-						} else {
-							console.log(`Failed to update item ${itemId} for user ${userId}`);
-							return null;
-						}
-					});
+					).then((result) => result || null);
 
 					updatePromises.push(updatePromise);
-				} else {
-					console.log(`User ${userId} already paid for item ${itemId} or not found`);
 				}
 			}
 		}
 
 		const results = await Promise.all(updatePromises);
 		successfulUpdates = results.filter((result) => result !== null).length;
-
-		console.log("Batch settlement update completed:", {
-			totalItems: items.length,
-			successfulUpdates,
-			settlementId,
-		});
 
 		if (successfulUpdates === 0) {
 			return res.status(404).json({ error: "No items were successfully updated in settlement" });
@@ -897,34 +784,11 @@ export const resolveBalanceBatch = async (req, res) => {
 // Debug endpoint to check all items in database
 export const getAllItemsDebug = async (req, res) => {
 	try {
-		console.log("=== GET ALL ITEMS DEBUG ENDPOINT HIT ===");
-		
 		// Get all items from database
 		const allItems = await Item.find({}).sort({ createdAt: -1 }).exec();
 		
-		console.log("=== ALL ITEMS IN DATABASE ===");
-		console.log("Total items in database:", allItems.length);
-		console.log("Items:", allItems.map(item => ({
-			id: item._id,
-			name: item.name,
-			price: item.price,
-			houseCode: item.houseCode,
-			author: item.author,
-			membersCount: item.members?.length || 0,
-			createdAt: item.createdAt
-		})));
-		console.log("=== END ALL ITEMS IN DATABASE ===");
-		
 		// Get all users
 		const allUsers = await User.find({}).select('_id email houseCode').exec();
-		console.log("=== ALL USERS IN DATABASE ===");
-		console.log("Total users:", allUsers.length);
-		console.log("Users:", allUsers.map(user => ({
-			id: user._id,
-			email: user.email,
-			houseCode: user.houseCode
-		})));
-		console.log("=== END ALL USERS IN DATABASE ===");
 		
 		return res.status(200).json({ 
 			allItems: allItems.length,

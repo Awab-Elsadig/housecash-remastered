@@ -10,7 +10,6 @@
 	color: white;
 	font-weight: 600;
 	cursor: pointer;
-	backdrop-filter: var(--glassBlur);
 }
 
 .addIcon {

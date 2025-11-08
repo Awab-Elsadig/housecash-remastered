@@ -29,7 +29,6 @@
 	border-radius: var(--border-radius-sm);
 	cursor: pointer;
 	transition: var(--transition-base);
-	backdrop-filter: blur(10px);
 	color: white;
 }
 
@@ -88,7 +87,6 @@
 
 .settingsCard {
 	background: rgba(255, 255, 255, 0.05);
-	backdrop-filter: blur(15px);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 16px;
 	padding: 1.5rem;
@@ -178,7 +176,6 @@
 	font-size: 0.75rem;
 	font-weight: 600;
 	white-space: nowrap;
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 	animation: fadeInOut 2s ease-in-out;
 	z-index: 10;
 }
@@ -206,12 +203,10 @@
 	font-weight: 600;
 	cursor: pointer;
 	transition: all 0.2s ease;
-	box-shadow: 0 4px 15px rgba(var(--mainColor-rgb), 0.3);
 }
 
 .changePasswordBtn:hover {
 	border-color: var(--mainColorDark);
-	box-shadow: 0 8px 25px rgba(var(--mainColor-rgb), 0.4);
 }
 
 .changePasswordBtn:active {
@@ -233,7 +228,6 @@
 	right: 0;
 	bottom: 0;
 	background: rgba(0, 0, 0, 0.7);
-	backdrop-filter: blur(4px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -248,8 +242,6 @@
 	padding: 2rem;
 	width: 100%;
 	max-width: 400px;
-	box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-	backdrop-filter: blur(20px);
 }
 
 .modal h2 {
@@ -277,7 +269,6 @@
 	outline: none;
 	border-color: var(--mainColor);
 	background: rgba(255, 255, 255, 0.12);
-	box-shadow: 0 0 0 3px rgba(var(--mainColor-rgb), 0.1);
 }
 
 .modal input::placeholder {
@@ -308,7 +299,6 @@
 
 .saveBtn:hover {
 	border-color: var(--mainColorDark);
-	box-shadow: 0 4px 15px rgba(var(--mainColor-rgb), 0.3);
 }
 
 .cancelBtn {

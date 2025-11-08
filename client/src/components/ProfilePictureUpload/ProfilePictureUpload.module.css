@@ -27,13 +27,11 @@
 	overflow: hidden;
 	border: 3px solid rgba(255, 255, 255, 0.2);
 	transition: all 0.3s ease;
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .imageWrapper:hover {
 	border-color: rgba(255, 255, 255, 0.4);
 	transform: scale(1.05);
-	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 .profileImage {
@@ -91,7 +89,6 @@
 	right: 0;
 	bottom: 0;
 	background: rgba(0, 0, 0, 0.3);
-	backdrop-filter: blur(2px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -128,15 +125,12 @@
 	cursor: pointer;
 	transition: all 0.3s ease;
 	font-size: 0.9rem;
-	backdrop-filter: blur(10px);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .actionButton:hover {
 	background: var(--mainColor);
 	border-color: var(--mainColor);
 	transform: scale(1.1);
-	box-shadow: 0 4px 12px rgba(var(--mainColor-rgb), 0.3);
 }
 
 .deleteButton {

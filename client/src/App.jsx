@@ -11,7 +11,6 @@ import { PaymentApprovalProvider } from "./contexts/PaymentApprovalContext";
 import { RefreshProvider } from "./contexts/RefreshContext";
 import { useUser } from "./hooks/useUser";
 import RouteProtection from "./components/RouteProtection";
-import SwipeRefreshWrapper from "./components/SwipeRefreshWrapper";
 import StopImpersonationFab from "./components/StopImpersonationFab/StopImpersonationFab";
 import ImpersonationBanner from "./components/ImpersonationBanner/ImpersonationBanner";
 import { useImpersonationContext } from "./hooks/useImpersonationContext";
@@ -56,9 +55,7 @@ function AppLayout({ isMobileMenuOpen, setIsMobileMenuOpen, toggleMobileMenu }) 
 			)}
 			<div className="right" key={`${location.pathname}:${user?._id || 'nouser'}:${isActuallyImpersonating ? 'impersonating' : 'normal'}`}>
 				<Header toggleMobileMenu={toggleMobileMenu} />
-				<SwipeRefreshWrapper key={location.pathname}>
-					<AppRoutes />
-				</SwipeRefreshWrapper>
+				<AppRoutes />
 				{isActuallyImpersonating && (
 					<div className="mobile-stop-button">
 						<StopImpersonationFab />

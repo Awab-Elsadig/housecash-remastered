@@ -12,7 +12,8 @@ const run = async () => {
     console.error("Missing MONGO_URI env var");
     process.exit(1);
   }
-  await mongoose.connect(uri);
+  const dbName = process.env.MONGO_DB_NAME || "theDatabase";
+  await mongoose.connect(uri, { dbName: dbName });
 
   const db = mongoose.connection.db;
   const items = db.collection("items");

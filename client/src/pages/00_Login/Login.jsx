@@ -113,15 +113,13 @@ const Login = () => {
 			} finally {
 				setLoading(false);
 			}
-		} else {
-			console.log("Form validation failed:", errors);
 		}
 	};
 
 	useEffect(() => {
 		document.title = "Login - HouseCash";
 
-		// Enable pull-to-refresh on mobile by allowing body overflow
+		// Allow body overflow for scrolling
 		document.body.style.overflowY = "auto";
 		document.body.style.touchAction = "pan-y";
 
@@ -136,21 +134,16 @@ const Login = () => {
 					return;
 				}
 			} catch (error) {
-				// Comprehensive error logging for auth check
-				console.error("=== AUTH CHECK ERROR DETAILS ===");
-				console.error("Error message:", error.message);
-				console.error("Error code:", error.code);
-				console.error("Error name:", error.name);
-				
-				if (error.response) {
-					console.error("Response status:", error.response.status);
-					console.error("Response data:", error.response.data);
-				} else if (error.request) {
-					console.error("No response received - possible network issue");
-					console.error("Request object:", error.request);
+				// Only show a friendly warning if it's a 401 (expected when logged out)
+				// or if there's a network issue (unexpected)
+				if (error.response?.status === 401) {
+					// Expected behavior - user is not logged in
+					// Show a friendly warning instead of error
+					console.warn("⚠️ You were logged out from your previous session. Please log in again.");
+				} else if (error.request && !error.response) {
+					// Network issue - this is unexpected
+					console.warn("⚠️ Unable to verify authentication. Please check your connection.");
 				}
-				
-				console.error("=== END AUTH CHECK ERROR DETAILS ===");
 				// User is not logged in, continue with login page
 			}
 		};

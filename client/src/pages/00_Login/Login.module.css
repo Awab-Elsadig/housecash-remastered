@@ -23,7 +23,6 @@
 .formLayout {
 	background: var(--glassBackground, rgba(255, 255, 255, 0.05));
 	border: 1px solid var(--glassStroke, rgba(255, 255, 255, 0.1));
-	backdrop-filter: blur(10px);
 	border-radius: 1rem;
 	padding: 2rem;
 	width: 100%;

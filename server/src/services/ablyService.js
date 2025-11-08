@@ -4,12 +4,15 @@ import ably from "../utils/ablyConfig.js";
 class AblyService {
 	// Send a notification to a specific house channel
 	static async sendToHouse(houseCode, eventName, data) {
+		if (!ably) {
+			return;
+		}
+		
 		try {
 			const channel = ably.channels.get(`house:${houseCode}`);
 			await channel.publish(eventName, data);
-			console.log(`Sent ${eventName} to house:${houseCode}:`, data);
 		} catch (error) {
-			console.error("Error sending Ably message:", error);
+			console.error(`[Ably] Error sending ${eventName} to house:${houseCode}:`, error.message);
 		}
 	}
 

@@ -41,11 +41,13 @@ const RouteProtection = ({ children, requireAuth = true }) => {
 			} catch (error) {
 				setIsAuthenticated(false);
 				
-				// If route requires auth but user is not authenticated, redirect to login
+				// Suppress 401 errors - they're expected during auth checks
+				// Only redirect if route requires auth
 				if (requireAuth && (error.response?.status === 401 || error.response?.status === 403)) {
 					navigate("/", { replace: true });
 					return;
 				}
+				// Silent - expected behavior during auth checks
 			} finally {
 				setIsChecking(false);
 			}

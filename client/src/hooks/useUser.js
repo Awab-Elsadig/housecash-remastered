@@ -67,7 +67,6 @@ export const useUser = () => {
 				const currentUser = JSON.parse(sessionStorage.getItem("user") || "null");
 				if (isImpersonating || !currentUser || currentUser._id !== response.data._id || currentUser.name !== response.data.name) {
 					updateUser(response.data);
-					console.log("✓ User data updated:", response.data.name);
 				}
 				
 				// Update the last fetch timestamp
@@ -89,7 +88,10 @@ export const useUser = () => {
 				}
 			}
 		} catch (error) {
-			console.error("Error fetching current user:", error);
+			// Only log unexpected errors (not 401s which are handled by RouteProtection)
+			if (error.response?.status !== 401 && error.response?.status !== 403) {
+				console.error("Error fetching current user:", error.response?.data?.error || error.message);
+			}
 			setError(error.response?.data?.error || "Failed to fetch current user");
 		} finally {
 			// Add a small delay before clearing the flag to prevent race conditions
@@ -136,17 +138,11 @@ export const useUser = () => {
 		const fiveMinutes = 5 * 60 * 1000;
 		
 		if (!cachedUser || !lastFetch || (now - parseInt(lastFetch)) > fiveMinutes || isImpersonating) {
-			// Only log if we're actually going to fetch (not already fetching)
-			const isCurrentlyFetching = sessionStorage.getItem("isFetchingUser");
-			if (isCurrentlyFetching !== "true") {
-				console.log("✓ Fetching fresh user data");
-			}
 			fetchCurrentUser();
 		}
 
 	// Listen for impersonation events to refresh data
 	const handleImpersonationStart = () => {
-		console.log("✓ Impersonation started: Clearing cache and fetching fresh data");
 		sessionStorage.removeItem("lastUserFetch");
 		setHasInitializedItems(false);
 		// Clear all cached data to force fresh fetch
@@ -160,7 +156,6 @@ export const useUser = () => {
 	};
 
 	const handleImpersonationStop = () => {
-		console.log("✓ Impersonation stopped: Clearing cache and fetching fresh data");
 		sessionStorage.removeItem("lastUserFetch");
 		setHasInitializedItems(false);
 		// Clear all cached data to force fresh fetch
@@ -177,7 +172,6 @@ export const useUser = () => {
 
 		// Handle force data refresh
 		const handleForceDataRefresh = () => {
-			console.log("✓ Force refreshing all data");
 			// Clear all cached data
 			sessionStorage.removeItem("user");
 			sessionStorage.removeItem("houseMembers");
@@ -195,7 +189,6 @@ export const useUser = () => {
 		// Handle navigation-like data loading (same as when navigating to any page)
 		const handleNavigateToPage = (event) => {
 			const { forceRefresh } = event.detail || {};
-			console.log("✓ Starting navigation-like data loading process", { forceRefresh });
 			
 			// Step 1: Load from session storage first (like navigation does)
 			const cachedUser = sessionStorage.getItem("user");
@@ -206,9 +199,8 @@ export const useUser = () => {
 				try {
 					const userData = JSON.parse(cachedUser);
 					setUser(userData);
-					console.log("✓ Loaded user from cache:", userData.name);
 				} catch (e) {
-					console.error("Failed to parse cached user data:", e);
+					// Silent - failed to parse cached data
 				}
 			}
 			
@@ -217,7 +209,7 @@ export const useUser = () => {
 					const membersData = JSON.parse(cachedHouseMembers);
 					setHouseMembers(membersData);
 				} catch (e) {
-					console.error("Failed to parse cached house members:", e);
+					// Silent - failed to parse cached data
 				}
 			}
 			
@@ -225,9 +217,8 @@ export const useUser = () => {
 				try {
 					const itemsData = JSON.parse(cachedItems);
 					setItems(itemsData);
-					console.log("✓ Loaded items from cache:", itemsData.length, "items");
 				} catch (e) {
-					console.error("Failed to parse cached items:", e);
+					// Silent - failed to parse cached data
 				}
 			}
 			
@@ -237,7 +228,6 @@ export const useUser = () => {
 			const fiveMinutes = 5 * 60 * 1000;
 			
 			if (forceRefresh || !cachedUser || !lastFetch || (now - parseInt(lastFetch)) > fiveMinutes) {
-				console.log("✓ Fetching fresh user data from server");
 				fetchCurrentUser();
 			}
 			
@@ -261,53 +251,32 @@ export const useUser = () => {
 
 	// Fetch items from backend
 	const fetchItems = useCallback(async () => {
-		console.log("=== CLIENT FETCH ITEMS CALLED ===");
-		console.log("User:", user);
-		console.log("User houseCode:", user?.houseCode);
-		
 		if (!user?.houseCode) {
-			console.log("ERROR: No houseCode found for user, skipping fetch");
 			return;
 		}
 
 		// Prevent duplicate calls using sessionStorage as a global flag
 		const isCurrentlyFetchingItems = sessionStorage.getItem("isFetchingItems");
 		if (isCurrentlyFetchingItems === "true") {
-			console.log("Already fetching items, skipping duplicate call");
 			return;
 		}
 
-		console.log("Starting items fetch...");
 		sessionStorage.setItem("isFetchingItems", "true");
 		setIsFetchingItems(true);
 		setLoading(true);
 		setError(null);
 
 		try {
-			console.log("✓ Making request to /api/items/get-items");
 			const response = await axios.get("/api/items/get-items");
-			
-			console.log("=== CLIENT ITEMS RESPONSE ===");
-			console.log("Response status:", response.status);
-			console.log("Response data:", response.data);
-			console.log("Items count:", response.data?.items?.length || 0);
-			console.log("Items:", response.data?.items);
-			console.log("=== END CLIENT ITEMS RESPONSE ===");
 			
 			if (response.data?.items) {
 				updateItems(response.data.items);
-				console.log("✓ Items updated in state");
-			} else {
-				console.log("WARNING: No items in response data");
 			}
 		} catch (error) {
-			console.error("=== CLIENT ITEMS FETCH ERROR ===");
-			console.error("Error:", error);
-			console.error("Error message:", error.message);
-			console.error("Error response:", error.response);
-			console.error("Error response data:", error.response?.data);
-			console.error("Error response status:", error.response?.status);
-			console.error("=== END CLIENT ITEMS FETCH ERROR ===");
+			// Only log unexpected errors (not 401s which are handled by RouteProtection)
+			if (error.response?.status !== 401 && error.response?.status !== 403) {
+				console.error("Error fetching items:", error.response?.data?.error || error.message);
+			}
 			setError(error.response?.data?.error || "Failed to fetch items");
 		} finally {
 			setLoading(false);
@@ -324,6 +293,7 @@ export const useUser = () => {
 		if (user?.houseCode && user?._id && !hasInitializedItems) {
 			setHasInitializedItems(true);
 			const cachedItems = sessionStorage.getItem("items");
+			
 			if (!cachedItems) {
 				fetchItems();
 			} else {
@@ -331,13 +301,15 @@ export const useUser = () => {
 				try {
 					const itemsData = JSON.parse(cachedItems);
 					setItems(itemsData);
+					// Still fetch fresh data in background
+					fetchItems();
 				} catch (e) {
-					console.error("Failed to parse cached items:", e);
+					// Silent - failed to parse cached data
 					fetchItems(); // Fallback to server fetch
 				}
 			}
 		}
-	}, [user?.houseCode, hasInitializedItems]);
+	}, [user?.houseCode, user?._id, hasInitializedItems, fetchItems]);
 
 	// Fetch user profile
 	const fetchUser = useCallback(
@@ -549,7 +521,6 @@ export const useUser = () => {
 
 	// Force refresh data (for Ably updates)
 	const forceRefresh = useCallback(async () => {
-		console.log("Force refreshing all data due to external update");
 		await fetchCurrentUser();
 		if (user?.houseCode) {
 			await fetchItems();

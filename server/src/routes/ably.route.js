@@ -10,8 +10,7 @@ router.get("/token", jwtAuthMiddleware, async (req, res) => {
 		const tokenRequest = await createAblyTokenRequest(clientId);
 		res.status(200).json(tokenRequest);
 	} catch (error) {
-		console.error("[Ably] Error generating token request:", error.message);
-		console.error("[Ably] Error stack:", error.stack);
+		console.error("[Ably] Error generating token:", error.message);
 		
 		// Check if it's a configuration error
 		if (error.message.includes("ABLY_API_KEY")) {
